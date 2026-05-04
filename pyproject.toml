@@ -1,0 +1,19 @@
+[project]
+name = "bosh"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = true
+
+[dependency-groups]
+dev = [
+    "auto-py-to-exe>=2.50.1",
+]
+
+[project.scripts]
+bosh = "bosh.bosh:main"
+build = "scripts.build:build"
