@@ -15,5 +15,5 @@ dev = [
 ]
 
 [project.scripts]
-bosh = "bosh.bosh:main"
-build = "scripts.build:build"
+bosh = "bosh.app.bosh:main"
+build = "scripts.app.build:build"
