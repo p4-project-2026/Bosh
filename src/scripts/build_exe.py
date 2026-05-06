@@ -2,7 +2,7 @@ import sys
 import subprocess
 from bosh.helper_functions.paths import PathsHelper
 
-def build():
+def build_exe():
     source = PathsHelper().get_project_root().joinpath("src/bosh/app/bosh.py")
     
     if not source.exists():
@@ -22,5 +22,7 @@ def build():
 
     print("Build completed successfully!")
 
+    subprocess.run([".\\dist\\bosh\\bosh.exe"], check=True)
+
 if __name__ == "__main__":
-    build()
+    build_exe()

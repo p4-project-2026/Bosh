@@ -1,0 +1,4 @@
+[bosh]
+default_file = "script.bosh"
+default_flags = []
+

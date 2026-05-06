@@ -1,8 +1,14 @@
+import msvcrt
+
+from bosh.app.config.config_handler import ConfigHandler
 from bosh.app.setup.flags.flag_handler import FlagHandler
 from bosh.app.setup.arguments.argument_handler import ArgumentHandler
 
 class Main:
     def run(self):
+        # Initialize configuration and setup
+        ConfigHandler().initilize()
+
         # Set flags based on command line arguments
         FlagHandler().set_flags_by_args(self.get_args())
         
@@ -18,6 +24,9 @@ class Main:
 
         # Execute any "after" flags
         FlagHandler().execute_after_flags()
+
+        print("Press any key to exit...")
+        msvcrt.getch()
 
 
     def get_args(self):
