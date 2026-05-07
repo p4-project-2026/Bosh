@@ -6,21 +6,18 @@ class FlagHandler:
     # Preserve the definition order from flags_module by iterating over its __dict__
     flags = [
         obj for name, obj in flags_module.__dict__.items()
-        if inspect.isclass(obj) and obj.__module__ == flags_module.__name__ and name != "flags"
+        if inspect.isclass(obj) and obj.__module__ == flags_module.__name__ and not name.startswith("_") 
     ]
 
     def set_flags_by_args(self, args):
-        for arg in args:
-            # Check if flag until the first non-flag argument is encountered
-            if not arg.startswith("-"): break
-            
+        for arg in args:          
             # Check if the argument matches any flag
             for Flag in self.flags:
                 if Flag.aliases and arg in Flag.aliases:
                     Flag.enabled = True
                     break
+            # unrecognized flag, you can choose to print a warning or ignore
             else:
-                # unrecognized flag, you can choose to print a warning or ignore
                 print(f"Error: Unrecognized flag '{arg}'")
                 self.flags[0].runner()  # Show help and exit
 

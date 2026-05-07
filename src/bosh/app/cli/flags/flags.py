@@ -87,6 +87,12 @@ class Pause:
 		print("Press any key to continue...")
 		msvcrt.getch()
 
+class Cmd:
+    name = "cmd"
+    aliases = ("-c", "--cmd")
+    description = "Run arguments as a command instead of a file."
+    enabled = False
+    run_type = "value"
 	
 
 

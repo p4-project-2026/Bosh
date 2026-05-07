@@ -1,37 +1,22 @@
-import msvcrt
-
+from bosh.app.cli.cli_handler import CLIHandler
 from bosh.app.config.config_handler import ConfigHandler
-from bosh.app.setup.flags.flag_handler import FlagHandler
-from bosh.app.setup.arguments.argument_handler import ArgumentHandler
+from bosh.helper_functions.print import vprint, vvprint, vvvprint
 
 class Main:
     def run(self):
         # Initialize configuration and setup
-        ConfigHandler().initilize()
+        ConfigHandler().initializer()
 
-        # Set flags based on command line arguments
-        FlagHandler().set_flags_by_args(self.get_args())
-        
-        # Execute any "before" flags
-        FlagHandler().execute_before_flags()
+        # Cli initializer
+        CLIHandler().initializer()
 
-        # extract the non-flag arguments for your main application logic
-        ArgumentHandler().extract_args(self.get_args())
-        
-
-        # run the main logic of your application here
+        # run Interpreter
 
 
-        # Execute any "after" flags
-        FlagHandler().execute_after_flags()
-
-        print("Press any key to exit...")
-        msvcrt.getch()
+        # Cli terminator
+        CLIHandler().terminator()
 
 
-    def get_args(self):
-        import sys
-        return sys.argv[1:]
 
 
 

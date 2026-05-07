@@ -6,10 +6,7 @@ class PathsHelper:
     project_root = None
 
     def get_project_root(self):
-        """Get the root directory based on how the project is run.
-        When frozen (as exe): returns the directory where the exe is located
-        When running from source: returns the project root (where pyproject.toml is)
-        """
+        # Get the root directory based on how the project is run.
         if self.project_root is not None:
             return self.project_root
 
