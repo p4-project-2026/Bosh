@@ -1,5 +1,12 @@
+# app imports
+from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 from bosh.app.cli.cli_handler import CLIHandler
 from bosh.app.config.config_handler import ConfigHandler
+
+# interpreter imports
+from bosh.interpreter.interpreter import Interpreter
+
+# helper function imports
 from bosh.helper_functions.print import vprint, vvprint, vvvprint
 
 class Main:
@@ -13,7 +20,7 @@ class Main:
         CLIHandler().initializer()
 
         # run Interpreter
-
+        Interpreter().run(ArgumentHandler.file, CLIHandler.run_type)
 
         # Cli terminator
         CLIHandler().terminator()
