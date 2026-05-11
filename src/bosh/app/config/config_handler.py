@@ -14,7 +14,7 @@ class ConfigHandler:
         # Check if config file exists, if not create it
         config_path = self._get_config_file_path()
         if not config_path.exists():
-            _print_queue("Config file not found, creating default config file...", type="v")
+            vprint("Config file not found, creating default config file...")
             self._create_default_config()
 
         # Load the config file
