@@ -1,12 +1,12 @@
 class PreProcessor:
-    def __init__(self, code):
-        self.code = code
+    code = None
 
-    def run(self):
+    def run(self, code):
+        self.code = code
         self._whitespace_strip()
         self.insert_symbols_at_nested_indents()
+        return self.code
 
-    
     def _whitespace_strip(self):
         self.code = self.code.strip()
         return self.code
