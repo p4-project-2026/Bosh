@@ -1,6 +1,5 @@
 from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 from bosh.app.cli.flags.flag_handler import FlagHandler
-from bosh.helper_functions.print import flush_print_queue
 
 class CLIHandler:
     run_type = None
@@ -12,8 +11,9 @@ class CLIHandler:
         # set flags based on command line arguments
         FlagHandler().set_flags_by_args(ArgumentHandler.flags)
 
-        # flush the print queue
-        flush_print_queue()
+        # Mark that verbose flags have been processed and queued messages should be flushed
+        from bosh.helper_functions.print import set_verbose_flag_proceeded
+        set_verbose_flag_proceeded(True)
 
         # get_run_type
         CLIHandler.run_type = ArgumentHandler().get_run_type()

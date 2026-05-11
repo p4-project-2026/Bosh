@@ -1,5 +1,5 @@
 import sys
-from bosh.helper_functions.print import print_queue
+from bosh.helper_functions.print import vprint
 from bosh.app.cli.flags.flags import Cmd
 
 class ArgumentHandler:
@@ -16,28 +16,28 @@ class ArgumentHandler:
                 ArgumentHandler.flags.append(arg)
             else: break
 
-        print_queue("flags: " + str(ArgumentHandler.flags), type="v")
+        vprint(f"flags: {ArgumentHandler.flags}")
 
         # non-flag arguments
         args = args[len(ArgumentHandler.flags):]
 
         # if no arguments or file, return
         if len(args) == 0:
-            print_queue("no file provided", type="v")
-            print_queue("no aruments provided", type="v")
+            vprint("no file provided")
+            vprint("no aruments provided")
             return
 
         if args[0].endswith(".bosh"):
             # file and arguments
             ArgumentHandler.file = args[0]
             ArgumentHandler.args = args[1:]
-            print_queue(f"file: {ArgumentHandler.file}", type="v")
-            print_queue(f"arguments: {ArgumentHandler.args}", type="v")
+            vprint(f"file: {ArgumentHandler.file}")
+            vprint(f"arguments: {ArgumentHandler.args}")
         elif len(args) != 0:
             # no file, just arguments
             ArgumentHandler.args = args
-            print_queue("no file provided", type="v")
-            print_queue("arguments: " + str(ArgumentHandler.args), type="v")
+            vprint("no file provided")
+            vprint(f"arguments: {ArgumentHandler.args}")
 
     def get_run_type(self):
         # get values

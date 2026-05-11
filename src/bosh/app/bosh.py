@@ -4,6 +4,8 @@ from bosh.helper_functions.print import vprint, vvprint, vvvprint
 
 class Main:
     def run(self):
+        vprint("Starting Bosh...")
+
         # Initialize configuration and setup
         ConfigHandler().initializer()
 
@@ -15,6 +17,8 @@ class Main:
 
         # Cli terminator
         CLIHandler().terminator()
+
+        vprint("Bosh finished execution!")
 
 
 

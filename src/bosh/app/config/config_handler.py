@@ -4,7 +4,7 @@ from bosh.helper_functions.paths import PathsHelper
 import tomllib
 
 from pprint import pprint
-from bosh.helper_functions.print import print_queue, json_format, indent
+from bosh.helper_functions.print import _print_queue, json_format, indent, vprint, vvprint
 
 class ConfigHandler:
     config = None
@@ -14,13 +14,13 @@ class ConfigHandler:
         # Check if config file exists, if not create it
         config_path = self._get_config_file_path()
         if not config_path.exists():
-            print_queue("Config file not found, creating default config file...", type="v")
+            _print_queue("Config file not found, creating default config file...", type="v")
             self._create_default_config()
 
         # Load the config file
         self._load_config(config_path)
-        print_queue("config loaded!", type="v")
-        print_queue(indent(json_format(self.config)), type="vv")
+        vprint("config loaded!")
+        vvprint(indent(json_format(self.config)))
 
         # set default flags
         self.set_default_flags(self.get("bosh.default_flags"))      
