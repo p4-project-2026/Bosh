@@ -5,6 +5,7 @@ class PreProcessor:
         self.code = code
         self._whitespace_strip()
         self.insert_symbols_at_nested_indents()
+        self.insert_ifelse_symbol()
         return self.code
 
     def _whitespace_strip(self):
@@ -52,3 +53,12 @@ class PreProcessor:
         # Join the lines back into a single string
         self.code = "\n".join(lines)
         return self.code
+
+    def insert_ifelse_symbol(self):
+        data = self.data.splitlines()
+        for i, line in enumerate(data):
+            if line.strip().startswith("else") or line.strip().startswith("otherwise"):
+                data[i-1] += "~"
+        
+        self.data = "\n".join(data)
+        return self.data
