@@ -15,6 +15,7 @@ class FlagHandler:
             for Flag in self.flags:
                 if Flag.aliases and arg in Flag.aliases:
                     Flag.enabled = True
+                    break
             # unrecognized flag, you can choose to print a warning or ignore
             else:
                 print(f"Error: Unrecognized flag '{arg}'")
