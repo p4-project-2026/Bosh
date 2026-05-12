@@ -1,0 +1,146 @@
+?start: program
+
+program: block
+
+block:  stmt (_SEP+ stmt)* _SEP*
+?in_code_block: _NL* _BLOCKSTART _NL*  block _NL* _BLOCKEND
+
+
+?stmt   : general_stmt
+        | domain_stmt
+        | def_stmt
+
+
+?general_stmt   : stmt ("else" | "otherwise") stmt  -> if_unable
+                | "if" expr ":"? in_code_block ("~" _NL* ( "else"|"otherwise") ":"?  in_code_block)?  -> if_else
+                | ("for all" | "for each") IDENT "in" expr? ":"? in_code_block -> for_all
+                | "repeat until" expr ":"?  in_code_block -> repeat
+                | ("stop" | "quit") -> quit
+                | ("say" | "print" | "output") expr -> print
+                | ("return") expr   -> return_
+                | "add" expr "to" expr -> add_to_list
+                | "remove" expr "from" expr -> remove_from_list
+                | "remove element" expr "from" expr -> remove_from_list_index
+                | IDENT "result" ("using" "(" expr ("," expr)* ")")? -> call_func
+
+
+?def_stmt       : IDENT "is" expr -> assign
+                | IDENT "is" "a" TYPE expr? -> assign_type
+                | "new"? "task" IDENT ("uses" "(" (IDENT ("," IDENT)*)? ")")? ":"? in_code_block -> assign_func
+
+
+?domain_stmt    : "go to" expr -> go_to
+                | ("make " | "create ") "new"? TYPE expr ("in" expr)? -> make
+                | "rename" expr "to" expr -> rename
+                | "delete" expr -> delete
+                | "copy from" expr "to" expr -> copy_from_to
+                | "go up" -> go_up
+                | "move" expr "to" expr -> move
+                | "read" expr -> read
+                | "write" expr "to" expr -> write
+                | ("execute" | "run") expr -> execute
+                | "pause" -> pause
+                | "wait" expr -> wait
+
+
+?expr   :or_expr    
+
+?or_expr    : and_expr
+            | or_expr ( "||"  | "or" ) and_expr -> or_
+
+?and_expr   : eq_expr
+            | and_expr ( "&&"  | "and" ) eq_expr -> and_ 
+
+?eq_expr    : rel_expr
+            | eq_expr ("==" | "equals" ) rel_expr               -> eq
+            | rel_expr ( "!=" | "not equals" ) plus_expr        -> neq
+
+?rel_expr   : plus_expr
+            | rel_expr ( ">"  | "greater than" ) plus_expr       -> gt
+            | rel_expr ( "<"  | "less than" ) plus_expr          -> lt
+            | rel_expr ( ">=" | "greater or equal" ) plus_expr   -> gte
+            | rel_expr ( "<=" | "less or equal" ) plus_expr      -> lte
+   
+?plus_expr  : mult_expr
+            | plus_expr ("+"|"plus" ) mult_expr -> plus
+            | plus_expr ("-"| "minus" ) mult_expr -> minus
+
+?mult_expr  :unary_expr
+            | mult_expr ( "*"  | "times" ) unary_expr -> mult
+            | mult_expr ( "/" | "divided by" ) unary_expr -> div
+            | mult_expr ( "%" | "mod" ) unary_expr -> mod
+
+?unary_expr : access_expr
+            | ("not" | "!") unary_expr -> not_
+            | ("negative" | "neg" | "-") unary_expr -> neg
+            | "length of" access_expr -> length
+            | "first element of" access_expr -> first
+            | "last element of"  access_expr -> last
+            | "floor of" access_expr -> floor
+            | "ceiling of" access_expr -> ceiling
+            | "exponent of" access_expr -> exponent
+            | "round of" access_expr -> round
+
+?access_expr    : term
+                | access_expr "at" "index"? access_expr -> list_look
+                | "regex" access_expr -> regex
+                | access_expr "age" -> age
+                | access_expr "name" -> file_name
+                | access_expr "starts with" access_expr -> starts_with
+                | access_expr "ends with" access_expr -> ends_with
+                | access_expr unit -> unit
+
+
+?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
+        | IDENT -> var
+        | NUMBER -> number
+        | FLOAT  -> decimal
+        | text
+        | BOOLEAN -> boolean
+        | "(" term ("," term)* ")" -> list
+        | "input" ("(" expr ")")? -> input
+        | "null" -> null
+        | "now"  -> now
+        | "here" -> here
+        | "(" expr ")" -> paren
+        | TYPE
+
+
+TYPE    : "text"
+        | "number"
+        | "decimal"
+        | "boolean"
+        | "date" 
+        | "time" 
+        | "list"
+        | "folder"
+        | "file"
+
+
+unit    : ("second" | "seconds") -> second
+        | ("minute" | "minutes") -> minute
+        | ("hour" | "hours")   -> hour
+        | ("day" | "days")   -> day
+        | ("month" | "months")  -> month
+        | ("year" | "years")  -> year
+
+
+text: "\"" (str_chars | interp)* "\""
+str_chars: /([^"{\\]|\\.)+/
+interp: "{" expr "}"
+
+FLOAT: /[0-9]+\.[0-9]+/
+
+path: text ("/" text)*
+
+_BLOCKSTART: "{"
+_BLOCKEND: "}" 
+_SEP: "." _WS* _NL* | _NL+
+COMMENT: /#[^\n]*\n/
+BOOLEAN: "true" | "false"
+IDENT: /[A-Z][a-zA-Z0-9]*/(" "*/[A-Z][a-zA-Z0-9]*/)*
+%import common.WS_INLINE -> _WS
+%import common.NEWLINE -> _NL
+%import common.INT -> NUMBER
+%ignore COMMENT
+%ignore _WS
