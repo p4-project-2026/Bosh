@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Any, Optional
-from bosh.semantics.type_checker import ScopeStack, FuncTable, FunctionSignature, BoshTypeError, BoshRuntimeError
-from bosh.executor.environment import Environment
+from semantics.type_checker import ScopeStack, FuncTable, FunctionSignature
+from executor.function_binding import FunctionBinding
+from executor.environment import Environment
 
 @dataclass
 class Position():
