@@ -26,6 +26,8 @@ class Interpreter:
         # open and load the file
         vprint(f"Opening file: {file_path}...")
         Interpreter.code = self._load_code_from_file(file_path)
+
+            
         vvprint(indent(Interpreter.code))
 
         # Preprocess the code
@@ -68,10 +70,6 @@ class Interpreter:
             # TODO: Implement the actual code execution logic
 
     def _load_code_from_file(self, file_path):
-        try:
-            with open(file_path, "r") as f:
-                code = f.read()
-                return code
-        except FileNotFoundError:
-            print(f"Error: File '{file_path}' not found.")
-            exit(1)
+        with open(file_path, "r") as f:
+            code = f.read()
+            return code

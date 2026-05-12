@@ -7,6 +7,13 @@ from bosh.app.cli.flags.flags import VeryVeryVerbose
 _verbose_flag_proceeded = False
 _print_queue = []
 
+def print_error(message, exception=None):
+    if exception is None:
+        print(f"{message}")
+    else:
+        print(f"{exception.color}{message}\033[0m")
+        print(exception)
+
 def vprint(*args, **kwargs):
     global _verbose_flag_proceeded
 

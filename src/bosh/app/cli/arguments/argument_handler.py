@@ -64,9 +64,8 @@ class ArgumentHandler:
             case "000": return "cli"
             case "001": return "cli"
             case "010": return "file"
-            case "011": return "err"
+            case "011": raise RunTypeError(message="Cannot run cmd flag and file at the same time!")
             case "100": return "cli"
             case "101": return "cmd"
             case "110": return "file"
-            case "111": return "err"
-            case _: return "err"
+            case "111": raise RunTypeError(message="Cannot run cmd flag and file at the same time!")
