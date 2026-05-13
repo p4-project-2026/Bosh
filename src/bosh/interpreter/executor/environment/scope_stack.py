@@ -1,5 +1,5 @@
-from bosh.executor.table import Table
-from bosh.executor.function_binding import FunctionBinding
+from .table import Table
+from .function_binding import FunctionBinding
 from typing import TypeVar, Generic, Type, Dict
 
 T = TypeVar('T')
