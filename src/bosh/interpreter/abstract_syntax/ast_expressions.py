@@ -4,7 +4,7 @@ from .ast_base import *
 class NumberLiteral(ASTNode):
     value: float
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "number"
     
     def execute(self, env: Environment) -> float:
@@ -15,7 +15,7 @@ class NumberLiteral(ASTNode):
 class DecimalLiteral(ASTNode):
     value: float
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "decimal"
     
     def execute(self, env: Environment) -> float:
@@ -26,7 +26,7 @@ class DecimalLiteral(ASTNode):
 class StringLiteral(ASTNode):
     value: str
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "text"
 
     def execute(self, env: Environment) -> str:
@@ -37,7 +37,7 @@ class StringLiteral(ASTNode):
 class InterpolatedString(ASTNode):
     parts: List[ASTNode]
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         for part in self.parts:
             if part.check(v_table, f_table) is None:
                 raise BoshTypeError("Undefined variable in interpolated string", self)
@@ -54,7 +54,7 @@ class InterpolatedString(ASTNode):
 class BooleanLiteral(ASTNode):
     value: bool
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "boolean"
 
     def execute(self, env: Environment) -> bool:
@@ -63,7 +63,7 @@ class BooleanLiteral(ASTNode):
 
 @dataclass
 class NullLiteral(ASTNode):
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "null"
     
     def execute(self, env: Environment) -> None:
@@ -74,7 +74,7 @@ class NullLiteral(ASTNode):
 class ListLiteral(ASTNode):
     elements: List[ASTNode]
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         if len(self.elements) == 0:
             return "list<any>"
         element_type = self.elements[0].check(v_table, f_table)
@@ -92,7 +92,7 @@ class ListLiteral(ASTNode):
 class Identifier(ASTNode):
     name: str
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
             var_type = v_table.lookup(self.name)
         except Exception:
@@ -112,7 +112,7 @@ class TaskCall(ASTNode):
     name: str
     arguments: Optional[List[ASTNode]] = None
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
             signature = f_table.lookup(self.name)
         except Exception:
@@ -148,7 +148,7 @@ class ListLookup(ASTNode):
     target: ASTNode
     index: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table)
         index_type = self.index.check(v_table, f_table)
         if not target_type.startswith("list<") or not target_type.endswith(">"):
@@ -173,7 +173,7 @@ class Unit(ASTNode):
     target: ASTNode
     unit_type: str
 
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table)
         if target_type not in ["number", "decimal"]:
             raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.", self)
@@ -205,7 +205,7 @@ class BinaryOp(ASTNode):
     operator: str
     right: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         left_type = self.left.check(v_table, f_table) if isinstance(self.left, ASTNode) else self.left
         right_type = self.right.check(v_table, f_table) if isinstance(self.right, ASTNode) else self.right
         op = self.operator
@@ -282,7 +282,7 @@ class UnaryOp(ASTNode):
     operator: str
     operand: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         operand_type = self.operand.check(v_table, f_table)
         op = self.operator
         if op in ["-", "neg", "negative"]:
@@ -351,7 +351,7 @@ class AccessOp(ASTNode):
     operation: str
     argument: Optional[ASTNode] = None
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table) if self.target else None
         op = self.operation
 

@@ -4,8 +4,12 @@ from .ast_base import *
 class Print(ASTNode):
     expression: ASTNode
 
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         self.expression.check(v_table, f_table)
+
+    def execute(self, env: Environment) -> None:
+        value = self.expression.execute(env)
+        print(value)
 
 
 @dataclass
@@ -14,7 +18,7 @@ class IfElse(ASTNode):
     then_branch: Block
     else_branch: Optional[Block]
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         condition_type = self.condition.check(v_table, f_table)
         if condition_type != "boolean":
             raise BoshTypeError(f"Condition in if statement must be of type 'boolean', got '{condition_type}'", self)
@@ -55,7 +59,7 @@ class Fallback(ASTNode):
     primary_stmt: ASTNode
     fallback_stmt: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         self.primary_stmt.check(v_table, f_table)
         self.fallback_stmt.check(v_table, f_table)
 
@@ -71,7 +75,7 @@ class ForAll(ASTNode):
     iterable: ASTNode
     body: Block
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         iterable_type = self.iterable.check(v_table, f_table)
         if iterable_type is None:
             return
@@ -110,7 +114,7 @@ class RepeatUntil(ASTNode):
     condition: ASTNode
     body: Block
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         condition_type = self.condition.check(v_table, f_table)
         if condition_type != "boolean":
             raise BoshTypeError(f"Condition in repeat until statement must be of type 'boolean', got '{condition_type}'", self)
@@ -129,7 +133,7 @@ class RepeatUntil(ASTNode):
 
 @dataclass
 class Quit(ASTNode):
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         return
     
     def execute(self, env: Environment) -> None:
@@ -141,7 +145,7 @@ class ListAdd(ASTNode):
     target: ASTNode
     item: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         target_type = self.target.check(v_table, f_table)
         self.item.check(v_table, f_table)
 
@@ -166,7 +170,7 @@ class ListRemove(ASTNode):
     target: ASTNode
     item: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table)
         self.item.check(v_table, f_table)
         if not target_type.startswith("list<") or not target_type.endswith(">"):
@@ -185,7 +189,7 @@ class ListRemoveAt(ASTNode):
     target: ASTNode
     index: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table)
         index_type = self.index.check(v_table, f_table)
         if not target_type.startswith("list<") or not target_type.endswith(">"):
@@ -205,7 +209,7 @@ class ListRemoveAt(ASTNode):
 class Return(ASTNode):
     expression: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return self.expression.check(v_table, f_table)
     
     def execute(self, env: Environment) -> Any:

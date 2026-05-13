@@ -1,10 +1,10 @@
 from typing import Any, Optional
-from bosh.interpreter.abstract_syntax import *
-from app.error_handler.errors import BoshTypeError
 from .func_table import FuncTable, FunctionSignature
+from ..abstract_syntax import *
 from .symbol_table_scope_stacker import SymbolTableScopeStacker
 
 class TypeChecker:
+    from ..abstract_syntax import Program
     def __init__(self):
         self.v_table = SymbolTableScopeStacker()
         self.f_table = FuncTable()

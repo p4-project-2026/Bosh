@@ -1,13 +1,27 @@
 from .ast_base import *
 
+
+# def make_absolute(self, target_path: str, env: Environment) -> Path:
+#     path = Path(target_path)
+#     if not path.is_absolute():
+#         path = (env.get_current_directory() / path).resolve()
+#     return path
+
 @dataclass
 class GoTo(ASTNode):
     path: ASTNode
 
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         path_type = self.path.check(v_table, f_table)
-        if path_type != "text":
+        if path_type not in ["folder", "text"]:
             raise BoshTypeError(f"Path in 'go to' statement must be of type 'text', got '{path_type}'", self)
+        
+    # def execute(self, env):
+    #     new_wd = self.make_absolute(target_path)
+    #     if not new_wd.is_dir():
+    #         raise Exception(f"Cannot go to '{target_path}': Not a directory")
+        
+    #     self.wd = new_wd
 
 
 @dataclass
@@ -15,8 +29,9 @@ class Make(ASTNode):
     entity_type: str
     name: ASTNode
     location: ASTNode
+    new: bool = False
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         if self.entity_type != "text":
             raise BoshTypeError(f"Entity type in make statement must be 'text', got '{self.entity_type}'", self)
 
@@ -44,7 +59,7 @@ class Make(ASTNode):
 class Delete(ASTNode):
     target: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         target_type = self.target.check(v_table, f_table)
         if target_type != "text":
             raise BoshTypeError(f"Cannot delete type '{target_type}'. Expected 'text'.", self)
@@ -55,7 +70,7 @@ class Rename(ASTNode):
     target: ASTNode
     new_name: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         target_type = self.target.check(v_table, f_table)
         new_name_type = self.new_name.check(v_table, f_table)
         if target_type != "text":
@@ -75,7 +90,7 @@ class Copy(ASTNode):
     source: ASTNode
     target: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         source_type = self.source.check(v_table, f_table)
         target_type = self.target.check(v_table, f_table)
         if source_type != "text":
@@ -89,7 +104,7 @@ class Move(ASTNode):
     source: ASTNode
     target: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         source_type = self.source.check(v_table, f_table)
         target_type = self.target.check(v_table, f_table)
         if source_type != "text":
@@ -102,7 +117,7 @@ class Move(ASTNode):
 class Read(ASTNode):
     source: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         source_type = self.source.check(v_table, f_table)
         if source_type != "text":
             raise BoshTypeError(f"Cannot read type '{source_type}'. Expected 'text'.", self)
@@ -113,7 +128,7 @@ class Write(ASTNode):
     target: ASTNode
     data: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         target_type = self.target.check(v_table, f_table)
         data_type = self.data.check(v_table, f_table)
         if target_type != "text":
@@ -124,7 +139,7 @@ class Write(ASTNode):
 
 @dataclass
 class GoUp(ASTNode):
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         return
 
 
@@ -132,7 +147,7 @@ class GoUp(ASTNode):
 class Execute(ASTNode):
     target: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         target_type = self.target.check(v_table, f_table)
         if target_type != "text":
             raise BoshTypeError(f"Cannot execute type '{target_type}'. Expected 'text'.", self)
@@ -141,7 +156,7 @@ class Execute(ASTNode):
 @dataclass
 class Pause(ASTNode):
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         return
 
 
@@ -149,7 +164,7 @@ class Pause(ASTNode):
 class Wait(ASTNode):
     time: ASTNode
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         duration_type = self.time.check(v_table, f_table)
         if duration_type not in ["number", "decimal", "time"]:
             raise BoshTypeError(f"Duration in 'wait' must be of type 'number', 'decimal' or 'time', got '{duration_type}'", self)
@@ -159,7 +174,7 @@ class Wait(ASTNode):
 class Input(ASTNode):
     prompt: Optional[ASTNode]
     
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         prompt_type = self.prompt.check(v_table, f_table) if self.prompt else None
         if prompt_type != "text":
             raise BoshTypeError(f"Prompt in input statement must be of type 'text', got '{prompt_type}'", self)

@@ -6,6 +6,8 @@ RunTypeError: Any
 ArgumentError: Any
 CLIError: Any
 ConfigurationError: Any
+BoshTypeError: Any
+BoshRuntimeError: Any
 
 # Helper functions
 print_error: Any

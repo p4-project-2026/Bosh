@@ -44,7 +44,7 @@ def get_call_location():
         caller_frame = stack[2]
         filename = Path(caller_frame.filename)
         line_number = caller_frame.lineno
-        return f"{filename}:{line_number}"
+        return f"{filename}, at line {line_number}"
     return "Unknown location"
 
 def get_default_color(color: Optional[str], severity: str) -> str:
@@ -58,6 +58,7 @@ def get_default_color(color: Optional[str], severity: str) -> str:
             case "yellow": return Colors.yellow
             case "white": return Colors.white
             case "black": return Colors.black
+            case _: return Colors.reset
     else:
         match severity:
             case "error": return Colors.red

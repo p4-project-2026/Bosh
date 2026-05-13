@@ -1,10 +1,10 @@
 from lark import Lark, Transformer, v_args
 from lark.exceptions import UnexpectedInput, UnexpectedToken, UnexpectedCharacters
-from interpreter.abstract_syntax.__init__ import *
+from ..abstract_syntax import *
 from colorama import Fore, Style
 
 def parseBosh(processed_code):
-    with open("src/bosh/parser/bosh_lang.lark", "r") as f:
+    with open("src/bosh/interpreter/lexparser/bosh_lang.lark", "r") as f:
         grammar = f.read()
 
     parser = Lark(grammar, start="program", parser="lalr", propagate_positions=True)
@@ -137,9 +137,12 @@ class BoshTransformer(Transformer):
         return node
 
     def make(self, meta, args):
-        entity_type = str(args[0])
-        location = args[2] if len(args) > 2 else None
-        node = Make(entity_type=entity_type, name=args[1], location=location)
+        new = False
+        if len(args) > 3 and args[0] == "new":
+            new = True
+            args = args[1:]
+        location = args[3] if len(args) > 3 else None
+        node = Make(entity_type=args[1], name=args[2], location=location, new=new)
         node.set_meta(meta, self._filename)
         return node
 

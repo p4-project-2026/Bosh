@@ -1,8 +1,14 @@
 from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 from bosh.helper_functions.print import indent, vprint, vvprint
 from bosh.interpreter.pre_processor.pre_processor import PreProcessor
+from bosh.interpreter.lexparser.parser import parseBosh, createAST
+from bosh.interpreter.semantics.type_checker import TypeChecker
+from bosh.interpreter.executor.executor import Executor
+
 class Interpreter:
     code = None
+    parse_tree = None
+    ast = None
 
     def run(self, file_path, run_type):
         vprint(f"Running {file_path} with run type: {run_type}")
@@ -27,7 +33,6 @@ class Interpreter:
         vprint(f"Opening file: {file_path}...")
         Interpreter.code = self._load_code_from_file(file_path)
 
-            
         vvprint(indent(Interpreter.code))
 
         # Preprocess the code
@@ -35,17 +40,22 @@ class Interpreter:
         Interpreter.code = PreProcessor().run(Interpreter.code)
         vvprint(indent(Interpreter.code))
 
-        vprint("parsing code...")
-        # TODO: parse the code here
-        vvprint(indent("parsed code goes here"))
+        vprint("Creating parse-tree...")
+        Interpreter.parse_tree = parseBosh(Interpreter.code)
+        vvprint(indent(Interpreter.parse_tree.pretty()))
 
         vprint("Building AST...")
-        # TODO: Build the AST here
-        vvprint(indent("AST goes here"))
+        Interpreter.ast = createAST(Interpreter.parse_tree)
+        vvprint(indent(Interpreter.ast))
 
-        vprint("Executing code...")
-        # TODO: Execute the code here
-        vvprint(indent("execution result goes here"))
+        vprint("Type checking...")
+        TypeChecker().check(Interpreter.ast)
+        vvprint(indent("Type checking passed!"))
+
+        vprint("Executing code...\n")
+        vprint("Output:")
+        Executor().execute(Interpreter.ast)
+        vvprint("\nExecution complete")
 
 
     def _run_cli(self):

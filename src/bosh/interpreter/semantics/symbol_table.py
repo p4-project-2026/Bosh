@@ -1,4 +1,5 @@
 from bosh.interpreter.executor.environment.table import Table
+
 class symbol_table(Table[str]):
 
     def bind(self, name: str, type_value: str):

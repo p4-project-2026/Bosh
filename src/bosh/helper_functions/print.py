@@ -11,7 +11,7 @@ def print_error(message, exception=None):
     if exception is None:
         print(f"{message}")
     else:
-        print(f"{exception.color}{message}\033[0m")
+        print(f"{exception.color}{message}\033[0m") if hasattr(exception, 'color') else print(f"{message}")
         print(exception)
 
 def vprint(*args, **kwargs):

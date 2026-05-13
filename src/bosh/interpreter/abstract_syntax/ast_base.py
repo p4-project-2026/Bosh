@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import List, Any, Optional
-from semantics.type_checker import ScopeStack, FuncTable, FunctionSignature
-from executor.environment.function_binding import FunctionBinding
-from executor.environment.environment import Environment
-from app.error_handler.errors import BoshTypeError, BoshRuntimeError
+from ..semantics.symbol_table_scope_stacker import SymbolTableScopeStacker as ScopeStack
+from ..semantics.func_table import FuncTable
+from ..executor.environment.function_binding import FunctionBinding
+from ..executor.environment.environment import Environment
+from bosh.app.error_handler.errors import BoshTypeError, BoshRuntimeError
 
 @dataclass
 class Position():
@@ -25,7 +26,7 @@ class ASTNode():
                 filename=filename
             )
 
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         raise BoshTypeError(self.__class__.__name__ + " does not implement check()", self)
     
     def execute(self, env: Environment) -> Any:
@@ -33,21 +34,10 @@ class ASTNode():
 
 
 @dataclass
-class Program(ASTNode):
-    block: Block
-    
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
-        return self.block.check(v_table, f_table)
-    
-    def execute(self, env: Environment) -> Any:
-        return self.block.execute(env)
-
-
-@dataclass
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return_type = None
         for stmt in self.statements:
             stmt_return_type = stmt.check(v_table, f_table)
@@ -62,3 +52,13 @@ class Block(ASTNode):
             return_val = stmt.execute(env)
             if return_val is not None:
                 return return_val
+
+@dataclass
+class Program(ASTNode):
+    block: Block
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        return self.block.check(v_table, f_table)
+    
+    def execute(self, env: Environment) -> Any:
+        return self.block.execute(env)

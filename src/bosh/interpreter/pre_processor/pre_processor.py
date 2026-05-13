@@ -55,10 +55,10 @@ class PreProcessor:
         return self.code
 
     def insert_ifelse_symbol(self):
-        data = self.data.splitlines()
-        for i, line in enumerate(data):
+        code = self.code.splitlines()
+        for i, line in enumerate(code):
             if line.strip().startswith("else") or line.strip().startswith("otherwise"):
-                data[i-1] += "~"
+                code[i-1] += "~"
         
-        self.data = "\n".join(data)
-        return self.data
+        self.code = "\n".join(code)
+        return self.code
