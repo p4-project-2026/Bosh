@@ -24,32 +24,43 @@ class Environment:
         vvvprint("Current scope exited.")
         self.v_table.exit_scope()
     
-    def enter_function_scope(self,name: str) -> FunctionBinding:
-        """Enter a new function scope based on the function definition associated with the given name. returns the FunctionBinding for the function being entered."""
-        function_def = None
+    def get_function(self, name: str) -> FunctionBinding:
+        """Look up a function definition by name."""
         try:
+            vvvprint(f"Environment: Looking up function '{name}'...")
             function_def = self.f_table.lookup(name)
+            vvvprint(f"Environment: Function '{name}' found: {function_def}")
+            return function_def
+
         except Exception as e:
-            raise Exception(f"Error looking up function '{name}': {e}")
-        self.v_table.enter_function_scope(function_def)
-        return function_def
+            raise Exception(f"Environment: Error looking up function '{name}': {e}")
+
+    def enter_function_scope(self,name: str):
+        """Enter a new function scope based on the function definition associated with the given name. returns the FunctionBinding for the function being entered."""
+
+        try:
+            vvvprint(f"Environment: Entering function scope for function '{name}'...")
+            self.v_table.enter_function_scope(function_def = self.f_table.lookup(name))
+            vvvprint(f"Environment: Function scope for function '{name}' entered successfully.")
+        except Exception as e:
+            raise Exception(f"Environment: Error looking up function '{name}': {e}")
         
     def assign_variable(self, name: str, value: any):
         """Assign a value to a variable. If the variable already exists in any assingnable scope, update its value. Otherwise, create a new variable in the current scope."""
-        vvvprint(f"Assigning value to variable '{name}': {value}")
+        vvvprint(f"Environment: Assigning value to variable '{name}': {value}")
         try:
-            vvvprint(f"Looking up variable '{name}' for assignment...")
+            vvvprint(f"Environment: Looking up variable '{name}' for assignment...")
             loc = self.v_table.lookup_assign(name)  # Check if variable exists in any visible scope
-            vvvprint(f"Variable '{name}' found at location {loc}. Updating value...")
+            vvvprint(f"Environment: Variable '{name}' found at location {loc}. Updating value...")
             self.store.set(loc, value)  # Update the value in the store
-            vvvprint(f"Variable '{name}' updated successfully.")
+            vvvprint(f"Environment: Variable '{name}' updated successfully.")
         except Exception:
-            vvvprint(f"Variable '{name}' not found in visible scopes. Creating new variable...")
+            vvvprint(f"Environment: Variable '{name}' not found in visible scopes. Creating new variable...")
             loc = self.store.allocate(value)  # Allocate a new cell in the store
-            vvvprint(f"New variable '{name}' allocated at location {loc} with value {value}. Binding to current scope...")
+            vvvprint(f"Environment: New variable '{name}' allocated at location {loc} with value {value}. Binding to current scope...")
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
-            vvvprint(f"Variable '{name}' bound to location {loc} in current scope successfully.")
-    
+            vvvprint(f"Environment: Variable '{name}' bound to location {loc} in current scope successfully.")
+
     def lookup_variable(self, name: str) -> any:
         """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""
         
