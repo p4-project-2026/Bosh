@@ -5,6 +5,7 @@ from .table import Table
 from .function_binding import FunctionBinding
 from .var_table import VarTable
 from pathlib import Path
+
 class Environment:
     def __init__(self):
         self.v_table = ScopeStack[int](VarTable)

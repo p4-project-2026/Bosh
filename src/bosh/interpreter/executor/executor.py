@@ -1,7 +1,8 @@
 from platform import node
-from ..error_handler import BoshRuntimeError, RuntimeError
+from app.error_handler.errors import BoshRuntimeError
 from .environment.environment import Environment
-from bosh.abstract_syntax import *
+from interpreter.abstract_syntax import *
+
 class Executor:
     # __init__
     def __init__(self):
@@ -13,9 +14,4 @@ class Executor:
             # node.execute(self.environment)
             pass
         except BoshRuntimeError as e:
-            self.error_handler.report_error(
-                message=e.message,
-                error_type=RuntimeError,
-                node=e.node
-            )
-        return None
+            pass

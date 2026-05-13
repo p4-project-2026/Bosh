@@ -30,7 +30,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
 
 
 ?domain_stmt    : "go to" expr -> go_to
-                | ("make " | "create ") "new"? TYPE expr ("in" expr)? -> make
+                | ("make " | "create ") NEW? TYPE expr ("in" expr)? -> make
                 | "rename" expr "to" expr -> rename
                 | "delete" expr -> delete
                 | "copy from" expr "to" expr -> copy_from_to
@@ -132,7 +132,7 @@ interp: "{" expr "}"
 FLOAT: /[0-9]+\.[0-9]+/
 
 path: text ("/" text)*
-
+NEW : "new"
 _BLOCKSTART: "{"
 _BLOCKEND: "}" 
 _SEP: "." _WS* _NL* | _NL+
