@@ -7,6 +7,10 @@ class Print(ASTNode):
     def check(self, v_table: ScopeStack[str], f_table: FuncTable) -> None:
         self.expression.check(v_table, f_table)
 
+    def execute(self, env: Environment) -> None:
+        value = self.expression.execute(env)
+        print(value)
+
 
 @dataclass
 class IfElse(ASTNode):
