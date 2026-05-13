@@ -1,4 +1,4 @@
-from var_table import VarTable
+from .var_table import VarTable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
