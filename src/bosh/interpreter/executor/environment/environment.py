@@ -30,7 +30,7 @@ class Environment:
         self.v_table.enter_function_scope(function_def)
         return function_def
         
-    def assign_variable(self, name: str, value: int):
+    def assign_variable(self, name: str, value: any):
         """Assign a value to a variable. If the variable already exists in any assingnable scope, update its value. Otherwise, create a new variable in the current scope."""
         try:
             loc = self.v_table.lookup_assign(name)  # Check if variable exists in any visible scope
@@ -39,13 +39,14 @@ class Environment:
             loc = self.store.allocate(value)  # Allocate a new cell in the store
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
     
-    def lookup_variable(self, name: str) -> int:
+    def lookup_variable(self, name: str) -> any:
         """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""
         try:
             loc = self.v_table.lookup(name)  # Get the location of the variable from the scope stack
             return self.store.get(loc)  # Retrieve the value from the store using the location
         except Exception as e:
             raise Exception(f"Error looking up variable '{name}': {e}")
+        
     
     def snapshot(self) -> VarTable:
         """Create a snapshot of the current variable scope stack. This is used for capturing the environment when defining a function."""
