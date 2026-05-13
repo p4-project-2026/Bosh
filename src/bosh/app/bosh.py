@@ -27,7 +27,10 @@ class Main:
             raise CLIError(f"Error initializing CLI", cause=e)
 
         # run Interpreter
-        Interpreter().run(ArgumentHandler.file, CLIHandler.run_type)
+        try:
+            Interpreter().run(ArgumentHandler.file, CLIHandler.run_type)
+        except Exception as e:
+            raise BoshRuntimeError(f"Error running interpreter: {e}", cause=e)
 
         # Cli terminator
         CLIHandler().terminator()

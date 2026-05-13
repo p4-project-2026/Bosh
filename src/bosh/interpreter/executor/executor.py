@@ -9,8 +9,4 @@ class Executor:
 
     # evaluate
     def execute(self, node: Program):
-        try:
-            node.execute(self.environment)
-            pass
-        except BoshRuntimeError as e:
-            pass
+        node.execute(self.environment)

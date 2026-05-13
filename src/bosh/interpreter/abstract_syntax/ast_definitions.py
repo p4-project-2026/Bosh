@@ -21,9 +21,11 @@ class Assign(ASTNode):
     def execute(self, env: Environment) -> None:
         value = self.value.execute(env)
         try:
-            env.assign_variable(self.target.execute(env), value.execute(env))
+            print(f"Assigning variable '{self.target.name}' with value: {value}")
+            env.assign_variable(self.target.execute(env), value)
+            print(f"Assigned variable '{self.target.name}' with value: {value}")
         except Exception as e:
-            raise BoshRuntimeError(f"Error assigning value to variable '{self.target.name}': {e}", self)
+            raise BoshRuntimeError(f"Error assigning value to variable '{self.target.name}':", self, cause=e)
         return None
 
 
@@ -83,9 +85,9 @@ class TaskDecl(ASTNode):
         # Create a snapshot of the current variable scope stack to capture the environment for the function
         env_snapshot = env.snapshot()
         # Create a FunctionBinding for the task and bind it to the function table
-        function_binding = FunctionBinding(parameters=self.parameters, body=self.body, env_snapshot=env_snapshot)
+        function_binding = FunctionBinding(parameters=self.parameters, body=self.body, captured_scope=env_snapshot)
         try:
             env.bind_function(self.name, function_binding)
         except Exception as e:
-            raise BoshRuntimeError(f"Error binding function '{self.name}': {e}", self)
+            raise BoshRuntimeError(f"Error binding function '{self.name}':", self, cause=e)
         return None

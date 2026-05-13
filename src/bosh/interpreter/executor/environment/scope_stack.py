@@ -47,7 +47,7 @@ class ScopeStack(Generic[T]):
             if scope.contains(name):
                 return scope.lookup(name)
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
-                break    
+                break
         raise Exception(f"Variable '{name}' not found in scope.")
     
     def lookup_assign(self, name: str) -> T:

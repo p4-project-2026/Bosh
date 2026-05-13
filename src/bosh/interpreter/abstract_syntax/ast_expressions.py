@@ -132,12 +132,13 @@ class TaskCall(ASTNode):
         try:
             task_func = env.enter_function_scope(self.name)
         except Exception as e:
-            raise BoshRuntimeError(f"error executing task '{self.name}': {e}", self)
+            raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
+        
         for i in range(len(task_func.parameters)):
             try:
                 env.assign_variable(task_func.parameters[i], self.arguments[i].execute(env))
             except Exception as e:
-                raise BoshRuntimeError(f"Error assigning argument {i+1} for task '{self.name}': {e}", self)
+                raise BoshRuntimeError(f"Error assigning argument {i+1} for task '{self.name}':", self, cause=e)
         return_value = task_func.execute(env)
         env.exit_function_scope()
         return return_value
