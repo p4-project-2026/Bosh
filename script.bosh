@@ -1,5 +1,1 @@
-task Gcd uses (A)
-    say A
-
-X is 1
-Gcd result using (X)
+say A
