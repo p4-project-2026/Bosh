@@ -1,9 +1,9 @@
 from typing import Optional
-from src.bosh.interpreter.executor.environment.scope_stack import ScopeStack
-from src.bosh.interpreter.executor.environment.store import Store
-from src.bosh.interpreter.executor.environment.table import Table
-from src.bosh.interpreter.executor.environment.function_binding import FunctionBinding
-from src.bosh.interpreter.executor.environment.var_table import VarTable
+from .scope_stack import ScopeStack
+from .store import Store
+from .table import Table
+from .function_binding import FunctionBinding
+from .var_table import VarTable
 from pathlib import Path
 class Environment:
     def __init__(self):
