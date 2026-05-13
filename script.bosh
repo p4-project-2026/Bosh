@@ -1,2 +1,5 @@
+task Gcd uses (A)
+    say A
+
 X is 1
-print X
+Gcd result using (X)

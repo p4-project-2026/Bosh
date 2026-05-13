@@ -21,9 +21,7 @@ class Assign(ASTNode):
     def execute(self, env: Environment) -> None:
         value = self.value.execute(env)
         try:
-            print(f"Assigning variable '{self.target.name}' with value: {value}")
-            env.assign_variable(self.target.execute(env), value)
-            print(f"Assigned variable '{self.target.name}' with value: {value}")
+            env.assign_variable(self.target.name, value)
         except Exception as e:
             raise BoshRuntimeError(f"Error assigning value to variable '{self.target.name}':", self, cause=e)
         return None
@@ -47,7 +45,7 @@ class AssignType(ASTNode):
             
     def execute(self, env: Environment) -> None:
         try:
-            env.assign_variable(self.target.execute(env), self.value.execute(env) if self.value else None)
+            env.assign_variable(self.target.name, self.value.execute(env) if self.value else None)
         except Exception as e:
             raise BoshRuntimeError(f"Error assigning value to variable '{self.target.name}': {e}", self)
                 
