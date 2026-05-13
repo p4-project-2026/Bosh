@@ -1,13 +1,13 @@
 from typing import Optional
-from bosh.executor.scope_stack2 import ScopeStack2
-from bosh.executor.store import Store
-from bosh.executor.table import Table
-from bosh.executor.function_binding import FunctionBinding
-from bosh.executor.var_table import VarTable
+from src.bosh.interpreter.executor.environment.scope_stack import ScopeStack
+from src.bosh.interpreter.executor.environment.store import Store
+from src.bosh.interpreter.executor.environment.table import Table
+from src.bosh.interpreter.executor.environment.function_binding import FunctionBinding
+from src.bosh.interpreter.executor.environment.var_table import VarTable
 from pathlib import Path
 class Environment:
     def __init__(self):
-        self.v_table = ScopeStack2[int](VarTable)
+        self.v_table = ScopeStack[int](VarTable)
         self.f_table = Table[FunctionBinding]()
         self.store = Store()
         self.CD: str = str(Path.cwd())  # Current Directory, used for resolving file paths in import statements
