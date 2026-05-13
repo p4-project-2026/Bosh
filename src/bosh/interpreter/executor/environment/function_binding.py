@@ -1,8 +1,8 @@
-from bosh.executor.var_table import VarTable
+from environment.var_table import VarTable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bosh.abstract_syntax.ast_base import Block
+    from abstract_syntax.ast_base import Block
 
 
 class FunctionBinding:
