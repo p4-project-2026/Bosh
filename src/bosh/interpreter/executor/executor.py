@@ -9,4 +9,6 @@ class Executor:
 
     # evaluate
     def execute(self, node: Program):
+        vvvprint("Executor: Starting execution of the program...")
         node.execute(self.environment)
+        vvvprint("Executor: Program execution completed.")
