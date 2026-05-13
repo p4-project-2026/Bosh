@@ -29,3 +29,4 @@ class PathsHelper:
         if getattr(sys, "frozen", False):
             return self.get_project_root().joinpath("_internal")
         return self.get_project_root().joinpath("src")
+    
