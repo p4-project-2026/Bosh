@@ -3,5 +3,3 @@ from typing import Dict, Optional
 
 class VarTable(Table[int]):
     pass
-
- 
