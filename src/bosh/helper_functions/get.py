@@ -1,3 +1,4 @@
+from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 from bosh.interpreter.interpreter import Interpreter
 
 def get_code() -> str:
@@ -13,3 +14,6 @@ def get_line(line_number: int) -> str:
     if line_number < 1 or line_number > len(lines):
         return ""
     return lines[line_number - 1]
+
+def get_filename() -> str:
+    return ArgumentHandler.file

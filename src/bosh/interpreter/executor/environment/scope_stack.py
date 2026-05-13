@@ -66,7 +66,7 @@ class ScopeStack(Generic[T]):
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
                 vvvprint(f"{self.__class__.__name__}: Reached function scope while looking up variable '{name}'. Stopping search.")
                 break
-        raise Exception(f"Variable '{name}' not found in scope.")
+        raise BoshScriptError(f"Undefined variable '{name}'")
     
     def lookup_assign(self, name: str) -> T:
         vvvprint(f"{self.__class__.__name__}: Looking up variable '{name}' for assignment...")

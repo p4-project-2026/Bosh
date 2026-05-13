@@ -95,8 +95,8 @@ class Identifier(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
             var_type = v_table.lookup(self.name)
-        except Exception:
-            raise BoshTypeError(f"Undefined variable '{self.name}'", self)
+        except BoshScriptError as e:
+            raise LocationError(node = self, cause=e)
         return var_type
 
     def execute(self, env: Environment) -> Any:
@@ -117,20 +117,22 @@ class TaskCall(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
-            signature = f_table.lookup(self.name)
-        except Exception:
-            raise BoshTypeError(f"Undefined task '{self.name}'", self)
-        
-        if len(self.arguments) != len(signature.param_types):
-            raise BoshTypeError(f"Task '{self.name}' expects {len(signature.param_types)} arguments, but {len(self.arguments)} were provided.", self)
-        for i, arg in enumerate(self.arguments):
-            if i < len(signature.param_types):
-                arg_type = arg.check(v_table, f_table)
-                expected_type = signature.param_types[signature.param[i]]
-                if arg_type != expected_type and expected_type != "any":
-                    raise BoshTypeError(f"Argument {i+1} of task '{self.name}' expects type '{expected_type}', but got '{arg_type}'.", self)
-        return signature.return_type
-
+            try:
+                signature = f_table.lookup(self.name)
+            except Exception:
+                raise BoshTypeError(f"Undefined task '{self.name}'", self)
+            
+            if len(self.arguments) != len(signature.param_types):
+                raise BoshTypeError(f"Task '{self.name}' expects {len(signature.param_types)} arguments, but {len(self.arguments)} were provided.", self)
+            for i, arg in enumerate(self.arguments):
+                if i < len(signature.param_types):
+                    arg_type = arg.check(v_table, f_table)
+                    expected_type = signature.param_types[signature.param[i]]
+                    if arg_type != expected_type and expected_type != "any":
+                        raise BoshTypeError(f"Argument {i+1} of task '{self.name}' expects type '{expected_type}', but got '{arg_type}'.", self)
+            return signature.return_type
+        except Exception as e:
+            raise LocationError(node = self, cause=e)
     def execute(self, env: Environment) -> Any:
         try:
             vvvprint(f"Task Call: Looking up task '{self.name}'...")
@@ -158,7 +160,7 @@ class TaskCall(ASTNode):
             vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
             return result
         except Exception as e:
-            raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
+            raise LocationError(node = self,cause = e)
 
 
 @dataclass

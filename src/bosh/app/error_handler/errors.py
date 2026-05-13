@@ -1,3 +1,8 @@
+from pyparsing import line
+
+from bosh.helper_functions.paths import PathsHelper
+from pathlib import Path
+
 from .error_handlers import *
 
 class RunTypeError(Error):
@@ -37,8 +42,15 @@ class BoshScriptError(Error):
         super().__init__(message=message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
 
 class LocationError(Error):
-    def __init__(self, message: str, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
-        formatted_message = f"Error in \"{node.pos.filename}\" a line {node.pos.line}\n{get_line(node.pos.line)}"
-        pos = f" (line {node.lineno}, column {node.col_offset})" if node and hasattr(node, 'lineno') and hasattr(node, 'col_offset') else ""
-        formatted_message += pos
+    def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
+        pos = node.pos
+        severity_prefix = f"[{severity.upper()}]: "
+        line = get_line(pos.line)
+        stripped_length = len(line) - len(line.lstrip())
+        line = line.strip()
+        filename = PathsHelper().get_project_root().joinpath(get_filename())
+        filename = f"\"{filename}\" " if filename else ""
+        print(f"({pos.start_col} - 1 - {stripped_length}) + ^ * ({pos.end_col} - {pos.start_col})")
+        pointer = " " * (pos.start_col - 1 - stripped_length) + "^" * (pos.end_col - pos.start_col)
+        formatted_message = f"    {severity_prefix}{filename}at line {pos.line}\n{indent(line, level=8)}\n{indent(pointer, level=8)}\n{cause.message}"
         super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)

@@ -72,12 +72,12 @@ class TaskDecl(ASTNode):
             body_type = self.body.check(v_table, f_table)
             signature.return_type = body_type if body_type else "any"
         except Exception as e:
-            raise BoshTypeError(str(e), self)
+            raise LocationError(node = self, cause = e)
         finally:
             try:
                 v_table.exit_scope()
             except Exception as e:
-                raise BoshTypeError(str(e), self)
+                raise LocationError(node = self, cause = e)
             
     def execute(self, env: Environment) -> None:
         # Create a snapshot of the current variable scope stack to capture the environment for the function

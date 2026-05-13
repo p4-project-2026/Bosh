@@ -50,8 +50,8 @@ def vvvprint(*args, **kwargs):
     if VeryVeryVerbose.enabled:
         print(*args, **kwargs)
 
-def indent(*args, indent_level=4):
-    indent_str = ' ' * indent_level
+def indent(*args, level=4):
+    indent_str = ' ' * level
     result = []
     for arg in args:
         result.append(indent_str + str(arg).replace("\n", "\n" + indent_str))

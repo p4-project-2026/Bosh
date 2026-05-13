@@ -1,5 +1,4 @@
-task Gcd uses (A)
-    say A
+task X uses (A)
+    say B
 
-X is 1
-Gcd result using (X)
+X result using (1)
