@@ -19,14 +19,20 @@ class FunctionSignature:
 class FuncTable(Table[FunctionSignature]):
     
     def bind(self, name: str, signature: FunctionSignature):
+        vvvprint(f"FuncTable: Attempting to bind function '{name}' with signature {signature} in current scope...")
         if name in self.table:
             raise Exception(f"Function '{name}' already defined in scope.")
+        vvvprint(f"FuncTable: Binding function '{name}' with signature {signature} in current scope...")
         self.table[name] = signature
+        vvvprint(f"FuncTable: Function '{name}' bound successfully.")
 
     def lookup(self, name: str) -> FunctionSignature:
+        vvvprint(f"FuncTable: Looking up function '{name}' in current scope...")
         if name in self.table:
+            vvvprint(f"FuncTable: Function '{name}' found in current scope with signature {self.table[name]}.")
             return self.table[name]
         raise Exception(f"Function '{name}' not found in scope.")
+    
     
 
 
