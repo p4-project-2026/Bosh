@@ -7,6 +7,7 @@ from bosh.interpreter.executor.executor import Executor
 
 class Interpreter:
     code = None
+    processed_code = None
     parse_tree = None
     ast = None
 
@@ -37,11 +38,11 @@ class Interpreter:
 
         # Preprocess the code
         vprint("Preprocessing code...")
-        Interpreter.code = PreProcessor().run(Interpreter.code)
-        vvprint(indent(Interpreter.code))
+        Interpreter.processed_code = PreProcessor().run(Interpreter.code)
+        vvprint(indent(Interpreter.processed_code))
 
         vprint("Creating parse-tree...")
-        Interpreter.parse_tree = parseBosh(Interpreter.code)
+        Interpreter.parse_tree = parseBosh(Interpreter.processed_code)
         vvprint(indent(Interpreter.parse_tree.pretty()))
 
         vprint("Building AST...")

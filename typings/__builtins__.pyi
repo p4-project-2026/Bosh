@@ -15,3 +15,5 @@ vprint: Any
 vvprint: Any
 vvvprint: Any
 indent: Any
+get_code: Any
+get_line: Any

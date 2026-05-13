@@ -6,6 +6,7 @@ from bosh.app.error_handler.errors import RunTypeError, ArgumentError, CLIError,
 
 # helper function imports
 from bosh.helper_functions.print import print_error, vprint, vvprint, vvvprint, indent
+from bosh.helper_functions.get import get_code, get_line
 
 
 class GlobalImporter:
@@ -27,3 +28,5 @@ class GlobalImporter:
         builtins.vvprint = vvprint
         builtins.vvvprint = vvvprint
         builtins.indent = indent
+        builtins.get_code = get_code
+        builtins.get_line = get_line
