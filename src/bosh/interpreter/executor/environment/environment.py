@@ -15,9 +15,13 @@ class Environment:
 
     def new_scope(self):
         """Create a new variable scope."""
+        vvvprint("Entering new scope...")
         self.v_table.new_scope()
+        vvvprint("New scope entered.")
     def exit_scope(self):
+        vvvprint("Exiting current scope...")
         """Exit the current variable scope."""
+        vvvprint("Current scope exited.")
         self.v_table.exit_scope()
     
     def enter_function_scope(self,name: str) -> FunctionBinding:
@@ -32,18 +36,30 @@ class Environment:
         
     def assign_variable(self, name: str, value: any):
         """Assign a value to a variable. If the variable already exists in any assingnable scope, update its value. Otherwise, create a new variable in the current scope."""
+        vvvprint(f"Assigning value to variable '{name}': {value}")
         try:
+            vvvprint(f"Looking up variable '{name}' for assignment...")
             loc = self.v_table.lookup_assign(name)  # Check if variable exists in any visible scope
+            vvvprint(f"Variable '{name}' found at location {loc}. Updating value...")
             self.store.set(loc, value)  # Update the value in the store
+            vvvprint(f"Variable '{name}' updated successfully.")
         except Exception:
+            vvvprint(f"Variable '{name}' not found in visible scopes. Creating new variable...")
             loc = self.store.allocate(value)  # Allocate a new cell in the store
+            vvvprint(f"New variable '{name}' allocated at location {loc} with value {value}. Binding to current scope...")
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
+            vvvprint(f"Variable '{name}' bound to location {loc} in current scope successfully.")
     
     def lookup_variable(self, name: str) -> any:
         """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""
+        
         try:
+            vvvprint(f"Environment looking up variable '{name}'...")
             loc = self.v_table.lookup(name)  # Get the location of the variable from the scope stack
-            return self.store.get(loc)  # Retrieve the value from the store using the location
+            vvvprint(f"Variable '{name}' found at location {loc}. Retrieving value from store...")
+            value = self.store.get(loc)  # Retrieve the value from the store using the location
+            vvvprint(f"Value of variable '{name}' retrieved successfully: {value}")
+            return value
         except Exception as e:
             raise Exception(f"Error looking up variable '{name}': {e}")
         
