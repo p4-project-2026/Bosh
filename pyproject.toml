@@ -19,5 +19,6 @@ dev = [
 
 [project.scripts]
 bosh = "bosh.app.bosh:main"
+bosh_no_try = "bosh.app.bosh:main_no_try"
 build = "scripts.build:build"
 exe = "scripts.build_exe:build_exe"

@@ -54,3 +54,6 @@ def main():
         Main().run()
     except Exception as e:
         print_error(f"Error when running Bosh:", e)
+
+def main_no_try():
+    Main().run()
