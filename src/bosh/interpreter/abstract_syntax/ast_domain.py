@@ -1,4 +1,5 @@
 from .ast_base import *
+from os import path
 
 
 # def make_absolute(self, target_path: str, env: Environment) -> Path:
@@ -23,6 +24,12 @@ class GoTo(ASTNode):
         
     #     self.wd = new_wd
 
+    def execute(self, env: Environment) -> None:
+        path_value = self.path.execute(env)
+        if  path.isdir(path):
+            env.go_to(path.abspath(path_value))
+        else:
+            raise BoshRuntimeError(f"Path '{path_value}' does not exist or is not a directory.", self)
 
 @dataclass
 class Make(ASTNode):
@@ -63,6 +70,10 @@ class Delete(ASTNode):
         target_type = self.target.check(v_table, f_table)
         if target_type != "text":
             raise BoshTypeError(f"Cannot delete type '{target_type}'. Expected 'text'.", self)
+        
+    def execute(self, env: Environment) -> None:
+        target_value = self.target.execute(env)
+        
 
 
 @dataclass
