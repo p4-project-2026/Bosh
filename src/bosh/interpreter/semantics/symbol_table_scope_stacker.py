@@ -1,6 +1,6 @@
-from bosh.executor.scope_stack import ScopeStack2
+from bosh.interpreter.executor.environment.scope_stack import ScopeStack
 from symbol_table import symbol_table2
-class SymbolTableScopeStacker(ScopeStack2):
+class SymbolTableScopeStacker(ScopeStack):
     def __init__(self):
         super().__init__(table_class=symbol_table2)
 
