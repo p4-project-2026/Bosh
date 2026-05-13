@@ -133,23 +133,32 @@ class TaskCall(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
-            vvvprint(f"Executing task '{self.name}'...")
-            task_func = env.enter_function_scope(self.name)
-            vvvprint(f"Task '{self.name}' execution environment set up.")
+            vvvprint(f"Task Call: Looking up task '{self.name}'...")
+            task_func = env.get_function(self.name)
+            vvvprint(f"Task Call: Task '{self.name}' found: {task_func}")
         except Exception as e:
             raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
         
+        values : List[Any] = []
         for i in range(len(task_func.parameters)):
-            try:
-                vvvprint(f"Evaluating argument {i+1} for task '{self.name}'...")
-                value = self.arguments[i].execute(env)
-                vvvprint(f"Assigning {value} argument {task_func.parameters[i]} for task '{self.name}'...")
-                env.assign_variable(task_func.parameters[i], self.arguments[i].execute(env))
-            except Exception as e:
-                raise BoshRuntimeError(f"Error assigning argument {i+1} for task '{self.name}':", self, cause=e)
-        return_value = task_func.body.execute(env)
-        env.exit_scope()
-        return return_value
+            vvvprint(f"Task Call: Evaluating argument {i+1} for task '{self.name}'...")
+            values.append(self.arguments[i].execute(env))
+            vvvprint(f"Task Call: Argument {i+1} for task '{self.name}' evaluated to: {values[-1]}")
+        
+        env.enter_function_scope(self.name)
+        for i in range(len(task_func.parameters)):
+            param_name = task_func.parameters[i]
+            param_value = values[i]
+            vvvprint(f"Task Call: Binding parameter '{param_name}' to value '{param_value}' in function scope for task '{self.name}'...")
+            env.assign_variable(param_name, param_value)
+            vvvprint(f"Task Call: Parameter '{param_name}' bound to value '{param_value}' in function scope for task '{self.name}'.")
+        try:
+            vvvprint(f"Task Call: Executing body of task '{self.name}'...")
+            result = task_func.body.execute(env)
+            vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
+            return result
+        except Exception as e:
+            raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
 
 
 @dataclass
