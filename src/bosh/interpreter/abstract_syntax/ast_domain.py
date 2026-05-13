@@ -34,6 +34,11 @@ class Make(ASTNode):
         if name_type is not None and name_type != "text":
             raise BoshTypeError(f"Cannot use type '{name_type}' as a new name. Expected 'text'.", self)
 
+    def execute(self, env: Environment) -> None:
+        name_value = self.name.execute(env)
+        location_value = self.location.execute(env) if self.location else env.get_current_path()
+        pass  # TODO: Implement logic to create the folder/file at the specified location
+        
 
 @dataclass
 class Delete(ASTNode):
