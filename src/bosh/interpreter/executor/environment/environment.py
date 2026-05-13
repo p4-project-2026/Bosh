@@ -77,26 +77,25 @@ class Environment:
     
     def snapshot(self) -> VarTable:
         """Create a snapshot of the current variable scope stack. This is used for capturing the environment when defining a function."""
+        vvvprint("Environment: Creating snapshot of current variable scope stack...")
         return self.v_table.snapshot()
     
     def bind_function(self, name: str, function_def: FunctionBinding):
         """Bind a function definition to a name in the function table."""
         try:
+            vvvprint(f"Environment: Binding function '{name}' to function definition {function_def}...")
             self.f_table.bind(name, function_def)
+            vvvprint(f"Environment: Function '{name}' bound successfully.")
         except Exception as e:
             raise Exception(f"Error binding function '{name}': {e}")
-        
-    def __lookup_function__(self, name: str) -> FunctionBinding:
-        """Look up a function definition by name."""
-        try:
-            return self.f_table.lookup(name)
-        except Exception as e:
-            raise Exception(f"Error looking up function '{name}': {e}")
 
     def get_current_directory(self) -> str:
         """Get the current directory for resolving file paths in import statements."""
+        vvvprint(f"Environment: Getting current directory: {self.CD}")
         return self.CD
     
     def set_current_directory(self, path: str):
         """Set the current directory for resolving file paths in import statements."""
+        vvvprint(f"Environment: Setting current directory to: {path}")
         self.CD = path
+        vvvprint(f"Environment: Current directory set to: {self.CD}")
