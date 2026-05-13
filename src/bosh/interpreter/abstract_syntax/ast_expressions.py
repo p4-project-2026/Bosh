@@ -100,8 +100,11 @@ class Identifier(ASTNode):
         return var_type
 
     def execute(self, env: Environment) -> Any:
+        vvvprint(f"Looking up variable '{self.name}'...")
         try:
+            vvvprint(f"Variable '{self.name}' found. Retrieving value...")
             value = env.lookup_variable(self.name)
+            vvvprint(f"Value of variable '{self.name}': {value}")
         except Exception:
             raise BoshRuntimeError(f"Undefined variable '{self.name}'", self)
         return value
@@ -130,12 +133,17 @@ class TaskCall(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
+            vvvprint(f"Executing task '{self.name}'...")
             task_func = env.enter_function_scope(self.name)
+            vvvprint(f"Task '{self.name}' execution environment set up.")
         except Exception as e:
             raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
         
         for i in range(len(task_func.parameters)):
             try:
+                vvvprint(f"Evaluating argument {i+1} for task '{self.name}'...")
+                value = self.arguments[i].execute(env)
+                vvvprint(f"Assigning {value} argument {task_func.parameters[i]} for task '{self.name}'...")
                 env.assign_variable(task_func.parameters[i], self.arguments[i].execute(env))
             except Exception as e:
                 raise BoshRuntimeError(f"Error assigning argument {i+1} for task '{self.name}':", self, cause=e)
