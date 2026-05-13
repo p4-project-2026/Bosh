@@ -1,7 +1,5 @@
 from typing import Any, Optional
-from bosh.abstract_syntax import *
-from .symbol_table import SymbolTable
-from .ScopeStack import ScopeStack
+from bosh.interpreter.abstract_syntax import *
 from ..error_handler import ErrorHandler, TypeCheckError, BoshTypeError, BoshRuntimeError
 from .func_table import FuncTable, FunctionSignature
 from .symbol_table_scope_stacker import SymbolTableScopeStacker
