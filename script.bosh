@@ -1,4 +1,1 @@
-task X uses (A)
-    say A
-
-X result using (1)
+say 1.0 >= 1.0

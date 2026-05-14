@@ -249,7 +249,7 @@ class BinaryOp(ASTNode):
             op = self.operator
 
             if left_type == "any" or right_type == "any":
-                if op in ["eq", "neq", "lt", "gt", "gte", "lte", "or", "and"]:
+                if op in ["eq", "neq", "lt", "gt", "goet", "loet", "or", "and"]:
                     return "boolean"
                 if op in ["plus", "minus", "div", "mult", "mod"]:
                     return "any"
@@ -276,7 +276,7 @@ class BinaryOp(ASTNode):
                     raise TraceError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
                 return "boolean"
             
-            elif op in ["lt", "gt", "gte", "lte"]:
+            elif op in ["lt", "gt", "goet", "loet"]:
                 if left_type not in ["number", "decimal", "date", "time"] or right_type not in ["number", "decimal", "date", "time"]:
                     raise TraceError(node = self, cause = f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.")
                 return "boolean"
@@ -311,9 +311,9 @@ class BinaryOp(ASTNode):
                     return self.left.execute(env) < self.right.execute(env)
                 case "gt":
                     return self.left.execute(env) > self.right.execute(env)
-                case "lte":
+                case "loet":
                     return self.left.execute(env) <= self.right.execute(env)
-                case "gte":
+                case "goet":
                     return self.left.execute(env) >= self.right.execute(env)
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported operator '{self.operator}'")

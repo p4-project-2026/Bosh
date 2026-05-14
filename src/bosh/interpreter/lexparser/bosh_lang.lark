@@ -58,8 +58,8 @@ block:  stmt (_SEP+ stmt)* _SEP*
 ?rel_expr   : plus_expr
             | rel_expr ( ">"  | "greater than" ) plus_expr       -> gt
             | rel_expr ( "<"  | "less than" ) plus_expr          -> lt
-            | rel_expr ( ">=" | "greater or equal" ) plus_expr   -> gte
-            | rel_expr ( "<=" | "less or equal" ) plus_expr      -> lte
+            | rel_expr ( ">=" | "greater or equal then" ) plus_expr   -> goet
+            | rel_expr ( "<=" | "less or equal then" ) plus_expr      -> loet
    
 ?plus_expr  : mult_expr
             | plus_expr ("+"|"plus" ) mult_expr -> plus
