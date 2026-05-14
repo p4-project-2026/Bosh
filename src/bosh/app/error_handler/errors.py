@@ -44,7 +44,10 @@ class BoshScriptError(Error):
 
 class TraceError(Error):
     def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None, hide_trace: bool = False):
-        if FlagHandler().get_flag_by_name("trace").enabled: hide_trace = False 
+        if FlagHandler().get_flag_by_name("trace").enabled: hide_trace = False
+        if isinstance(cause, str):
+            hide_trace = True
+        
         pos = node.pos
         severity_prefix = f"[{severity.upper()}]: "
         line = get_line(pos.line)
@@ -53,7 +56,12 @@ class TraceError(Error):
         filename = PathsHelper().get_project_root().joinpath(get_filename())
         filename = f"\"{filename}\" " if filename else ""
         cause = Error(message=cause, severity=severity)
-        pointer = " " * (pos.start_col - 1 - stripped_length) + "^" * (pos.end_col - pos.start_col)
+
+        start_index = max(0, pos.start_col - 1 - stripped_length)
+        end_index = max(start_index + 1, min(len(line), pos.end_col - stripped_length))
+        pointer = " " * start_index + "^" * max(1, end_index - start_index)
+        pointer = pointer.rstrip()
+        
         formatted_message = f"    {severity_prefix}{filename}at line {pos.line}\n{indent(line, level=8)}\n{indent(pointer, level=8)}\n{cause.message}"
         if hide_trace:
             super().__init__(message=cause.message, severity=severity, cause=cause)

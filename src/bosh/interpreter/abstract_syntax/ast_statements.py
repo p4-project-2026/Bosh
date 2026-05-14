@@ -8,15 +8,14 @@ class Print(ASTNode):
         try:
             self.expression.check(v_table, f_table)
         except Exception as e:
-            raise TraceError(node = self, cause = e)
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
     def execute(self, env: Environment) -> None:
         try:
-            print("Print: Evaluating expression to print...")
             value = self.expression.execute(env)
             print(value)
         except Exception as e:
-            raise TraceError(node = self, cause = e)
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
 
 @dataclass
@@ -95,7 +94,7 @@ class ForAll(ASTNode):
             self.body.check(v_table, f_table)
             v_table.exit_scope()
         except Exception as e:
-            raise TraceError(node = self, cause = e)
+            raise TraceError(node = self, cause = e, hide_trace = True)
         
     def execute(self, env: Environment) -> None:
         try:
@@ -113,7 +112,7 @@ class ForAll(ASTNode):
                 finally:
                     env.exit_scope()
         except Exception as e:
-            raise TraceError(node = self, cause = e)
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
 @dataclass
 class RepeatUntil(ASTNode):

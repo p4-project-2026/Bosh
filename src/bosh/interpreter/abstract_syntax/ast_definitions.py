@@ -12,7 +12,6 @@ class Assign(ASTNode):
             value_type = self.value.check(v_table, f_table)
             if value_type is None:
                 raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
-            
             v_table.bind(self.target.name, value_type)
         except Exception as e:
             raise TraceError(node = self, cause = e)
