@@ -36,12 +36,12 @@ class symbol_table(Table[str]):
                 case _:
                     vvvprint(f"SymbolTable: Variable '{name}' is currently bound to an incompatible type '{self.table[name]}', raising exception.")
 
-            raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
+            raise BoshScriptError(f"Variable '{name}' already bound to a different type in current scope.")
         vvvprint(f"SymbolTable:  variable '{name}' is not yet bound in current scope, binding to type '{type_value}'...")
         self.table[name] = type_value
     
     def lookup(self, name: str) -> str:
         if name in self.table:
             return self.table[name]
-        raise Exception(f"Variable '{name}' not found in scope.")
+        raise BoshScriptError(f"Variable '{name}' not found in scope.")
     

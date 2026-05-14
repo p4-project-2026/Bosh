@@ -50,7 +50,7 @@ class LocationError(Error):
         line = line.strip()
         filename = PathsHelper().get_project_root().joinpath(get_filename())
         filename = f"\"{filename}\" " if filename else ""
-        print(f"({pos.start_col} - 1 - {stripped_length}) + ^ * ({pos.end_col} - {pos.start_col})")
+        cause = cause if isinstance(cause, Error) else Error(message=str(cause), severity=severity)
         pointer = " " * (pos.start_col - 1 - stripped_length) + "^" * (pos.end_col - pos.start_col)
         formatted_message = f"    {severity_prefix}{filename}at line {pos.line}\n{indent(line, level=8)}\n{indent(pointer, level=8)}\n{cause.message}"
         super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)

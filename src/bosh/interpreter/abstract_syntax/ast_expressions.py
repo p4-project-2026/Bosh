@@ -40,7 +40,7 @@ class InterpolatedString(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         for part in self.parts:
             if part.check(v_table, f_table) is None:
-                raise BoshTypeError("Undefined variable in interpolated string", self)
+                raise LocationError(node = self, cause = "Undefined variable in interpolated string")
         return "text"
 
     def execute(self, env: Environment) -> str:
@@ -81,7 +81,7 @@ class ListLiteral(ASTNode):
         for elem in self.elements[1:]:
             elem_type = elem.check(v_table, f_table)
             if elem_type != element_type:
-                raise BoshTypeError(f"List elements must all be of the same type, expected {element_type}, got {elem_type}", self)
+                raise LocationError(node = self, cause = f"List elements must all be of the same type, expected {element_type}, got {elem_type}")
         return f"list<{element_type}>"
 
     def execute(self, env: Environment) -> List[Any]:
@@ -105,8 +105,8 @@ class Identifier(ASTNode):
             vvvprint(f"Variable '{self.name}' found. Retrieving value...")
             value = env.lookup_variable(self.name)
             vvvprint(f"Value of variable '{self.name}': {value}")
-        except Exception:
-            raise BoshRuntimeError(f"Undefined variable '{self.name}'", self)
+        except BoshScriptError as e:
+            raise LocationError(node = self, cause = e)
         return value
 
 
@@ -119,27 +119,27 @@ class TaskCall(ASTNode):
         try:
             try:
                 signature = f_table.lookup(self.name)
-            except Exception:
-                raise BoshTypeError(f"Undefined task '{self.name}'", self)
+            except BoshScriptError as e:
+                raise LocationError(node = self, cause = e)
             
             if len(self.arguments) != len(signature.param_types):
-                raise BoshTypeError(f"Task '{self.name}' expects {len(signature.param_types)} arguments, but {len(self.arguments)} were provided.", self)
+                raise LocationError(node = self, cause = f"Task '{self.name}' expects {len(signature.param_types)} arguments, but {len(self.arguments)} were provided.")
             for i, arg in enumerate(self.arguments):
                 if i < len(signature.param_types):
                     arg_type = arg.check(v_table, f_table)
                     expected_type = signature.param_types[signature.param[i]]
                     if arg_type != expected_type and expected_type != "any":
-                        raise BoshTypeError(f"Argument {i+1} of task '{self.name}' expects type '{expected_type}', but got '{arg_type}'.", self)
+                        raise LocationError(node = self, cause = f"Argument {i+1} of task '{self.name}' expects type '{expected_type}', but got '{arg_type}'.")
             return signature.return_type
-        except Exception as e:
+        except BoshScriptError as e:
             raise LocationError(node = self, cause=e)
     def execute(self, env: Environment) -> Any:
         try:
             vvvprint(f"Task Call: Looking up task '{self.name}'...")
             task_func = env.get_function(self.name)
             vvvprint(f"Task Call: Task '{self.name}' found: {task_func}")
-        except Exception as e:
-            raise BoshRuntimeError(f"Error executing task '{self.name}':", self, cause=e)
+        except BoshScriptError as e:
+            raise LocationError(node = self, cause = e)
         
         values : List[Any] = []
         for i in range(len(task_func.parameters)):
@@ -159,7 +159,7 @@ class TaskCall(ASTNode):
             result = task_func.body.execute(env)
             vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
             return result
-        except Exception as e:
+        except LocationError as e:
             raise LocationError(node = self,cause = e)
 
 
@@ -172,21 +172,21 @@ class ListLookup(ASTNode):
         target_type = self.target.check(v_table, f_table)
         index_type = self.index.check(v_table, f_table)
         if not target_type.startswith("list<") or not target_type.endswith(">"):
-            raise BoshTypeError(f"Cannot index type '{target_type}'. Expected a list.", self)
+            raise LocationError(node = self, cause = f"Cannot index type '{target_type}'. Expected a list.")
         if index_type != "number":
-            raise BoshTypeError(f"List index must be of type 'number', got '{index_type}'", self)
+            raise LocationError(node = self, cause = f"List index must be of type 'number', got '{index_type}'")
         return target_type[5:-1]
     
     def execute(self, env: Environment) -> Any:
         try:
             target_value = self.target.execute(env)
-        except Exception as e:
-            raise BoshRuntimeError(f"Error executing list lookup: {e}", self)
+        except BoshScriptError as e:
+            raise LocationError(node = self, cause = e)
         index_value = self.index.execute(env)
         try:
             return target_value[int(index_value)]
-        except Exception as e:
-            raise BoshRuntimeError(f"Error executing list lookup: {e}", self)
+        except BoshScriptError as e:
+            raise LocationError(node = self, cause = e)
 
 @dataclass
 class Unit(ASTNode):
@@ -196,28 +196,28 @@ class Unit(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         target_type = self.target.check(v_table, f_table)
         if target_type not in ["number", "decimal"]:
-            raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.", self)
+            raise LocationError(node = self, cause = f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.")
         return "time"
 
     def execute(self, env: Environment) -> Any:
         target_value = self.target.execute(env)
         match self.unit_type:
-            case "seconds":
+            case "second":
                 return target_value * 1000  # Convert seconds to milliseconds
-            case "minutes":
+            case "minute":
                 return target_value * 60 * 1000  # Convert minutes to milliseconds
-            case "hours":
+            case "hour":
                 return target_value * 60 * 60 * 1000  # Convert hours to milliseconds
-            case "days":
+            case "day":
                 return target_value * 24 * 60 * 60 * 1000  # Convert days to milliseconds
-            case "weeks":
+            case "week":
                 return target_value * 7 * 24 * 60 * 60 * 1000  # Convert weeks to milliseconds
-            case "months":
+            case "month":
                 return target_value * 30 * 24 * 60 * 60 * 1000  # Approximate conversion of months to milliseconds
-            case "years":
+            case "year":
                 return target_value * 365 * 24 * 60 * 60 * 1000  # Approximate conversion of years to milliseconds
             case _:
-                raise BoshRuntimeError(f"Unsupported unit type '{self.unit_type}'", self)
+                raise LocationError(node = self, cause = f"Unsupported unit type '{self.unit_type}'")
 
 @dataclass
 class BinaryOp(ASTNode):
@@ -244,58 +244,61 @@ class BinaryOp(ASTNode):
             elif op == "plus" and left_type == "text" and right_type == "text":
                 return "text"
             else:
-                raise BoshTypeError(f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'", self)
-            
+                raise LocationError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
+
         elif op in ["eq", "neq"]:
             numeric_eq = (left_type in ["number", "decimal"] and right_type in ["number", "decimal"])
             null_eq = (left_type == "null" or right_type == "null")
             if left_type != right_type and not numeric_eq and not null_eq:
-                raise BoshTypeError(f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'", self)
+                raise LocationError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
             return "boolean"
         
         elif op in ["or", "and"]:
             if left_type != "boolean" or right_type != "boolean":
-                raise BoshTypeError(f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'", self)
+                raise LocationError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
             return "boolean"
         
         elif op in ["lt", "gt", "gte", "lte"]:
             if left_type not in ["number", "decimal", "date", "time"] or right_type not in ["number", "decimal", "date", "time"]:
-                raise BoshTypeError(f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.", self)
+                raise LocationError(node = self, cause = f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.")
             return "boolean"
         
         else:
-            raise BoshTypeError(f"Unsupported operator '{op}'", self)
+            raise LocationError(node = self, cause = f"Unsupported operator '{op}'")
 
     def execute(self, env: Environment) -> Any:
-        match self.operator:
-            case "plus":
-                return self.left.execute(env) + self.right.execute(env)
-            case "minus":
-                return self.left.execute(env) - self.right.execute(env)
-            case "mult":
-                return self.left.execute(env) * self.right.execute(env)
-            case "div":
-                return self.left.execute(env) / self.right.execute(env)
-            case "mod":
-                return self.left.execute(env) % self.right.execute(env)
-            case "eq":
-                return self.left.execute(env) == self.right.execute(env)
-            case "neq":
-                return self.left.execute(env) != self.right.execute(env)
-            case "or":
-                return self.left.execute(env) or self.right.execute(env)
-            case "and":
-                return self.left.execute(env) and self.right.execute(env)
-            case "lt":
-                return self.left.execute(env) < self.right.execute(env)
-            case "gt":
-                return self.left.execute(env) > self.right.execute(env)
-            case "lte":
-                return self.left.execute(env) <= self.right.execute(env)
-            case "gte":
-                return self.left.execute(env) >= self.right.execute(env)
-            case _:
-                raise BoshRuntimeError(f"Unsupported operator '{self.operator}'", self)
+        try:
+            match self.operator:
+                case "plus":
+                    return self.left.execute(env) + self.right.execute(env)
+                case "minus":
+                    return self.left.execute(env) - self.right.execute(env)
+                case "mult":
+                    return self.left.execute(env) * self.right.execute(env)
+                case "div":
+                    return self.left.execute(env) / self.right.execute(env)
+                case "mod":
+                    return self.left.execute(env) % self.right.execute(env)
+                case "eq":
+                    return self.left.execute(env) == self.right.execute(env)
+                case "neq":
+                    return self.left.execute(env) != self.right.execute(env)
+                case "or":
+                    return self.left.execute(env) or self.right.execute(env)
+                case "and":
+                    return self.left.execute(env) and self.right.execute(env)
+                case "lt":
+                    return self.left.execute(env) < self.right.execute(env)
+                case "gt":
+                    return self.left.execute(env) > self.right.execute(env)
+                case "lte":
+                    return self.left.execute(env) <= self.right.execute(env)
+                case "gte":
+                    return self.left.execute(env) >= self.right.execute(env)
+                case _:
+                    raise LocationError(node = self, cause = f"Unsupported operator '{self.operator}'")
+        except Exception as e:
+            raise LocationError(node = self, cause = e)
 
 @dataclass
 class UnaryOp(ASTNode):
@@ -307,46 +310,46 @@ class UnaryOp(ASTNode):
         op = self.operator
         if op in ["-", "neg", "negative"]:
             if operand_type not in ["number", "decimal"]:
-                raise BoshTypeError(f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.", self)
+                raise LocationError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
             return operand_type
         
         elif op in ["not_", "not", "!"]:
             if operand_type != "boolean":
-                raise BoshTypeError(f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'boolean'.", self)
+                raise LocationError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'boolean'.")
             return "boolean"
         
         elif op in ["floor", "ceiling", "round"]:
             if operand_type not in ["number", "decimal"]:
-                raise BoshTypeError(f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.", self)
+                raise LocationError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
             return "number"
         
         elif op == "exponent":
             if operand_type not in ["number", "decimal"]:
-                raise BoshTypeError(f"Unary operator 'exponent' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.", self)
+                raise LocationError(node = self, cause = f"Unary operator 'exponent' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
             return "decimal"
         
         elif op == "length":
             is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
             if operand_type != "text" and not is_list:
-                raise BoshTypeError(f"Unary operator 'length' not supported for type '{operand_type}'. Expected 'text' or 'list'.", self)
+                raise LocationError(node = self, cause = f"Unary operator 'length' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
             return "number"
     
         elif op in ["first", "last"]:
             is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
             if operand_type != "text" and not is_list:
-                raise BoshTypeError(f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'text' or 'list'.", self)
+                raise LocationError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
             if operand_type == "text":
                 return "text"
             else:
                 return operand_type[5:-1]
             
         else:
-            raise BoshTypeError(f"Unsupported unary operator '{op}'", self)
+            raise LocationError(node = self, cause = f"Unsupported unary operator '{op}'")
 
     def execute(self, env):
         import math
         match self.operator:
-            case "-":
+            case "neg":
                 return -self.operand.execute(env)
             case "not":
                 return not self.operand.execute(env)
@@ -363,7 +366,7 @@ class UnaryOp(ASTNode):
             case "round":
                 return int(round(self.operand.execute(env)))
             case _:
-                raise BoshRuntimeError(f"Unsupported unary operator '{self.operator}'", self)
+                raise LocationError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
 
 @dataclass
 class AccessOp(ASTNode):
@@ -377,22 +380,22 @@ class AccessOp(ASTNode):
 
         if op == "file_name":
             if target_type != "text":
-                raise BoshTypeError(f"Cannot get file name of type '{target_type}'. Expected 'file' or 'folder'.", self)
+                raise LocationError(node = self, cause = f"Cannot get file name of type '{target_type}'. Expected 'file' or 'folder'.")
             return "text"
         
         elif op == "age":
             if target_type != "text":
-                raise BoshTypeError(f"Cannot get age of type '{target_type}'. Expected 'file' or 'folder'.", self)
+                raise LocationError(node = self, cause = f"Cannot get age of type '{target_type}'. Expected 'file' or 'folder'.")
             return "number"
         
         elif op in ["starts_with", "ends_with", "regex"]:
             if target_type != "text":
-                raise BoshTypeError(f"Cannot apply operation '{op}' to type '{target_type}'. Expected 'text'.", self)
+                raise LocationError(node = self, cause = f"Cannot apply operation '{op}' to type '{target_type}'. Expected 'text'.")
 
             if self.argument is not None:
                 arg_type = self.argument.check(v_table, f_table)
                 if arg_type != "text":
-                    raise BoshTypeError(f"Argument for operation '{op}' must be of type 'text', got '{arg_type}'.", self)
+                    raise LocationError(node = self, cause = f"Argument for operation '{op}' must be of type 'text', got '{arg_type}'.")
             return "boolean"
         
         elif op == "unit":
@@ -401,7 +404,7 @@ class AccessOp(ASTNode):
             elif target_type == "time":
                 return "number"
             else:
-                raise BoshTypeError(f"Time units require a numeric, date, or time target, got '{target_type}'.", self)
+                raise LocationError(node = self, cause = f"Time units require a numeric, date, or time target, got '{target_type}'.")
         
         elif op == "now":
             return "date"
@@ -410,4 +413,4 @@ class AccessOp(ASTNode):
             return "text"
         
         else:
-            raise BoshTypeError(f"Unsupported access operation '{op}'", self)
+            raise LocationError(node = self, cause = f"Unsupported access operation '{op}'")

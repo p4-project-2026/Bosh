@@ -138,11 +138,11 @@ class BoshTransformer(Transformer):
 
     def make(self, meta, args):
         new = False
-        if len(args) > 3 and args[0] == "new":
+        if args[0] == "new":
             new = True
             args = args[1:]
-        location = args[3] if len(args) > 3 else None
-        node = Make(entity_type=args[1], name=args[2], location=location, new=new)
+        location = args[2] if len(args) > 2 else None
+        node = Make(entity_type=args[0], name=args[1], location=location, new=new)
         node.set_meta(meta, self._filename)
         return node
 
