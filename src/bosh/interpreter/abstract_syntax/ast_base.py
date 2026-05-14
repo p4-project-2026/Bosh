@@ -57,7 +57,7 @@ class ASTNode():
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
         vvvprint(f"Block: Checking block with {len(self.statements)} statements...")
         return_type = None
         for stmt in self.statements:
@@ -81,12 +81,20 @@ class Block(ASTNode):
             if return_val is not None:
                 vvvprint(f"Block: Statement {stmt} returned value: {return_val}, exiting block execution.")
                 return return_val
+            
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        vvvprint(f"Block: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
+        
 
 @dataclass
 class Program(ASTNode):
     block: Block
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
         vvvprint("Program: Starting type checking of program...")
         return self.block.check(v_table, f_table)
         vvvprint("Program: Finished type checking of program.")
