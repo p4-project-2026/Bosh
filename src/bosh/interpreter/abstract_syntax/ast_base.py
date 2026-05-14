@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Any, Optional
 from ..semantics.symbol_table_scope_stacker import SymbolTableScopeStacker as ScopeStack
 from ..semantics.func_table import FuncTable
@@ -16,6 +16,8 @@ class Position():
 
 class ASTNode():
     pos: Optional[Position] = None
+    def __init__(self):
+        self.value_node_pairs: list[tuple[set[str], "ASTNode"]] = []
 
     def set_meta(self, meta, filename: Optional[str] = None):
         if meta is not None:
@@ -31,6 +33,24 @@ class ASTNode():
     
     def execute(self, env: Environment) -> Any:
         raise NotImplementedError(self.__class__.__name__ + " does not implement execute()")
+    
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        new_list = []
+        for value, node in self.value_node_pairs:
+            # i want to check if all the values in inference_value are in value and vice versa, and if so, run inference on the node with new_inference_value then replace value with new_inference_value and check the next one
+            if old_inference_value == value:
+                node.inference(v_table, f_table, old_inference_value, new_inference_value)
+                new_list.append((new_inference_value.copy(), node))
+            else:
+                new_list.append((value, node))
+        self.value_node_pairs = new_list
+
+        
+            
 
 
 @dataclass
