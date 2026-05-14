@@ -28,12 +28,7 @@ class Error(Exception):
     
     def __str__(self) -> str:
         # Format the error message with color.
-        result = f"    {self.color}[{self.severity.upper()}]: {self.message}{Colors.reset}"
-        
-        # Append cause if present
-        if self.cause:
-            result += "\n" + str(self.cause)
-        
+        result = f"{self.color}{self.message}{Colors.reset}"
         return result
 
 

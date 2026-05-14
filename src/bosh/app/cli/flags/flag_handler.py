@@ -33,3 +33,6 @@ class FlagHandler:
 
     def get_enabled_flags(self):
         return [flag for flag in self.flags if flag.enabled]
+    
+    def get_flag_by_name(self, name):
+        return {flag.name: flag for flag in self.flags}.get(name)

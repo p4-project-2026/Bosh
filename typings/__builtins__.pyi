@@ -8,6 +8,8 @@ CLIError: Any
 ConfigurationError: Any
 BoshTypeError: Any
 BoshRuntimeError: Any
+BoshScriptError: Any
+TraceError: Any
 
 # Helper functions
 print_error: Any
@@ -17,3 +19,4 @@ vvvprint: Any
 indent: Any
 get_code: Any
 get_line: Any
+get_filename: Any

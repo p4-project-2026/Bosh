@@ -10,9 +10,6 @@ class TypeChecker:
         self.f_table = FuncTable()
 
     def check(self, program_ast: Program):
-        try:
-            vvvprint("TypeChecker: Starting type checking of the program...")
-            program_ast.check(self.v_table, self.f_table)
-            vvvprint("TypeChecker: Type checking completed successfully.")
-        except BoshTypeError as e:
-            pass
+        vvvprint("TypeChecker: Starting type checking of the program...")
+        program_ast.check(self.v_table, self.f_table)
+        vvvprint("TypeChecker: Type checking completed successfully.")

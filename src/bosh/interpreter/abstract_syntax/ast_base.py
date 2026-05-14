@@ -4,7 +4,6 @@ from ..semantics.symbol_table_scope_stacker import SymbolTableScopeStacker as Sc
 from ..semantics.func_table import FuncTable
 from ..executor.environment.function_binding import FunctionBinding
 from ..executor.environment.environment import Environment
-from bosh.app.error_handler.errors import BoshTypeError, BoshRuntimeError
 
 @dataclass
 class Position():
@@ -29,7 +28,7 @@ class ASTNode():
             )
 
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        raise BoshTypeError(self.__class__.__name__ + " does not implement check()", self)
+        raise NotImplementedError(self.__class__.__name__ + " does not implement check()")
     
     def execute(self, env: Environment) -> Any:
         raise NotImplementedError(self.__class__.__name__ + " does not implement execute()")
@@ -67,7 +66,7 @@ class Block(ASTNode):
             if stmt_return_type is not None:
                 vvvprint(f"Block: Statement {stmt} has return type: {stmt_return_type}")
                 if return_type is not None and stmt_return_type != return_type:
-                    raise BoshTypeError(f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'", self)
+                    raise TraceError(node = self, cause = f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'")
                 vvvprint(f"Block: Setting block return type to: {stmt_return_type}")
                 return_type = stmt_return_type
         return return_type
@@ -97,9 +96,7 @@ class Program(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
         vvvprint("Program: Starting type checking of program...")
         return self.block.check(v_table, f_table)
-        vvvprint("Program: Finished type checking of program.")
     
     def execute(self, env: Environment) -> Any:
         vvvprint("Program: Starting execution of program...")
         return self.block.execute(env)
-        vvvprint("Program: Finished execution of program.")

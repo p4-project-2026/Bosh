@@ -5,11 +5,18 @@ class Print(ASTNode):
     expression: ASTNode
 
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        self.expression.check(v_table, f_table)
+        try:
+            self.expression.check(v_table, f_table)
+        except Exception as e:
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
     def execute(self, env: Environment) -> None:
-        value = self.expression.execute(env)
-        print(value)
+        try:
+            value = self.expression.execute(env)
+            value = value if type(value) != bool else ("true" if value else "false")
+            print(value)
+        except Exception as e:
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
 
 @dataclass
@@ -19,39 +26,35 @@ class IfElse(ASTNode):
     else_branch: Optional[Block]
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        condition_type = self.condition.check(v_table, f_table)
-        if condition_type != "boolean":
-            raise BoshTypeError(f"Condition in if statement must be of type 'boolean', got '{condition_type}'", self)
-        
         try:
+            condition_type = self.condition.check(v_table, f_table)
+            if condition_type != "boolean":
+                raise TraceError(node = self, cause = f"Condition in if statement must be of type 'boolean', got '{condition_type}'")
             v_table.new_scope()
             self.then_branch.check(v_table, f_table)
-            v_table.exit_scope()
-        except Exception as e:
-            raise BoshTypeError(str(e), self)
-        
-        if self.else_branch:            
-            try:
+            v_table.exit_scope()            
+            if self.else_branch:
                 v_table.new_scope()
                 self.else_branch.check(v_table, f_table)
                 v_table.exit_scope()
-            except Exception as e:
-                raise BoshTypeError(str(e), self)
-            
+        except Exception as e:
+            raise TraceError(node = self, cause = e, hide_trace = True)
+
     def execute(self, env: Environment) -> None:
-        condition_value = self.condition.execute(env)
-        if condition_value:
-            env.new_scope()
-            try:
-                self.then_branch.execute(env)
-            finally:
+        try:
+            condition_value = self.condition.execute(env)
+            value = None
+            if condition_value:
+                env.new_scope()
+                value = self.then_branch.execute(env)
                 env.exit_scope()
-        elif self.else_branch:
-            env.new_scope()
-            try:
-                self.else_branch.execute(env)
-            finally:
+            elif self.else_branch:
+                env.new_scope()
+                value = self.else_branch.execute(env)
                 env.exit_scope()
+            return value
+        except Exception as e:
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
 
 @dataclass
@@ -60,14 +63,20 @@ class Fallback(ASTNode):
     fallback_stmt: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        self.primary_stmt.check(v_table, f_table)
-        self.fallback_stmt.check(v_table, f_table)
+        try:
+            self.primary_stmt.check(v_table, f_table)
+            self.fallback_stmt.check(v_table, f_table)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
         try:
             self.primary_stmt.execute(env)
         except Exception:
-            self.fallback_stmt.execute(env)
+            try:
+                self.fallback_stmt.execute(env)
+            except Exception as e:
+                raise TraceError(node = self, cause = e)
 
 @dataclass
 class ForAll(ASTNode):
@@ -76,38 +85,41 @@ class ForAll(ASTNode):
     body: Block
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        iterable_type = self.iterable.check(v_table, f_table)
-        if iterable_type is None:
-            return
-        if iterable_type != "text" and not (iterable_type.startswith("list<") and iterable_type.endswith(">")):
-            raise BoshTypeError(f"Iterable in for all statement must be of type 'list' or 'text', got '{iterable_type}'", self)
-        element_type = iterable_type[5:-1] if iterable_type.startswith("list<") else "text"
-        v_table.new_scope()
         try:
+            iterable_type = self.iterable.check(v_table, f_table)
+            if iterable_type is None:
+                return
+            if iterable_type != "text" and not (iterable_type.startswith("list<") and iterable_type.endswith(">")):
+                raise TraceError(node = self, cause = f"Iterable in for all statement must be of type 'list' or 'text', got '{iterable_type}'")
+            element_type = iterable_type[5:-1] if iterable_type.startswith("list<") else "text"
+            v_table.new_scope()
             v_table.bind(self.iterator_name, element_type)
             self.body.check(v_table, f_table)
+            v_table.exit_scope()
         except Exception as e:
-            raise BoshTypeError(str(e), self)
-        finally:
-            try:
-                v_table.exit_scope()
-            except Exception as e:
-                raise BoshTypeError(str(e), self)
+            raise TraceError(node = self, cause = e, hide_trace = True)
         
     def execute(self, env: Environment) -> None:
-        iterable_value = self.iterable.execute(env)
-        if iterable_value is None:
-            return
-        if isinstance(iterable_value, str):
-            iterable_value = [iterable_value]
-        
-        for item in iterable_value:
-            env.new_scope()
-            try:
-                env.assign_variable(self.iterator_name, item)
-                self.body.execute(env)
-            finally:
-                env.exit_scope()
+        try:
+            value = None
+            iterable_value = self.iterable.execute(env)
+            if iterable_value is None:
+                return
+            if isinstance(iterable_value, str):
+                iterable_value = [iterable_value]
+            
+            for item in iterable_value:
+                env.new_scope()
+                try:
+                    env.assign_variable(self.iterator_name, item)
+                    value = self.body.execute(env)
+                    if value is not None:
+                        break
+                finally:
+                    env.exit_scope()
+            return value
+        except Exception as e:
+            raise TraceError(node = self, cause = e, hide_trace = True)
 
 @dataclass
 class RepeatUntil(ASTNode):
@@ -115,21 +127,29 @@ class RepeatUntil(ASTNode):
     body: Block
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        condition_type = self.condition.check(v_table, f_table)
-        if condition_type != "boolean":
-            raise BoshTypeError(f"Condition in repeat until statement must be of type 'boolean', got '{condition_type}'", self)
-        self.body.check(v_table, f_table)
+        try:        
+            condition_type = self.condition.check(v_table, f_table)
+            if condition_type != "boolean":
+                raise TraceError(node = self, cause = f"Condition in repeat until statement must be of type 'boolean', got '{condition_type}'")
+            self.body.check(v_table, f_table)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
-        env.new_scope()
-
-        while True:
-            self.body.execute(env)
-            condition_value = self.condition.execute(env)
-            if condition_value:
-                break
-        
-        env.exit_scope()
+        try:
+            value = None
+            env.new_scope()
+            while True:
+                value = self.body.execute(env)
+                if value is not None:
+                    break
+                condition_value = self.condition.execute(env)
+                if condition_value:
+                    break
+            env.exit_scope()
+            return value
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
 @dataclass
 class Quit(ASTNode):
@@ -146,23 +166,26 @@ class ListAdd(ASTNode):
     item: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        target_type = self.target.check(v_table, f_table)
-        self.item.check(v_table, f_table)
+        try:
+            target_type = self.target.check(v_table, f_table)
+            self.item.check(v_table, f_table)
 
-        if not target_type.startswith("list<") or not target_type.endswith(">"):
-            raise BoshTypeError(f"Cannot add to type '{target_type}'. Can only add to lists.", self)
-        
-        if target_type == "list<any>":
-            item_type = self.item.check(v_table, f_table)
-            try:
+            if not target_type.startswith("list<") or not target_type.endswith(">"):
+                raise TraceError(node = self, cause = f"Cannot add to type '{target_type}'. Can only add to lists.")
+            
+            if target_type == "list<any>":
+                item_type = self.item.check(v_table, f_table)
                 v_table.bind(self.target.name, f"list<{item_type}>")
-            except Exception as e:
-                raise BoshTypeError(str(e), self)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
-        target_value = self.target.execute(env)
-        item_value = self.item.execute(env)
-        target_value.append(item_value)
+        try:
+            target_value = self.target.execute(env)
+            item_value = self.item.execute(env)
+            target_value.append(item_value)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
 
 @dataclass
@@ -171,18 +194,25 @@ class ListRemove(ASTNode):
     item: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        target_type = self.target.check(v_table, f_table)
-        self.item.check(v_table, f_table)
-        if not target_type.startswith("list<") or not target_type.endswith(">"):
-            raise BoshTypeError(f"Cannot remove from type '{target_type}'. Can only remove from lists.", self)
-
-    def execute(self, env: Environment) -> None:
-        target_value = self.target.execute(env)
-        item_value = self.item.execute(env)
         try:
-            target_value.remove(item_value)
-        except ValueError:
-            raise Exception(f"Item '{item_value}' not found in list.")
+            target_type = self.target.check(v_table, f_table)
+            self.item.check(v_table, f_table)
+            if not target_type.startswith("list<") or not target_type.endswith(">"):
+                raise TraceError(node = self, cause = f"Cannot remove from type '{target_type}'. Can only remove from lists.")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
+    def execute(self, env: Environment) -> None:
+        try:
+            target_value = self.target.execute(env)
+            item_value = self.item.execute(env)
+            try:
+                target_value.remove(item_value)
+            except ValueError:
+                raise TraceError(node = self, cause = f"Item '{item_value}' not found in list.")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+            
         
 @dataclass
 class ListRemoveAt(ASTNode):
@@ -190,27 +220,40 @@ class ListRemoveAt(ASTNode):
     index: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        target_type = self.target.check(v_table, f_table)
-        index_type = self.index.check(v_table, f_table)
-        if not target_type.startswith("list<") or not target_type.endswith(">"):
-            raise BoshTypeError(f"Cannot remove from type '{target_type}'. Can only remove from lists.", self)
-        if index_type != "int":
-            raise BoshTypeError(f"Index in list remove at statement must be of type 'int', got '{index_type}'", self)
+        try:
+            target_type = self.target.check(v_table, f_table)
+            index_type = self.index.check(v_table, f_table)
+            if not target_type.startswith("list<") or not target_type.endswith(">"):
+                raise TraceError(node = self, cause = f"Cannot remove from type '{target_type}'. Can only remove from lists.")
+            if index_type != "int":
+                raise TraceError(node = self, cause = f"Index in list remove at statement must be of type 'int', got '{index_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
-        target_value = self.target.execute(env)
-        index_value = self.index.execute(env)
         try:
-            del target_value[index_value]
-        except IndexError:
-            raise Exception(f"Index '{index_value}' out of range for list.")
+            target_value = self.target.execute(env)
+            index_value = self.index.execute(env)
+            try:
+                del target_value[index_value]
+            except IndexError:
+                raise TraceError(node = self, cause = f"Index '{index_value}' out of range for list.")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
 @dataclass
 class Return(ASTNode):
     expression: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        return self.expression.check(v_table, f_table)
-    
+        try:
+            return self.expression.check(v_table, f_table)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> Any:
-        return self.expression.execute(env)
+        try:
+            value = self.expression.execute(env)
+            return value
+        except Exception as e:
+            raise TraceError(node = self, cause = e)

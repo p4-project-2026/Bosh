@@ -1,3 +1,9 @@
+from pyparsing import line
+
+from bosh.app.cli.flags.flag_handler import FlagHandler
+from bosh.helper_functions.paths import PathsHelper
+from pathlib import Path
+
 from .error_handlers import *
 
 class RunTypeError(Error):
@@ -21,7 +27,7 @@ class ConfigurationError(Error):
         super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
 
 class BoshTypeError(Error):
-    def __init__(self, message: str, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
+    def __init__(self, message: str, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
         formatted_message = f"File \"{get_call_location()}\" Bosh Type Error: {message}"
         super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
 
@@ -31,3 +37,33 @@ class BoshRuntimeError(Error):
         pos = f" (line {node.lineno}, column {node.col_offset})" if node and hasattr(node, 'lineno') and hasattr(node, 'col_offset') else ""
         formatted_message += pos
         super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
+
+class BoshScriptError(Error):
+    def __init__(self, message: str, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
+        super().__init__(message=message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
+
+class TraceError(Error):
+    def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None, hide_trace: bool = False):
+        if FlagHandler().get_flag_by_name("trace").enabled: hide_trace = False
+        if isinstance(cause, str):
+            hide_trace = True
+        
+        pos = node.pos
+        severity_prefix = f"[{severity.upper()}]: "
+        line = get_line(pos.line)
+        stripped_length = len(line) - len(line.lstrip())
+        line = line.strip()
+        filename = PathsHelper().get_project_root().joinpath(get_filename())
+        filename = f"\"{filename}\" " if filename else ""
+        cause = Error(message=cause, severity=severity)
+
+        start_index = max(0, pos.start_col - 1 - stripped_length)
+        end_index = max(start_index + 1, min(len(line), pos.end_col - stripped_length))
+        pointer = " " * start_index + "^" * max(1, end_index - start_index)
+        pointer = pointer.rstrip()
+        
+        formatted_message = f"    {severity_prefix}{filename}at line {pos.line}\n{indent(line, level=8)}\n{indent(pointer, level=8)}\n{cause.message}"
+        if hide_trace:
+            super().__init__(message=cause.message, severity=severity, cause=cause)
+        else:
+            super().__init__(message=formatted_message, severity=severity, cause=cause)
