@@ -8,6 +8,7 @@ class Print(ASTNode):
         self.expression.check(v_table, f_table)
 
     def execute(self, env: Environment) -> None:
+        print("Print: Evaluating expression to print...")
         value = self.expression.execute(env)
         print(value)
 
@@ -27,16 +28,16 @@ class IfElse(ASTNode):
             v_table.new_scope()
             self.then_branch.check(v_table, f_table)
             v_table.exit_scope()
-        except BoshScriptError as e:
-            raise LocationError(node = self, cause = e)
+        except Exception as e:
+            raise LocationError(node = self, cause = e, traceback = False)
         
         if self.else_branch:            
             try:
                 v_table.new_scope()
                 self.else_branch.check(v_table, f_table)
                 v_table.exit_scope()
-            except BoshScriptError as e:
-                raise LocationError(node = self, cause = e)
+            except Exception as e:
+                raise LocationError(node = self, cause = e, traceback = False)
 
     def execute(self, env: Environment) -> None:
         condition_value = self.condition.execute(env)
@@ -44,16 +45,16 @@ class IfElse(ASTNode):
             env.new_scope()
             try:
                 self.then_branch.execute(env)
-            except LocationError as e:
-                raise LocationError(node = self, cause = e)
+            # except LocationError as e:
+            #     raise LocationError(node = self, cause = e)
             finally:
                 env.exit_scope()
         elif self.else_branch:
             env.new_scope()
             try:
                 self.else_branch.execute(env)
-            except LocationError as e:
-                raise LocationError(node = self, cause = e)
+            # except LocationError as e:
+            #     raise LocationError(node = self, cause = e)
             finally:
                 env.exit_scope()
 
@@ -90,12 +91,12 @@ class ForAll(ASTNode):
         try:
             v_table.bind(self.iterator_name, element_type)
             self.body.check(v_table, f_table)
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause = e)
         finally:
             try:
                 v_table.exit_scope()
-            except BoshScriptError as e:
+            except Exception as e:
                 raise LocationError(node = self, cause = e)
         
     def execute(self, env: Environment) -> None:
@@ -160,7 +161,7 @@ class ListAdd(ASTNode):
             item_type = self.item.check(v_table, f_table)
             try:
                 v_table.bind(self.target.name, f"list<{item_type}>")
-            except BoshScriptError as e:
+            except Exception as e:
                 raise LocationError(node = self, cause = str(e))
 
     def execute(self, env: Environment) -> None:

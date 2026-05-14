@@ -47,7 +47,7 @@ class AssignType(ASTNode):
         try:
             env.assign_variable(self.target.name, self.value.execute(env) if self.value else None)
         except Exception as e:
-            raise LocationError(node = self, cause = f"Error assigning value to variable '{self.target.name}': {e}")
+            raise LocationError(node = self, cause = e)
                 
     
 @dataclass

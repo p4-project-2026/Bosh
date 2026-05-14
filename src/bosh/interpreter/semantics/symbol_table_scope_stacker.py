@@ -15,7 +15,7 @@ class SymbolTableScopeStacker(ScopeStack):
                     scope.bind(name, type_value)
                     vvvprint(f"SymbolTableScopeStacker: Successfully bound variable '{name}' to type '{type_value}' in scope.")
                 except Exception as e:
-                    raise BoshScriptError(f"Error binding variable '{name}': {e}")
+                    raise Exception(f"Error binding variable '{name}': {e}")
                 return
             vvvprint(f"SymbolTableScopeStacker: Variable '{name}' not found in scope, moving to next outer scope...")
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
@@ -31,7 +31,7 @@ class SymbolTableScopeStacker(ScopeStack):
             self.stack[-1].bind(name, type_value)
             vvvprint(f"SymbolTableScopeStacker: Successfully bound variable '{name}' to type '{type_value}' in current scope.")
         except Exception as e:
-            raise BoshScriptError(f"Error binding variable '{name}' in local scope: {e}")
+            raise Exception(f"Error binding variable '{name}' in local scope: {e}")
         
     def domain(self) -> list[str]:
         vvvprint(f"SymbolTableScopeStacker: Retrieving domain of all visible scopes...")

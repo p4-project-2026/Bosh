@@ -95,7 +95,7 @@ class Identifier(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
             var_type = v_table.lookup(self.name)
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause=e)
         return var_type
 
@@ -105,7 +105,7 @@ class Identifier(ASTNode):
             vvvprint(f"Variable '{self.name}' found. Retrieving value...")
             value = env.lookup_variable(self.name)
             vvvprint(f"Value of variable '{self.name}': {value}")
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause = e)
         return value
 
@@ -119,7 +119,7 @@ class TaskCall(ASTNode):
         try:
             try:
                 signature = f_table.lookup(self.name)
-            except BoshScriptError as e:
+            except Exception as e:
                 raise LocationError(node = self, cause = e)
             
             if len(self.arguments) != len(signature.param_types):
@@ -131,14 +131,15 @@ class TaskCall(ASTNode):
                     if arg_type != expected_type and expected_type != "any":
                         raise LocationError(node = self, cause = f"Argument {i+1} of task '{self.name}' expects type '{expected_type}', but got '{arg_type}'.")
             return signature.return_type
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause=e)
+
     def execute(self, env: Environment) -> Any:
         try:
             vvvprint(f"Task Call: Looking up task '{self.name}'...")
             task_func = env.get_function(self.name)
             vvvprint(f"Task Call: Task '{self.name}' found: {task_func}")
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause = e)
         
         values : List[Any] = []
@@ -158,6 +159,7 @@ class TaskCall(ASTNode):
             vvvprint(f"Task Call: Executing body of task '{self.name}'...")
             result = task_func.body.execute(env)
             vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
+            print(f"Task '{self.name}' returned: {result}")
             return result
         except LocationError as e:
             raise LocationError(node = self,cause = e)
@@ -180,12 +182,12 @@ class ListLookup(ASTNode):
     def execute(self, env: Environment) -> Any:
         try:
             target_value = self.target.execute(env)
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause = e)
         index_value = self.index.execute(env)
         try:
             return target_value[int(index_value)]
-        except BoshScriptError as e:
+        except Exception as e:
             raise LocationError(node = self, cause = e)
 
 @dataclass

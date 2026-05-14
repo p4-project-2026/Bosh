@@ -1,13 +1,6 @@
 from .ast_base import *
 from os import path
 
-
-# def make_absolute(self, target_path: str, env: Environment) -> Path:
-#     path = Path(target_path)
-#     if not path.is_absolute():
-#         path = (env.get_current_directory() / path).resolve()
-#     return path
-
 @dataclass
 class GoTo(ASTNode):
     path: ASTNode
@@ -16,20 +9,15 @@ class GoTo(ASTNode):
         path_type = self.path.check(v_table, f_table)
         if path_type not in ["folder", "text"]:
             raise LocationError(node = self, cause = f"Path in 'go to' statement must be of type 'text', got '{path_type}'")
-        
-    # def execute(self, env):
-    #     new_wd = self.make_absolute(target_path)
-    #     if not new_wd.is_dir():
-    #         raise Exception(f"Cannot go to '{target_path}': Not a directory")
-        
-    #     self.wd = new_wd
 
     def execute(self, env: Environment) -> None:
+        return
         path_value = self.path.execute(env)
         if  path.isdir(path):
             env.go_to(path.abspath(path_value))
         else:
             raise LocationError(node = self, cause = f"Path '{path_value}' does not exist or is not a directory.")
+
 
 @dataclass
 class Make(ASTNode):
