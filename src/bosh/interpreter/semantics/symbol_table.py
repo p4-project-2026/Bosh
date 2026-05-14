@@ -54,6 +54,6 @@ class Symbol_Table(Table[set[str]]):
         vvvprint(f"SymbolTable: Looking up variable '{name}' in current scope...")
         if name in self.table:
             vvvprint(f"SymbolTable: Variable '{name}' found in current scope with type '{self.table[name]}'.")
-            return self.table[name]
+            return self.table[name].copy()
         raise Exception(f"Variable '{name}' not found in scope.")
     
