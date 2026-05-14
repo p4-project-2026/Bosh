@@ -91,12 +91,15 @@ class ListLiteral(ASTNode):
 @dataclass
 class Identifier(ASTNode):
     name: str
+    def  __post_init__(self):
+        super().__init__(self)
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> set[str]:
         try:
             var_type = v_table.lookup(self.name)
         except Exception:
             raise BoshTypeError(f"Undefined variable '{self.name}'", self)
+        self.value_node_pairs.append((var_type, self))
         return var_type
 
     def execute(self, env: Environment) -> Any:
@@ -109,6 +112,39 @@ class Identifier(ASTNode):
             raise BoshRuntimeError(f"Undefined variable '{self.name}'", self)
         return value
 
+    def inference(self, v_table: ScopeStack, f_table: FuncTable, old_inference_value: set[str], new_inference_value: set[str]) -> None:
+        vvvprint(f"Identifier:Inference: Checking if variable '{self.name}' with type '{self.value_node_pairs[0][0]}' matches old inference value {old_inference_value}...")
+        if not self.value_node_pairs[0][0] == old_inference_value:
+            vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{self.value_node_pairs[0][0]}' which is not in inference value {old_inference_value}. No update performed.")
+            return
+        vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{self.value_node_pairs[0][0]}' which matches old inference value {old_inference_value}. Updating to new inference value {new_inference_value}...")
+        try:
+            vvvprint(f"Identifier:Inference: Looking up variable '{self.name}' in symbol table for inference...")
+            var_type = v_table.lookup(self.name)
+        except Exception:
+            raise Exception(f"Identifier: Undefined variable '{self.name}' during type inference", self)
+        if var_type != old_inference_value:
+            vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which does not match old inference value {old_inference_value}. No update performed.")
+            if var_type == new_inference_value:
+                vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which matches new inference value {new_inference_value}. No update needed.")
+                return
+            else:
+                vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which does not match new inference value {new_inference_value}. Updating variable '{self.name}' to new inference value {new_inference_value}...")
+                if var_type.subset(new_inference_value) or new_inference_value.subset(var_type):
+                    vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which is compatible with new inference value {new_inference_value}. Updating variable '{self.name}' to new inference value {new_inference_value}...")
+                    try:
+                        v_table.bind(self.name, new_inference_value.intersection(var_type))
+                    except Exception:
+                        raise Exception(f"Identifier: Inference: Error updating variable '{self.name}' to new inference value {new_inference_value}: {e}")
+                    vvvprint(f"Identifier: Inference: Variable '{self.name}' updated to new inference value {new_inference_value} successfully.")
+                    return
+                else:
+                    raise Exception(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which is incompatible with new inference value {new_inference_value}. Cannot update variable '{self.name}' to new inference value {new_inference_value}.")
+        
+        vvvprint(f"Identifier: Inference: Variable '{self.name}' has type '{var_type}' which is in inference value {old_inference_value}. Updating to new inference value {new_inference_value}...")
+        v_table.bind(self.name, new_inference_value)
+        vvvprint(f"Identifier: Inference: Variable '{self.name}' updated to new inference value {new_inference_value} successfully.")
+        
 
 @dataclass
 class TaskCall(ASTNode):
