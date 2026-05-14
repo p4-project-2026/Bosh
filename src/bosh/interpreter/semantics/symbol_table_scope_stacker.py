@@ -5,7 +5,7 @@ class SymbolTableScopeStacker(ScopeStack):
     def __init__(self):
         super().__init__(table_class=symbol_table)
 
-    def bind(self, name: str, type_value: str):
+    def bind(self, name: str, type_value: set[str]):
         for scope in reversed(self.stack):
             vvvprint(f"SymbolTableScopeStacker: Attempting to bind variable '{name}' to type '{type_value}' in scope: {scope}")
             if scope.contains(name):
@@ -24,7 +24,7 @@ class SymbolTableScopeStacker(ScopeStack):
         vvvprint(f"SymbolTableScopeStacker: Variable '{name}' not found in any outer scope, binding to type '{type_value}' in current scope...")
         self.stack[-1].bind(name, type_value)  # Bind in the current scope if not found in any outer scope
     
-    def bind_local(self, name: str, type_value: str):
+    def bind_local(self, name: str, type_value: set[str]):
         vvvprint(f"SymbolTableScopeStacker: Binding variable '{name}' to type '{type_value}' in current scope...")
         try:
             vvvprint(f"SymbolTableScopeStacker: Attempting to bind variable '{name}' to type '{type_value}' in current scope...")
