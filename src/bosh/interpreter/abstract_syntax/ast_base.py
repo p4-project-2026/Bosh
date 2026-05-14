@@ -68,9 +68,7 @@ class Program(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         vvvprint("Program: Starting type checking of program...")
         return self.block.check(v_table, f_table)
-        vvvprint("Program: Finished type checking of program.")
     
     def execute(self, env: Environment) -> Any:
         vvvprint("Program: Starting execution of program...")
         return self.block.execute(env)
-        vvvprint("Program: Finished execution of program.")
