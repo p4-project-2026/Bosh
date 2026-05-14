@@ -75,6 +75,13 @@ class VeryVeryVerbose:
     enabled = False
     run_type = "value"
 
+class Trace:
+	name = "trace"
+	aliases = ("-t", "--trace")
+	description = "Show the full trace through ifs and loops."
+	enabled = False
+	run_type = "value"
+
 class Pause:
 	name = "pause"
 	aliases = ("-p", "--pause")
