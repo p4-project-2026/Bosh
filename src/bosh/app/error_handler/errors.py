@@ -1,5 +1,6 @@
 from pyparsing import line
 
+from bosh.app.cli.flags.flag_handler import FlagHandler
 from bosh.helper_functions.paths import PathsHelper
 from pathlib import Path
 
@@ -43,6 +44,7 @@ class BoshScriptError(Error):
 
 class TraceError(Error):
     def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None, hide_trace: bool = False):
+        if FlagHandler().get_flag_by_name("trace").enabled: hide_trace = False 
         pos = node.pos
         severity_prefix = f"[{severity.upper()}]: "
         line = get_line(pos.line)
