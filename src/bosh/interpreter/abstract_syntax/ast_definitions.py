@@ -70,7 +70,7 @@ class TaskDecl(ASTNode):
     body: Block
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        "TODO: Refactor to type check the body first to determine the return type, then bind the function signature with the correct return type, then type check the body again to ensure it matches the signature"
+        
         vvvprint(f"TaskDecl: Checking task declaration of '{self.name}' with parameters {self.parameters}...")
         param_types = {param: "any" for param in self.parameters}
         signature = FunctionSignature(parameters=param_types, return_type="any")
