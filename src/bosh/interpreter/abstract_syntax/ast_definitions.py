@@ -8,23 +8,21 @@ class Assign(ASTNode):
     value: ASTNode
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        value_type = self.value.check(v_table, f_table)
-
-        if value_type is None:
-            raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
-
         try:
+            value_type = self.value.check(v_table, f_table)
+            if value_type is None:
+                raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
+            
             v_table.bind(self.target.name, value_type)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
-        value = self.value.execute(env)
         try:
+            value = self.value.execute(env)
             env.assign_variable(self.target.name, value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        return None
 
 
 @dataclass
@@ -34,11 +32,11 @@ class AssignType(ASTNode):
     value: Optional[ASTNode]
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        value_type = self.value.check(v_table, f_table) if self.value else None
-        if value_type and value_type != self.var_type:
-            raise TraceError(node = self, cause = f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'")
-
         try:
+            value_type = self.value.check(v_table, f_table) if self.value else None
+            if value_type and value_type != self.var_type:
+                raise TraceError(node = self, cause = f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'")
+
             v_table.bind(self.target.name, self.var_type)
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -57,35 +55,29 @@ class TaskDecl(ASTNode):
     body: Block
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        param_types = {param: "any" for param in self.parameters}
-        signature = FunctionSignature(parameters=param_types, return_type="any")
-
         try:
+            param_types = {param: "any" for param in self.parameters}
+            signature = FunctionSignature(parameters=param_types, return_type="any")
+
             f_table.bind(self.name, signature)
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
+            v_table.new_scope()
 
-        v_table.new_scope()
-        try:
             for param in self.parameters:
                 v_table.bind(param, "any")
+
             body_type = self.body.check(v_table, f_table)
             signature.return_type = body_type if body_type else "any"
+            v_table.exit_scope()
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        finally:
-            try:
-                v_table.exit_scope()
-            except Exception as e:
-                raise TraceError(node = self, cause = e)
             
     def execute(self, env: Environment) -> None:
-        # Create a snapshot of the current variable scope stack to capture the environment for the function
-        env_snapshot = env.snapshot()
-        # Create a FunctionBinding for the task and bind it to the function table
-        function_binding = FunctionBinding(parameters=self.parameters, body=self.body, captured_scope=env_snapshot)
         try:
+            # Create a snapshot of the current variable scope stack to capture the environment for the function
+            env_snapshot = env.snapshot()
+            # Create a FunctionBinding for the task and bind it to the function table
+            function_binding = FunctionBinding(parameters=self.parameters, body=self.body, captured_scope=env_snapshot)
+
             env.bind_function(self.name, function_binding)
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        return None
