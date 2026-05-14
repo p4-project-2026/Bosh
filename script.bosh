@@ -1,4 +1,4 @@
 task X uses (A)
-    say B
+    say A
 
 X result using (1)
