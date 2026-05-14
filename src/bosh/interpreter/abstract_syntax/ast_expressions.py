@@ -1,3 +1,4 @@
+import os
 from .ast_base import *
 import math
 
@@ -52,7 +53,7 @@ class InterpolatedString(ASTNode):
             result = ""
             for part in self.parts:
                 value = part.execute(env)
-                result += str(value)
+                result += str(value) if type(value) != bool else ("true" if value else "false")
             return result
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -168,7 +169,6 @@ class TaskCall(ASTNode):
             vvvprint(f"Task Call: Executing body of task '{self.name}'...")
             result = task_func.body.execute(env)
             vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
-            print(f"Task '{self.name}' returned: {result}")
             return result
         except TraceError as e:
             raise TraceError(node = self,cause = e)
@@ -440,5 +440,34 @@ class AccessOp(ASTNode):
             
             else:
                 raise TraceError(node = self, cause = f"Unsupported access operation '{op}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+    
+    def execute(self, env: Environment) -> Any:
+        try:
+            target_value = self.target.execute(env) if self.target else None
+            arg_value = self.argument.execute(env) if self.argument else None
+            match self.operation:
+                case "file_name":
+                    return os.path.basename(target_value)
+                case "age":
+                    return os.path.getmtime(target_value)
+                case "starts_with":
+                    return target_value.startswith(arg_value)
+                case "ends_with":
+                    return target_value.endswith(arg_value)
+                case "regex":
+                    import re
+                    return re.search(arg_value, target_value) is not None
+                case "unit":
+                    # This will be handled by the Unit AST node, so we can just return the value here
+                    return target_value
+                case "now":
+                    import datetime
+                    return datetime.datetime.now().isoformat()
+                case "here":
+                    return os.getcwd()
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported access operation '{self.operation}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)

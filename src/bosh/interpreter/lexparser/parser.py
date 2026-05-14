@@ -111,9 +111,6 @@ class BoshTransformer(Transformer):
             var_type = "list<any>"
             value = ListLiteral(elements=[])
 
-        if var_type in ["folder", "file"]:
-            var_type = "text"
-
         node = AssignType(target=target_node, var_type=var_type, value=value)
         node.set_meta(meta, self._filename)
         return node
@@ -445,6 +442,4 @@ class BoshTransformer(Transformer):
         return "year"
     
     def TYPE(self, token):
-        if token.value in ["file", "folder"]:
-            return "text"
         return token.value

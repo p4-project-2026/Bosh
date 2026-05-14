@@ -13,6 +13,7 @@ class Print(ASTNode):
     def execute(self, env: Environment) -> None:
         try:
             value = self.expression.execute(env)
+            value = value if type(value) != bool else ("true" if value else "false")
             print(value)
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
@@ -42,14 +43,16 @@ class IfElse(ASTNode):
     def execute(self, env: Environment) -> None:
         try:
             condition_value = self.condition.execute(env)
+            value = None
             if condition_value:
                 env.new_scope()
-                self.then_branch.execute(env)
+                value = self.then_branch.execute(env)
                 env.exit_scope()
             elif self.else_branch:
                 env.new_scope()
-                self.else_branch.execute(env)
+                value = self.else_branch.execute(env)
                 env.exit_scope()
+            return value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
@@ -98,6 +101,7 @@ class ForAll(ASTNode):
         
     def execute(self, env: Environment) -> None:
         try:
+            value = None
             iterable_value = self.iterable.execute(env)
             if iterable_value is None:
                 return
@@ -108,9 +112,12 @@ class ForAll(ASTNode):
                 env.new_scope()
                 try:
                     env.assign_variable(self.iterator_name, item)
-                    self.body.execute(env)
+                    value = self.body.execute(env)
+                    if value is not None:
+                        break
                 finally:
                     env.exit_scope()
+            return value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
@@ -130,13 +137,17 @@ class RepeatUntil(ASTNode):
 
     def execute(self, env: Environment) -> None:
         try:
+            value = None
             env.new_scope()
             while True:
-                self.body.execute(env)
+                value = self.body.execute(env)
+                if value is not None:
+                    break
                 condition_value = self.condition.execute(env)
                 if condition_value:
                     break
             env.exit_scope()
+            return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
