@@ -6,10 +6,13 @@ from ..semantics.func_table import FunctionSignature
 class Assign(ASTNode):
     target: Identifier
     value: ASTNode
+
+    def 
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         vvvprint(f"Assign: Checking assignment of value '{self.value}' to variable '{self.target.name}'...")
         value_type = self.value.check(v_table, f_table)
+
         vvvprint(f"Assign: Value '{self.value}' has type '{value_type}'")
         if value_type is None:
             raise BoshTypeError(f"Value assigned to '{self.target.name}' is undefined.", self)
@@ -31,6 +34,8 @@ class Assign(ASTNode):
         except Exception as e:
             raise BoshRuntimeError(f"Error assigning value to variable '{self.target.name}':", self, cause=e)
         return None
+    
+    def inference()
 
 
 @dataclass
