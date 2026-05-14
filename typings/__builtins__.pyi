@@ -9,7 +9,7 @@ ConfigurationError: Any
 BoshTypeError: Any
 BoshRuntimeError: Any
 BoshScriptError: Any
-LocationError: Any
+TraceError: Any
 
 # Helper functions
 print_error: Any

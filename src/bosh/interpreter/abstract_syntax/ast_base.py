@@ -46,7 +46,7 @@ class Block(ASTNode):
             if stmt_return_type is not None:
                 vvvprint(f"Block: Statement {stmt} has return type: {stmt_return_type}")
                 if return_type is not None and stmt_return_type != return_type:
-                    raise LocationError(node = self, cause = f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'")
+                    raise TraceError(node = self, cause = f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'")
                 vvvprint(f"Block: Setting block return type to: {stmt_return_type}")
                 return_type = stmt_return_type
         return return_type

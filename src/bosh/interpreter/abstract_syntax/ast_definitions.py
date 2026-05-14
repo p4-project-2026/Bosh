@@ -11,19 +11,19 @@ class Assign(ASTNode):
         value_type = self.value.check(v_table, f_table)
 
         if value_type is None:
-            raise LocationError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
+            raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
 
         try:
             v_table.bind(self.target.name, value_type)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> None:
         value = self.value.execute(env)
         try:
             env.assign_variable(self.target.name, value)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
         return None
 
 
@@ -36,18 +36,18 @@ class AssignType(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         value_type = self.value.check(v_table, f_table) if self.value else None
         if value_type and value_type != self.var_type:
-            raise LocationError(node = self, cause = f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'")
+            raise TraceError(node = self, cause = f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'")
 
         try:
             v_table.bind(self.target.name, self.var_type)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
             
     def execute(self, env: Environment) -> None:
         try:
             env.assign_variable(self.target.name, self.value.execute(env) if self.value else None)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
                 
     
 @dataclass
@@ -63,7 +63,7 @@ class TaskDecl(ASTNode):
         try:
             f_table.bind(self.name, signature)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
 
         v_table.new_scope()
         try:
@@ -72,12 +72,12 @@ class TaskDecl(ASTNode):
             body_type = self.body.check(v_table, f_table)
             signature.return_type = body_type if body_type else "any"
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
         finally:
             try:
                 v_table.exit_scope()
             except Exception as e:
-                raise LocationError(node = self, cause = e)
+                raise TraceError(node = self, cause = e)
             
     def execute(self, env: Environment) -> None:
         # Create a snapshot of the current variable scope stack to capture the environment for the function
@@ -87,5 +87,5 @@ class TaskDecl(ASTNode):
         try:
             env.bind_function(self.name, function_binding)
         except Exception as e:
-            raise LocationError(node = self, cause = e)
+            raise TraceError(node = self, cause = e)
         return None

@@ -41,8 +41,8 @@ class BoshScriptError(Error):
     def __init__(self, message: str, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
         super().__init__(message=message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)
 
-class LocationError(Error):
-    def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None, traceback: bool = True):
+class TraceError(Error):
+    def __init__(self, node: Optional[ast.AST] = None, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None, hide_trace: bool = False):
         pos = node.pos
         severity_prefix = f"[{severity.upper()}]: "
         line = get_line(pos.line)
@@ -53,7 +53,7 @@ class LocationError(Error):
         cause = Error(message=cause, severity=severity)
         pointer = " " * (pos.start_col - 1 - stripped_length) + "^" * (pos.end_col - pos.start_col)
         formatted_message = f"    {severity_prefix}{filename}at line {pos.line}\n{indent(line, level=8)}\n{indent(pointer, level=8)}\n{cause.message}"
-        if traceback:
-            super().__init__(message=formatted_message, severity=severity, cause=cause)
-        else:
+        if hide_trace:
             super().__init__(message=cause.message, severity=severity, cause=cause)
+        else:
+            super().__init__(message=formatted_message, severity=severity, cause=cause)
