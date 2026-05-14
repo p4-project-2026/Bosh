@@ -1,7 +1,7 @@
 from bosh.interpreter.executor.environment.table import Table
 NUMERIC_TYPES = {"number", "decimal"}
         
-class symbol_table(Table[set[str]]):
+class Symbol_Table(Table[set[str]]):
 
     def bind(self, name: str, type_value: set[str]):
         vvvprint(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...")
@@ -49,10 +49,6 @@ class symbol_table(Table[set[str]]):
             return # Allow list<any> to be treated as any other list type
                  
         raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
-    
-
-
-
     
     def lookup(self, name: str) -> set[str]:
         vvvprint(f"SymbolTable: Looking up variable '{name}' in current scope...")
