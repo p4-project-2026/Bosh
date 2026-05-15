@@ -62,6 +62,16 @@ class BoshTransformer(Transformer):
         node = RepeatUntil(condition=args[0], body=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def count(self, meta, args):
+        iterator_name = str(args[0]) if isinstance(args[0], str) else None
+        args = args[1:] if iterator_name else args
+        from_ = args[0]
+        to_ = args[1]
+        body = args[2]
+        node = Count(iterator_name=iterator_name, from_=from_, to_=to_, body=body)
+        node.set_meta(meta, self._filename)
+        return node
 
     def quit(self, meta, args):
         node = Quit()
@@ -267,6 +277,11 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
+    def sqrt(self, meta, args):
+        node = UnaryOp(operator="sqrt", operand=args[0])
+        node.set_meta(meta, self._filename)
+        return node
+
     def not_(self, meta, args):
         node = UnaryOp(operator="not", operand=args[0])
         node.set_meta(meta, self._filename)
@@ -339,6 +354,11 @@ class BoshTransformer(Transformer):
 
     def unit(self, meta, args):
         node = Unit(target=args[0], unit_type=str(args[1]).lower())
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def type_cast(self, meta, args):
+        node = TypeCast(target=args[0], target_type=str(args[1]).lower())
         node.set_meta(meta, self._filename)
         return node
 

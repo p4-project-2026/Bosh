@@ -15,6 +15,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | stmt ("else" | "otherwise") stmt                              -> if_unable
                 | ("for all" | "for each") IDENT "in" expr? ":"? in_code_block  -> for_all
                 | "repeat until" expr ":"?  in_code_block                       -> repeat
+                | "count" IDENT? "from" expr "to" expr ":"? in_code_block    -> count
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
                 | ("return") expr                                               -> return_
@@ -54,8 +55,8 @@ block:  stmt (_SEP+ stmt)* _SEP*
 ?eq_expr    : rel_expr
             | eq_expr  ( "==" | "equals" | "is" )      rel_expr         -> eq
             | eq_expr  ( "!=" | "not equals" | "is not" )  rel_expr     -> neq
-            | rel_expr ( "==" | "is a" ) ( TYPE | PATH )                -> eq_type
-            | rel_expr ( "!=" | "is not a" ) ( TYPE | PATH )            -> neq_type
+            | rel_expr "is a" ( TYPE | PATH )                           -> eq_type
+            | rel_expr "is not a" ( TYPE | PATH )                       -> neq_type
 
 ?rel_expr   : plus_expr
             | rel_expr ( ">"  | "greater than" ) plus_expr              -> gt
@@ -94,6 +95,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | access_expr "age"                     -> age
                 | access_expr "name"                    -> file_name
                 | access_expr unit                      -> unit
+                | access_expr "as" TYPE                 -> type_cast
 
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
