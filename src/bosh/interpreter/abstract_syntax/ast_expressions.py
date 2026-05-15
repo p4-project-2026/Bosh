@@ -1,6 +1,7 @@
 import os
 from .ast_base import *
 import math
+import datetime
 
 @dataclass
 class NumberLiteral(ASTNode):
@@ -55,6 +56,19 @@ class InterpolatedString(ASTNode):
                 value = part.execute(env)
                 result += str(value) if type(value) != bool else ("true" if value else "false")
             return result
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
+@dataclass
+class DateLiteral(ASTNode):
+    value: str
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        return "date"
+    
+    def execute(self, env: Environment) -> datetime.datetime:
+        try:
+            return datetime.datetime.fromisoformat(self.value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
@@ -253,68 +267,118 @@ class BinaryOp(ASTNode):
                     return "boolean"
                 if op in ["plus", "minus", "div", "mult", "mod"]:
                     return "any"
-                # fallback: preserve previous behavior for unknown operators
                 return "any" 
             
-            if op in ["plus", "minus", "div", "mult", "mod"]:
-                if left_type in ["number", "decimal"] and right_type in ["number", "decimal"]:
-                    return "decimal" if "decimal" in [left_type, right_type] else "number"
-                elif op == "plus" and left_type == "text" and right_type == "text":
-                    return "text"
-                else:
+            match op:
+                case "plus" | "minus" | "div" | "mult" | "mod" | "pow":
+                    # numeric <op> numeric
+                    if left_type in ["number", "decimal"] and right_type in ["number", "decimal"]:
+                        return "decimal" if "decimal" in [left_type, right_type] else "number"
+
+                    # string concatenation only for plus
+                    if op == "plus" and left_type == "text" and right_type == "text":
+                        return "text"
+
+                    # time <op> number or number <op> time -> time (allow any arithmetic)
+                    if (left_type == "time" and right_type in ["number", "decimal"]) or (right_type == "time" and left_type in ["number", "decimal"]):
+                        return "time"
+
+                    # time <op> time -> only plus or minus
+                    if left_type == "time" and right_type == "time":
+                        if op in ["plus", "minus"]:
+                            return "time"
+                        raise TraceError(node = self, cause = f"Operator '{op}' not supported between two times; only 'plus' or 'minus' allowed")
+
+                    # date <op> time or time <op> date -> only plus or minus
+                    if (left_type == "date" and right_type == "time"):
+                        if op in ["plus", "minus"]:
+                            # date +/- time -> date; time +/- date -> date (order-insensitive for type checking)
+                            return "date"
+                        raise TraceError(node = self, cause = f"Operator '{op}' not supported between date and time; only 'plus' or 'minus' allowed")
+
+                    # date - date -> time (difference)
+                    if left_type == "date" and right_type == "date":
+                        if op == "minus":
+                            return "time"
+                        raise TraceError(node = self, cause = f"Operator '{op}' not supported between two dates; only 'minus' allowed")
+
                     raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
 
-            elif op in ["eq", "neq"]:
-                numeric_eq = (left_type in ["number", "decimal"] and right_type in ["number", "decimal"])
-                null_eq = (left_type == "null" or right_type == "null")
-                if left_type != right_type and not numeric_eq and not null_eq:
-                    raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
-                return "boolean"
-            
-            elif op in ["or", "and"]:
-                if left_type != "boolean" or right_type != "boolean":
-                    raise TraceError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
-                return "boolean"
-            
-            elif op in ["lt", "gt", "gte", "lte"]:
-                if left_type not in ["number", "decimal", "date", "time"] or right_type not in ["number", "decimal", "date", "time"]:
-                    raise TraceError(node = self, cause = f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.")
-                return "boolean"
-            
-            else:
-                raise TraceError(node = self, cause = f"Unsupported operator '{op}'")
+                case "eq" | "neq":
+                    numeric_eq = (left_type in ["number", "decimal"] and right_type in ["number", "decimal"])
+                    null_eq = (left_type == "null" or right_type == "null")
+                    if left_type != right_type and not numeric_eq and not null_eq:
+                        raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
+                    return "boolean"
+                
+                case "or" | "and":
+                    if left_type != "boolean" or right_type != "boolean":
+                        raise TraceError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
+                    return "boolean"
+                
+                case "lt" | "gt" | "gte" | "lte":
+                    if left_type not in ["number", "decimal", "date", "time"] or right_type not in ["number", "decimal", "date", "time"]:
+                        raise TraceError(node = self, cause = f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.")
+                    return "boolean"
+                
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported operator '{op}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> Any:
         try:
+            # evaluate operands once
+            left_val = self.left.execute(env)
+            right_val = self.right.execute(env)
             match self.operator:
                 case "plus":
-                    return self.left.execute(env) + self.right.execute(env)
+                    # datetime + milliseconds
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                        return left_val + datetime.timedelta(milliseconds=right_val)
+                    # milliseconds + datetime -> swap
+                    if isinstance(right_val, datetime.datetime) and isinstance(left_val, (int, float)):
+                        return right_val + datetime.timedelta(milliseconds=left_val)
+                    # string concatenation
+                    if isinstance(left_val, str) and isinstance(right_val, str):
+                        return left_val + right_val
+                    # fallback to python add (may raise)
+                    return left_val + right_val
                 case "minus":
-                    return self.left.execute(env) - self.right.execute(env)
+                    # datetime - datetime -> timedelta
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, datetime.datetime):
+                        return left_val - right_val
+                    # datetime - milliseconds
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                        return left_val - datetime.timedelta(milliseconds=right_val)
+                    # numeric subtraction
+                    if isinstance(left_val, (int, float)) and isinstance(right_val, (int, float)):
+                        return left_val - right_val
+                    return left_val - right_val
                 case "mult":
-                    return self.left.execute(env) * self.right.execute(env)
+                    return left_val * right_val
                 case "div":
-                    return self.left.execute(env) / self.right.execute(env)
+                    return left_val / right_val
                 case "mod":
-                    return self.left.execute(env) % self.right.execute(env)
+                    return left_val % right_val
+                case "pow":
+                    return left_val ** right_val
                 case "eq":
-                    return self.left.execute(env) == self.right.execute(env)
+                    return left_val == right_val
                 case "neq":
-                    return self.left.execute(env) != self.right.execute(env)
+                    return left_val != right_val
                 case "or":
-                    return self.left.execute(env) or self.right.execute(env)
+                    return bool(left_val) or bool(right_val)
                 case "and":
-                    return self.left.execute(env) and self.right.execute(env)
+                    return bool(left_val) and bool(right_val)
                 case "lt":
-                    return self.left.execute(env) < self.right.execute(env)
+                    return left_val < right_val
                 case "gt":
-                    return self.left.execute(env) > self.right.execute(env)
+                    return left_val > right_val
                 case "lte":
-                    return self.left.execute(env) <= self.right.execute(env)
+                    return left_val <= right_val
                 case "gte":
-                    return self.left.execute(env) >= self.right.execute(env)
+                    return left_val >= right_val
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported operator '{self.operator}'")
         except Exception as e:
@@ -343,11 +407,6 @@ class UnaryOp(ASTNode):
                 if operand_type not in ["number", "decimal"]:
                     raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
                 return "number"
-            
-            elif op == "exponent":
-                if operand_type not in ["number", "decimal"]:
-                    raise TraceError(node = self, cause = f"Unary operator 'exponent' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
-                return "decimal"
             
             elif op == "length":
                 is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
@@ -384,8 +443,6 @@ class UnaryOp(ASTNode):
                     return math.floor(self.operand.execute(env))
                 case "ceiling":
                     return math.ceil(self.operand.execute(env))
-                case "exponent":
-                    return math.exp(self.operand.execute(env))
                 case "round":
                     return int(round(self.operand.execute(env)))
                 case _:
@@ -463,8 +520,7 @@ class AccessOp(ASTNode):
                     # This will be handled by the Unit AST node, so we can just return the value here
                     return target_value
                 case "now":
-                    import datetime
-                    return datetime.datetime.now().isoformat()
+                    return datetime.datetime.now()
                 case "here":
                     return os.getcwd()
                 case _:
