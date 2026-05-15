@@ -1,5 +1,5 @@
 from bosh.interpreter.executor.environment.table import Table
-import bosh.helper_functions.type_helper as type_helper 
+import bosh.helper_functions.type_helper as t_h 
 from bosh.helper_functions.type_helper import EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
         
 class Symbol_Table(Table[set[str]]):
@@ -37,14 +37,14 @@ class Symbol_Table(Table[set[str]]):
             return
             
         
-        if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and type_helper.has_concrete_list_type(type_value):
+        if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and t_h.has_concrete_list_type(type_value):
             vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'list<any>' or 'list<UNKNOWN>', allowing re-binding to specific list type '{type_value}'.")
             self.table[name] = type_value.copy() # Allow list to overwrite list<any> and list<UNKNOWN> with specific list type
             return
         
         
         if (type_value in ({UNKNOWN_LIST_TYPE}, {EMPTY_LIST_TYPE}) 
-        and type_helper.has_concrete_list_type(current_type)):
+        and t_h.has_concrete_list_type(current_type)):
             vvvprint(f"SymbolTable: Attempting to bind 'list<UNKNOWN>' or 'list<any>' to variable '{name}' which is currently bound to specific list type '{current_type}', allowing re-binding.")
             return # Allow list<any> and list<UNKNOWN> to be treated as specific list type
         
