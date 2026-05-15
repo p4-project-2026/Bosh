@@ -365,6 +365,9 @@ class BinaryOp(ASTNode):
                         raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
                     return "boolean"
                 
+                case "eq_type" | "neq_type":
+                    return "boolean"
+                
                 case "or" | "and":
                     if left_type != "boolean" or right_type != "boolean":
                         raise TraceError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
@@ -382,9 +385,8 @@ class BinaryOp(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
-            # evaluate operands once
-            left_val = self.left.execute(env)
-            right_val = self.right.execute(env)
+            left_val = self.left.execute(env) if isinstance(self.left, ASTNode) else self.left
+            right_val = self.right.execute(env) if isinstance(self.right, ASTNode) else self.right
             match self.operator:
                 case "plus":
                     # datetime + milliseconds
@@ -423,6 +425,10 @@ class BinaryOp(ASTNode):
                     return left_val == right_val
                 case "neq":
                     return left_val != right_val
+                case "eq_type":
+                    return python_type_to_bosh_type(type(left_val)) == right_val
+                case "neq_type":
+                    return python_type_to_bosh_type(type(left_val)) != right_val
                 case "or":
                     return bool(left_val) or bool(right_val)
                 case "and":

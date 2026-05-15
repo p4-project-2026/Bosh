@@ -226,6 +226,16 @@ class BoshTransformer(Transformer):
         node = BinaryOp(operator="neq", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def eq_type(self, meta, args):
+        node = BinaryOp(operator="eq_type", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def neq_type(self, meta, args):
+        node = BinaryOp(operator="neq_type", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
 
     def gt(self, meta, args):
         node = BinaryOp(operator="gt", left=args[0], right=args[1])
