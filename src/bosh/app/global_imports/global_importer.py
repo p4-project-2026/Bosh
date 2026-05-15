@@ -7,6 +7,7 @@ from bosh.app.error_handler.errors import TraceError, RunTypeError, ArgumentErro
 # helper function imports
 from bosh.helper_functions.print import print_error, vprint, vvprint, vvvprint, indent
 from bosh.helper_functions.get import get_code, get_line, get_filename
+from bosh.helper_functions.types import python_type_to_bosh_type
 
 
 class GlobalImporter:
@@ -33,3 +34,4 @@ class GlobalImporter:
         builtins.get_code = get_code
         builtins.get_line = get_line
         builtins.get_filename = get_filename
+        builtins.python_type_to_bosh_type = python_type_to_bosh_type
