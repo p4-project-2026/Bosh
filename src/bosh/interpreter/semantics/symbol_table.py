@@ -1,6 +1,6 @@
 from bosh.interpreter.executor.environment.table import Table
-
-
+import bosh.helper_functions.type_helper as type_helper 
+from bosh.helper_functions.type_helper import EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
         
 class Symbol_Table(Table[set[str]]):
 
@@ -36,26 +36,23 @@ class Symbol_Table(Table[set[str]]):
             self.table[name] = overlap
             return
             
-        is_specific_list_type = any(
-        t.startswith("list<") and t.endswith(">")
-        for t in type_value
-        )
-
-            
-        if current_type in ({"list<any>"}, {"list<UNKNOWN>"}) and is_specific_list_type:
+        
+        if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and type_helper.has_concrete_list_type(type_value):
             vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'list<any>' or 'list<UNKNOWN>', allowing re-binding to specific list type '{type_value}'.")
-            self.table[name] = type_value.copy() # Allow list<any> or list<UNKNOWN> to be treated as any other list type
+            self.table[name] = type_value.copy() # Allow list to overwrite list<any> and list<UNKNOWN> with specific list type
             return
         
-        is_current_specific_list_type = any(
-        t.startswith("list<") and t.endswith(">")
-        for t in current_type
-        )
         
-        if type_value in ({"list<UNKNOWN>"}, {"list<any>"}) and is_current_specific_list_type:
+        if (type_value in ({UNKNOWN_LIST_TYPE}, {EMPTY_LIST_TYPE}) 
+        and type_helper.has_concrete_list_type(current_type)):
             vvvprint(f"SymbolTable: Attempting to bind 'list<UNKNOWN>' or 'list<any>' to variable '{name}' which is currently bound to specific list type '{current_type}', allowing re-binding.")
-            return # Allow list<UNKNOWN> to be treated as any other list type
-                 
+            return # Allow list<any> and list<UNKNOWN> to be treated as specific list type
+        
+        if type_value == {UNKNOWN_LIST_TYPE} and current_type == {EMPTY_LIST_TYPE}:
+            vvvprint(f"SymbolTable: Attempting to bind 'list<UNKNOWN>' to variable '{name}' which is currently bound to 'list<any>', allowing re-binding.")
+            self.table[name] = {UNKNOWN_LIST_TYPE} # Allow list<UNKNOWN> to overwrite as list<any>
+            return
+        
         raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
     
     def lookup(self, name: str) -> set[str]:
