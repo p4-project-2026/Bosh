@@ -53,8 +53,14 @@ class TraceError(Error):
         line = get_line(pos.line)
         stripped_length = len(line) - len(line.lstrip())
         line = line.strip()
-        filename = PathsHelper().get_project_root().joinpath(get_filename())
-        filename = f"\"{filename}\" " if filename else ""
+
+        # if --cmd flag is used, theres on filename
+        if FlagHandler().get_flag_by_name("cmd").enabled:
+            filename = ""
+        else:
+            filename = PathsHelper().get_project_root().joinpath(get_filename())
+            filename = f"\"{filename}\""
+
         cause = Error(message=cause, severity=severity)
 
         start_index = max(0, pos.start_col - 1 - stripped_length)

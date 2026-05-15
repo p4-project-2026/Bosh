@@ -1,4 +1,4 @@
-task X uses (A)
-    say B
+function X:
+    say "WeeWoo"
 
-X result using (1)
+run X

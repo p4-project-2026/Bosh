@@ -263,7 +263,7 @@ class BinaryOp(ASTNode):
             op = self.operator
 
             if left_type == "any" or right_type == "any":
-                if op in ["eq", "neq", "lt", "gt", "gte", "lte", "or", "and"]:
+                if op in ["eq", "neq", "lt", "gt", "goet", "loet", "or", "and"]:
                     return "boolean"
                 if op in ["plus", "minus", "div", "mult", "mod"]:
                     return "any"
@@ -374,11 +374,11 @@ class BinaryOp(ASTNode):
                 case "lt":
                     return left_val < right_val
                 case "gt":
-                    return left_val > right_val
-                case "lte":
-                    return left_val <= right_val
-                case "gte":
-                    return left_val >= right_val
+                    return self.left.execute(env) > self.right.execute(env)
+                case "loet":
+                    return self.left.execute(env) <= self.right.execute(env)
+                case "goet":
+                    return self.left.execute(env) >= self.right.execute(env)
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported operator '{self.operator}'")
         except Exception as e:

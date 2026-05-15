@@ -18,15 +18,15 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
                 | ("return") expr                                               -> return_
-                | ( "add" | "append" ) expr "to" expr                           -> add_to_list
+                | "append" expr "to" expr                                       -> add_to_list
                 | "remove" expr "from" expr                                     -> remove_from_list
                 | "remove element" expr "from" expr                             -> remove_from_list_index
-                | IDENT "result" ("using" "(" expr ("," expr)* ")")?            -> call_func
+                | ( "run" | "call" ) IDENT ("using" "(" expr ("," expr)* ")")?  -> call_func
 
 
 ?def_stmt       : IDENT "is" expr               -> assign
                 | IDENT "is" "a" TYPE expr?     -> assign_type
-                | "new"? "task" IDENT ("uses" "(" (IDENT ("," IDENT)*)? ")")? ":"? in_code_block -> assign_func
+                | "new"? ( "task" | "function" ) IDENT ("uses" "(" (IDENT ("," IDENT)*)? ")")? ":"? in_code_block -> assign_func
 
 
 ?domain_stmt    : ("make " | "create ") NEW? PATH expr ("in" expr)? -> make
@@ -38,7 +38,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | "move" expr "to" expr         -> move
                 | "read" expr                   -> read
                 | "write" expr "to" expr        -> write
-                | ("execute" | "run") expr      -> execute
+                | "execute" expr                -> execute
                 | "pause"                       -> pause
                 | "wait" expr                   -> wait
 
@@ -60,8 +60,8 @@ block:  stmt (_SEP+ stmt)* _SEP*
 ?rel_expr   : plus_expr
             | rel_expr ( ">"  | "greater than" ) plus_expr              -> gt
             | rel_expr ( "<"  | "less than" ) plus_expr                 -> lt
-            | rel_expr ( ">=" | "greater or equal than" ) plus_expr     -> gte
-            | rel_expr ( "<=" | "less or equal than" ) plus_expr        -> lte
+            | rel_expr ( ">=" | "greater or equal than" ) plus_expr     -> goet
+            | rel_expr ( "<=" | "less or equal than" ) plus_expr        -> loet
             | access_expr "regex" access_expr                           -> regex
             | access_expr "starts with" access_expr                     -> starts_with
             | access_expr "ends with" access_expr                       -> ends_with
@@ -94,8 +94,6 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | access_expr "age"                     -> age
                 | access_expr "name"                    -> file_name
                 | access_expr unit                      -> unit
-
-
 
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func

@@ -227,13 +227,13 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
-    def gte(self, meta, args):
-        node = BinaryOp(operator="gte", left=args[0], right=args[1])
+    def goet(self, meta, args):
+        node = BinaryOp(operator="goet", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
 
-    def lte(self, meta, args):
-        node = BinaryOp(operator="lte", left=args[0], right=args[1])
+    def loet(self, meta, args):
+        node = BinaryOp(operator="loet", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
 
