@@ -61,6 +61,14 @@ class Environment:
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
             vvvprint(f"Environment: Variable '{name}' bound to location {loc} in current scope successfully.")
 
+    def bind_local_variable(self, name: str, value: any):
+        """Bind a variable to the current scope without checking outer scopes. This is used for binding function parameters and local variables."""
+        vvvprint(f"Environment: Binding local variable '{name}' to value {value} in current scope...")
+        loc = self.store.allocate(value)  # Allocate a new cell in the store
+        vvvprint(f"Environment: Local variable '{name}' allocated at location {loc} with value {value}. Binding to current scope...")
+        self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
+        vvvprint(f"Environment: Local variable '{name}' bound to location {loc} in current scope successfully.")
+
     def lookup_variable(self, name: str) -> any:
         """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""
         
