@@ -11,127 +11,133 @@ block:  stmt (_SEP+ stmt)* _SEP*
         | def_stmt
 
 
-?general_stmt   : stmt ("else" | "otherwise") stmt  -> if_unable
-                | "if" expr ":"? in_code_block ("~" _NL* ( "else"|"otherwise") ":"?  in_code_block)?  -> if_else
-                | ("for all" | "for each") IDENT "in" expr? ":"? in_code_block -> for_all
-                | "repeat until" expr ":"?  in_code_block -> repeat
-                | ("stop" | "quit") -> quit
-                | ("say" | "print" | "output") expr -> print
-                | ("return") expr   -> return_
-                | "append" expr "to" expr -> add_to_list
-                | "remove" expr "from" expr -> remove_from_list
-                | "remove element" expr "from" expr -> remove_from_list_index
-                | ("run" | "call") IDENT ("using" "(" expr ("," expr)* ")")? -> call_func
+?general_stmt   : "if" expr ":"? in_code_block ("~" _NL* ( "else"|"otherwise") ":"?  in_code_block)?  -> if_else
+                | stmt ("else" | "otherwise") stmt                              -> if_unable
+                | ("for all" | "for each") IDENT "in" expr? ":"? in_code_block  -> for_all
+                | "repeat until" expr ":"?  in_code_block                       -> repeat
+                | ("stop" | "quit")                                             -> quit
+                | ("say" | "print" | "output") expr                             -> print
+                | ("return") expr                                               -> return_
+                | "append" expr "to" expr                                       -> add_to_list
+                | "remove" expr "from" expr                                     -> remove_from_list
+                | "remove element" expr "from" expr                             -> remove_from_list_index
+                | ( "run" | "call" ) IDENT ("using" "(" expr ("," expr)* ")")?  -> call_func
 
 
-?def_stmt       : IDENT "is" expr -> assign
-                | IDENT "is" "a" TYPE expr? -> assign_type
+?def_stmt       : IDENT "is" expr               -> assign
+                | IDENT "is" "a" TYPE expr?     -> assign_type
                 | "new"? ( "task" | "function" ) IDENT ("uses" "(" (IDENT ("," IDENT)*)? ")")? ":"? in_code_block -> assign_func
 
 
-?domain_stmt    : "go to" expr -> go_to
-                | ("make " | "create ") NEW? TYPE expr ("in" expr)? -> make
-                | "rename" expr "to" expr -> rename
-                | "delete" expr -> delete
-                | "copy from" expr "to" expr -> copy_from_to
-                | "go up" -> go_up
-                | "move" expr "to" expr -> move
-                | "read" expr -> read
-                | "write" expr "to" expr -> write
-                | ("execute") expr -> execute
-                | "pause" -> pause
-                | "wait" expr -> wait
+?domain_stmt    : ("make " | "create ") NEW? PATH expr ("in" expr)? -> make
+                | "go to" expr                  -> go_to
+                | "rename" expr "to" expr       -> rename
+                | "delete" expr                 -> delete
+                | "copy from" expr "to" expr    -> copy_from_to
+                | "go up"                       -> go_up
+                | "move" expr "to" expr         -> move
+                | "read" expr                   -> read
+                | "write" expr "to" expr        -> write
+                | "execute" expr                -> execute
+                | "pause"                       -> pause
+                | "wait" expr                   -> wait
 
 
-?expr   :or_expr    
+?expr   : or_expr
 
 ?or_expr    : and_expr
-            | or_expr ( "||"  | "or" ) and_expr -> or_
+            | or_expr ( "||"  | "or" ) and_expr  -> or_
 
 ?and_expr   : eq_expr
-            | and_expr ( "&&"  | "and" ) eq_expr -> and_ 
+            | and_expr ( "&&"  | "and" ) eq_expr -> and_
 
 ?eq_expr    : rel_expr
-            | eq_expr ("==" | "equals" ) rel_expr               -> eq
-            | rel_expr ( "!=" | "not equals" ) plus_expr        -> neq
+            | eq_expr  ( "==" | "equals" | "is" )      rel_expr         -> eq
+            | eq_expr  ( "!=" | "not equals" | "is not" )  rel_expr     -> neq
+            | rel_expr ( "==" | "is a" ) ( TYPE | PATH )                -> eq_type
+            | rel_expr ( "!=" | "is not a" ) ( TYPE | PATH )            -> neq_type
 
 ?rel_expr   : plus_expr
-            | rel_expr ( ">"  | "greater than" ) plus_expr       -> gt
-            | rel_expr ( "<"  | "less than" ) plus_expr          -> lt
-            | rel_expr ( ">=" | "greater or equal than" ) plus_expr   -> goet
-            | rel_expr ( "<=" | "less or equal than" ) plus_expr      -> loet
-   
+            | rel_expr ( ">"  | "greater than" ) plus_expr              -> gt
+            | rel_expr ( "<"  | "less than" ) plus_expr                 -> lt
+            | rel_expr ( ">=" | "greater or equal than" ) plus_expr     -> goet
+            | rel_expr ( "<=" | "less or equal than" ) plus_expr        -> loet
+            | access_expr "regex" access_expr                           -> regex
+            | access_expr "starts with" access_expr                     -> starts_with
+            | access_expr "ends with" access_expr                       -> ends_with
+
 ?plus_expr  : mult_expr
-            | plus_expr ("+"|"plus" ) mult_expr -> plus
-            | plus_expr ("-"| "minus" ) mult_expr -> minus
+            | plus_expr ( "+" | "plus" ) mult_expr       -> plus
+            | plus_expr ( "-" | "minus" ) mult_expr      -> minus
 
-?mult_expr  :unary_expr
-            | mult_expr ( "*"  | "times" ) unary_expr -> mult
-            | mult_expr ( "/" | "divided by" ) unary_expr -> div
-            | mult_expr ( "%" | "mod" ) unary_expr -> mod
+?mult_expr  : unary_expr
+            | mult_expr ( "*" | "times" ) unary_expr            -> mult
+            | mult_expr ( "/" | "divided by" ) unary_expr       -> div
+            | mult_expr ( "%" | "mod" ) unary_expr              -> mod
 
-?unary_expr : access_expr
-            | ("not" | "!") unary_expr -> not_
-            | ("negative" | "neg" | "-") unary_expr -> neg
-            | "length of" access_expr -> length
-            | "first element of" access_expr -> first
-            | "last element of"  access_expr -> last
-            | "floor of" access_expr -> floor
-            | "ceiling of" access_expr -> ceiling
-            | "exponent of" access_expr -> exponent
-            | "round of" access_expr -> round
+?unary_expr : pow_expr
+            | ( "not" | "!" ) unary_expr                -> not_
+            | ( "negative" | "neg" | "-" ) unary_expr   -> neg
+            | "floor of" pow_expr                       -> floor
+            | "ceiling of" pow_expr                     -> ceiling
+            | "round of" pow_expr                       -> round
+
+?pow_expr   : access_expr
+            | pow_expr ( "^" | "pow" | "to the power of" ) access_expr  -> pow
+            | ( "sqrt" | "square root of" ) access_expr                 -> sqrt
 
 ?access_expr    : term
-                | access_expr "at" "index"? access_expr -> list_look
-                | "regex" access_expr -> regex
-                | access_expr "age" -> age
-                | access_expr "name" -> file_name
-                | access_expr "starts with" access_expr -> starts_with
-                | access_expr "ends with" access_expr -> ends_with
-                | access_expr unit -> unit
+                | access_expr "at" "index"? term        -> list_look
+                | "length of" term                      -> length
+                | "first element of" term               -> first
+                | "last element of"  term               -> last
+                | access_expr "age"                     -> age
+                | access_expr "name"                    -> file_name
+                | access_expr unit                      -> unit
 
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
-        | IDENT -> var
-        | NUMBER -> number
-        | FLOAT  -> decimal
         | text
-        | BOOLEAN -> boolean
-        | "(" term ("," term)* ")" -> list
-        | "input" ("(" expr ")")? -> input
-        | "null" -> null
-        | "now"  -> now
-        | "here" -> here
-        | "(" expr ")" -> paren
+        | date
+        | IDENT                         -> var
+        | NUMBER                        -> number
+        | FLOAT                         -> decimal
+        | BOOLEAN                       -> boolean
+        | "(" term ("," term)* ")"      -> list
+        | "input" (expr)?               -> input
+        | "null"                        -> null
+        | "now"                         -> now
+        | "here"                        -> here
+        | "(" expr ")"                  -> paren
         | TYPE
 
 
 TYPE    : "text"
-        | "number"
-        | "decimal"
+        | ("int" | "number")
+        | ("float" | "decimal")
         | "boolean"
-        | "date" 
+        | "date"
         | "time" 
         | "list"
-        | "folder"
-        | "file"
 
 
-unit    : ("second" | "seconds") -> second
-        | ("minute" | "minutes") -> minute
-        | ("hour" | "hours")   -> hour
-        | ("day" | "days")   -> day
-        | ("month" | "months")  -> month
-        | ("year" | "years")  -> year
+unit    : ("second" | "seconds")        -> second
+        | ("minute" | "minutes")        -> minute
+        | ("hour" | "hours")            -> hour
+        | ("day" | "days")              -> day
+        | ("month" | "months")          -> month
+        | ("year" | "years")            -> year
 
 
 text: "\"" (str_chars | interp)* "\""
 str_chars: /([^"{\\]|\\.)+/
 interp: "{" expr "}"
 
+date: "t"/[0-9]{4}-[0-1][0-9]-[0-3][0-9]( [0-2][0-9]:[0-5][0-9]:[0-5][0-9](\.[0-9]{0,6})?)?/
+
 FLOAT: /[0-9]+\.[0-9]+/
 
-path: text ("/" text)*
+PATH: "file" | "folder"
 NEW : "new"
 _BLOCKSTART: "{"
 _BLOCKEND: "}" 

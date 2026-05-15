@@ -139,7 +139,7 @@ class BoshTransformer(Transformer):
             new = True
             args = args[1:]
         location = args[2] if len(args) > 2 else None
-        node = Make(entity_type=args[0], name=args[1], location=location, new=new)
+        node = Make(new=new, entity_type=args[0], name=args[1], location=location)
         node.set_meta(meta, self._filename)
         return node
 
@@ -261,6 +261,11 @@ class BoshTransformer(Transformer):
         node = BinaryOp(operator="mod", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def pow(self, meta, args):
+        node = BinaryOp(operator="pow", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
 
     def not_(self, meta, args):
         node = UnaryOp(operator="not", operand=args[0])
@@ -294,11 +299,6 @@ class BoshTransformer(Transformer):
 
     def ceiling(self, meta, args):
         node = UnaryOp(operator="ceiling", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def exponent(self, meta, args):
-        node = UnaryOp(operator="exponent", operand=args[0])
         node.set_meta(meta, self._filename)
         return node
 
@@ -379,6 +379,11 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
     
+    def date(self, meta, args):
+        node = DateLiteral(value=str(args[0]))
+        node.set_meta(meta, self._filename)
+        return node
+    
     def str_chars(self, meta, args):
         content = "".join(str(arg) for arg in args)
         node = StringLiteral(value=content)
@@ -442,4 +447,8 @@ class BoshTransformer(Transformer):
         return "year"
     
     def TYPE(self, token):
+        if token.value == "int":
+            token.value = "number"
+        if token.value == "float":
+            token.value = "decimal"
         return token.value
