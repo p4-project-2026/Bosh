@@ -471,4 +471,6 @@ class BoshTransformer(Transformer):
             token.value = "number"
         if token.value == "float":
             token.value = "decimal"
+        if token.value == "string":
+            token.value = "text"
         return token.value

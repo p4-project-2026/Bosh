@@ -90,8 +90,8 @@ block:  stmt (_SEP+ stmt)* _SEP*
 ?access_expr    : term
                 | access_expr "at" "index"? term        -> list_look
                 | "length of" term                      -> length
-                | "first element of" term               -> first
-                | "last element of"  term               -> last
+                | "first" "element"? "of" term          -> first
+                | "last" "element"? "of"  term          -> last
                 | access_expr "age"                     -> age
                 | access_expr "name"                    -> file_name
                 | access_expr unit                      -> unit
@@ -114,7 +114,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
         | TYPE
 
 
-TYPE    : "text"
+TYPE    : ("text" | "string")
         | ("int" | "number")
         | ("float" | "decimal")
         | "boolean"
