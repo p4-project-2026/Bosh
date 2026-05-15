@@ -356,6 +356,11 @@ class BoshTransformer(Transformer):
         node = Unit(target=args[0], unit_type=str(args[1]).lower())
         node.set_meta(meta, self._filename)
         return node
+    
+    def type_cast(self, meta, args):
+        node = TypeCast(target=args[0], target_type=str(args[1]).lower())
+        node.set_meta(meta, self._filename)
+        return node
 
     # LITERALS AND IDENTIFIERS ----------------------------------------
     def var(self, meta, args):

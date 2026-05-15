@@ -250,6 +250,60 @@ class Unit(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
+
+@dataclass  
+class TypeCast(ASTNode):
+    target: ASTNode
+    target_type: str
+
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        try:
+            original_type = self.target.check(v_table, f_table)
+            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
+                raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+            if original_type == self.target_type:
+                return original_type
+            if original_type == "number" and self.target_type == "decimal":
+                return "decimal"
+            if original_type == "decimal" and self.target_type == "number":
+                return "number"
+            if original_type in ["number", "decimal"] and self.target_type == "text":
+                return "text"
+            if original_type == "boolean" and self.target_type == "text":
+                return "text"
+            if original_type == "text" and self.target_type == "boolean":
+                return "boolean"
+            if original_type == "text" and self.target_type in ["number", "decimal"]:
+                return self.target_type
+            if original_type == "date" and self.target_type == "text":
+                return "text"
+            raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env: Environment) -> Any:
+        try:
+            value = self.target.execute(env)
+            match self.target_type:
+                case "number":
+                    return int(value)
+                case "decimal":
+                    return float(value)
+                case "text":
+                    if isinstance(value, bool):
+                        return "true" if value else "false"
+                    return str(value)
+                case "boolean":
+                    return bool(value)
+                case "date":
+                    if isinstance(value, str):
+                        return datetime.datetime.fromisoformat(value)
+                    raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
 @dataclass
 class BinaryOp(ASTNode):
     left: ASTNode

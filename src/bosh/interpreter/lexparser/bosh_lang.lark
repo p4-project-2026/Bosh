@@ -95,6 +95,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | access_expr "age"                     -> age
                 | access_expr "name"                    -> file_name
                 | access_expr unit                      -> unit
+                | access_expr "as" TYPE                 -> type_cast
 
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func

@@ -59,7 +59,7 @@ class TraceError(Error):
             filename = ""
         else:
             filename = PathsHelper().get_project_root().joinpath(get_filename())
-            filename = f"\"{filename}\""
+            filename = f"\"{filename}\" "
 
         cause = Error(message=cause, severity=severity)
 
