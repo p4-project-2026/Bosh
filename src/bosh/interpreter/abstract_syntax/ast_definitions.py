@@ -7,21 +7,25 @@ class Assign(ASTNode):
     target: Identifier
     value: ASTNode
 
-    def 
+
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         try:
             vvvprint(f"Assign: Checking assignment of value '{self.value}' to variable '{self.target.name}'...")
             value_type = self.value.check(v_table, f_table)
-
             vvvprint(f"Assign: Value '{self.value}' has type '{value_type}'")
             if value_type is None:
-                raise BoshTypeError(f"Value assigned to '{self.target.name}' is undefined.", self)
-            vvvprint(f"Assign: Attempting to bind variable '{self.target.name}' to type '{value_type}'...")
-            value_type = self.value.check(v_table, f_table)
-            if value_type is None:
                 raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
-            vvvprint(f"Assign: Successfully bound variable '{self.target.name}' to type '{value_type}'.")
+            old_types = None
+            try:
+                vvvprint(f"Assign: Looking up variable '{self.target.name}' for type checking...")
+                old_types = v_table.lookup(self.target.name)
+                if value_type 
+
+
+            
+
+            vvvprint(f"Assign: Attempting to bind variable '{self.target.name}' to type '{value_type}'...")            
             v_table.bind(self.target.name, value_type)
             vvvprint(f"Assign: Variable '{self.target.name}' bound to type '{value_type}' successfully.")
         except Exception as e:
@@ -37,7 +41,12 @@ class Assign(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def inference()
+    def inference(
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception("Assign does not return a value and cannot be used in inference.")
 
 
 @dataclass
@@ -46,10 +55,10 @@ class AssignType(ASTNode):
     var_type: str
     value: Optional[ASTNode]
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             vvvprint(f"AssignType: Checking assignment of value '{self.value}' to variable '{self.target}' with declared type '{self.var_type}'...")
-            value_type = self.value.check(v_table, f_table) if self.value else None
+            value_type = self.value.check(v_table, f_table, inference_context) if self.value else None
             vvvprint(f"AssignType: Value '{self.value}' has type '{value_type}'")
             if value_type and value_type != self.var_type:
                 raise BoshTypeError(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'", self)
@@ -69,14 +78,22 @@ class AssignType(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
                 
-    
+    def inference(
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception("AssignType does not return a value and cannot be used in inference.")
+
+
 @dataclass
 class TaskDecl(ASTNode):
     name: str
     parameters: List[str]
     body: Block
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             "TODO: Refactor to type check the body first to determine the return type, then bind the function signature with the correct return type, then type check the body again to ensure it matches the signature"
             vvvprint(f"TaskDecl: Checking task declaration of '{self.name}' with parameters {self.parameters}...")

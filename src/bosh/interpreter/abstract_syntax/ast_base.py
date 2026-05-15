@@ -12,11 +12,23 @@ class Position():
     end_col: Optional[int] = None
     filename: Optional[str] = None
 
+@dataclass
+class InferenceContext:
+    __changed: bool = False
+
+    def has_changed(self) -> bool:
+        return self.__changed
+    
+    def mark_infered(self):
+        self.__changed = True
+
+    def reset(self):
+        self.__changed = False
 
 class ASTNode():
     pos: Optional[Position] = None
     def __init__(self):
-        self.value_node_pairs: list[tuple[set[str], "ASTNode"]] = []
+        self.type_node_pairs: list[tuple[set[str], "ASTNode"]] = []
 
     def set_meta(self, meta, filename: Optional[str] = None):
         if meta is not None:
@@ -27,7 +39,7 @@ class ASTNode():
                 filename=filename
             )
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         raise NotImplementedError(self.__class__.__name__ + " does not implement check()")
     
     def execute(self, env: Environment) -> Any:
@@ -36,18 +48,24 @@ class ASTNode():
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
-        new_list = []
-        for value, node in self.value_node_pairs:
-            # i want to check if all the values in inference_value are in value and vice versa, and if so, run inference on the node with new_inference_value then replace value with new_inference_value and check the next one
-            if old_inference_value == value:
-                node.inference(v_table, f_table, old_inference_value, new_inference_value)
-                new_list.append((new_inference_value.copy(), node))
-            else:
-                new_list.append((value, node))
-        self.value_node_pairs = new_list
+        try:
+            new_list = []
 
+            for value, node in stype:
+                # i want to check if all the values in inference_value are in value and vice versa, and if so, run inference on the node with new_inference_value then replace value with new_inference_value and check the next one
+                if old_inference_value == value:
+                    node.inference(v_table, f_table, inference_context, old_inference_value, new_inference_value)
+                    new_list.append((new_inference_value.copy(), node))
+                    
+                else:
+                    new_list.append((value, node))
+            stype = new_list
+            return 
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
         
             
 
@@ -56,12 +74,12 @@ class ASTNode():
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         vvvprint(f"Block: Checking block with {len(self.statements)} statements...")
         return_type = None
         for stmt in self.statements:
             vvvprint(f"Block: Checking statement {stmt}...")
-            stmt_return_type = stmt.check(v_table, f_table)
+            stmt_return_type = stmt.check(v_table, f_table, inference_context)
             vvvprint(f"Block: Finished checking statement {stmt} with return type: {stmt_return_type}")
             if stmt_return_type is not None:
                 vvvprint(f"Block: Statement {stmt} has return type: {stmt_return_type}")
@@ -84,6 +102,7 @@ class Block(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         vvvprint(f"Block: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
@@ -93,10 +112,10 @@ class Block(ASTNode):
 class Program(ASTNode):
     block: Block
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         vvvprint("Program: Starting type checking of program...")
-        return self.block.check(v_table, f_table)
-    
+        return self.block.check(v_table, f_table, inference_context)
+
     def execute(self, env: Environment) -> Any:
         vvvprint("Program: Starting execution of program...")
         return self.block.execute(env)

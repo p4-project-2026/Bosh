@@ -5,9 +5,9 @@ from os import path
 class GoTo(ASTNode):
     path: ASTNode
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            path_type = self.path.check(v_table, f_table)
+            path_type = self.path.check(v_table, f_table, inference_context)
             if path_type not in ["folder", "text"]:
                 raise TraceError(node = self, cause = f"Path in 'go to' statement must be of type 'text', got '{path_type}'")
         except Exception as e:
@@ -29,13 +29,13 @@ class Make(ASTNode):
     location: ASTNode
     new: bool = False
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             if self.entity_type != "text":
                 raise TraceError(node = self, cause = f"Entity type in make statement must be 'text', got '{self.entity_type}'")
 
-            location_type = self.location.check(v_table, f_table) if self.location else "text"
-            
+            location_type = self.location.check(v_table, f_table, inference_context) if self.location else "text"
+
             if location_type != "text":
                 raise TraceError(node = self, cause = f"Path in make statement must be of type 'text', got '{location_type}'")
 
@@ -44,7 +44,7 @@ class Make(ASTNode):
             except Exception as e:
                 raise TraceError(node = self, cause = e)
 
-            name_type = self.name.check(v_table, f_table)
+            name_type = self.name.check(v_table, f_table, inference_context)
             if name_type is not None and name_type != "text":
                 raise TraceError(node = self, cause = f"Cannot use type '{name_type}' as a new name. Expected 'text'.")
         except Exception as e:
@@ -60,9 +60,9 @@ class Make(ASTNode):
 class Delete(ASTNode):
     target: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
+            target_type = self.target.check(v_table, f_table, inference_context)
             if target_type != "text":
                 raise TraceError(node = self, cause = f"Cannot delete type '{target_type}'. Expected 'text'.")
         except Exception as e:
@@ -78,10 +78,10 @@ class Rename(ASTNode):
     target: ASTNode
     new_name: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
-            new_name_type = self.new_name.check(v_table, f_table)
+            target_type = self.target.check(v_table, f_table, inference_context)
+            new_name_type = self.new_name.check(v_table, f_table, inference_context)
             if target_type != "text":
                 raise TraceError(node = self, cause = f"Cannot rename type '{target_type}'. Expected 'text'.")
             if new_name_type != "text":
@@ -95,10 +95,10 @@ class Copy(ASTNode):
     source: ASTNode
     target: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table)
-            target_type = self.target.check(v_table, f_table)
+            source_type = self.source.check(v_table, f_table, inference_context)
+            target_type = self.target.check(v_table, f_table, inference_context)
             if source_type != "text":
                 raise TraceError(node = self, cause = f"Cannot copy type '{source_type}'. Expected 'text'.")
             if target_type != "text":
@@ -112,10 +112,10 @@ class Move(ASTNode):
     source: ASTNode
     target: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table)
-            target_type = self.target.check(v_table, f_table)
+            source_type = self.source.check(v_table, f_table, inference_context)
+            target_type = self.target.check(v_table, f_table, inference_context)
             if source_type != "text":
                 raise TraceError(node = self, cause = f"Cannot move type '{source_type}'. Expected 'text'.")
             if target_type != "text":
@@ -128,9 +128,9 @@ class Move(ASTNode):
 class Read(ASTNode):
     source: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table)
+            source_type = self.source.check(v_table, f_table, inference_context)
             if source_type != "text":
                 raise TraceError(node = self, cause = f"Cannot read type '{source_type}'. Expected 'text'.")
         except Exception as e:
@@ -142,10 +142,10 @@ class Write(ASTNode):
     target: ASTNode
     data: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None: 
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None: 
         try:
-            target_type = self.target.check(v_table, f_table)
-            data_type = self.data.check(v_table, f_table)
+            target_type = self.target.check(v_table, f_table, inference_context)
+            data_type = self.data.check(v_table, f_table, inference_context)
             if target_type != "text":
                 raise TraceError(node = self, cause = f"Cannot write to type '{target_type}'. Expected 'text'.")
             if data_type != "text":
@@ -156,7 +156,7 @@ class Write(ASTNode):
 
 @dataclass
 class GoUp(ASTNode):
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         return
 
 
@@ -164,9 +164,9 @@ class GoUp(ASTNode):
 class Execute(ASTNode):
     target: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
+            target_type = self.target.check(v_table, f_table, inference_context)
             if target_type != "text":
                 raise TraceError(node = self, cause = f"Cannot execute type '{target_type}'. Expected 'text'.")
         except Exception as e:
@@ -175,7 +175,7 @@ class Execute(ASTNode):
 
 @dataclass
 class Pause(ASTNode):
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         return
 
 
@@ -183,9 +183,9 @@ class Pause(ASTNode):
 class Wait(ASTNode):
     time: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            duration_type = self.time.check(v_table, f_table)
+            duration_type = self.time.check(v_table, f_table, inference_context)
             if duration_type not in ["number", "decimal", "time"]:
                 raise TraceError(node = self, cause = f"Duration in 'wait' must be of type 'number', 'decimal' or 'time', got '{duration_type}'")
         except Exception as e:
@@ -196,9 +196,9 @@ class Wait(ASTNode):
 class Input(ASTNode):
     prompt: Optional[ASTNode]
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[str]:
         try:
-            prompt_type = self.prompt.check(v_table, f_table) if self.prompt else None
+            prompt_type = self.prompt.check(v_table, f_table, inference_context) if self.prompt else None
             if prompt_type != "text":
                 raise TraceError(node = self, cause = f"Prompt in input statement must be of type 'text', got '{prompt_type}'")
             return "text"

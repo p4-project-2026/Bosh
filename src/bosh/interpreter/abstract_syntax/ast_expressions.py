@@ -4,9 +4,9 @@ import math
 
 @dataclass
 class NumberLiteral(ASTNode):
-    value: float
+    value: int
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         return {"number"}
     
     def execute(self, env: Environment) -> float:
@@ -15,6 +15,7 @@ class NumberLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Number literals are only compatible with "number", "decimal", and "any" types, so if the new inference value is not compatible, raise an error.
@@ -27,7 +28,7 @@ class DecimalLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         return {"decimal"}
     
     def execute(self, env: Environment) -> float:
@@ -36,6 +37,7 @@ class DecimalLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Decimal literals are only compatible with "decimal" and "any" types, so if the new inference value is not compatible, raise an error.
@@ -47,7 +49,7 @@ class StringLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         return {"text"}
 
     def execute(self, env: Environment) -> str:
@@ -56,10 +58,12 @@ class StringLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # String literals are only compatible with "text" and "any" types, so if the new inference value is not compatible, raise an error.
         raise Exception("StringLiteral: inference: String literals cannot be narrowed to type '{new_inference_value}'", self)
+
 
 @dataclass
 class InterpolatedString(ASTNode):
@@ -67,10 +71,10 @@ class InterpolatedString(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
             for part in self.parts:
-                if part.check(v_table, f_table) is None:
+                if part.check(v_table, f_table, inference_context) is None:
                     raise TraceError(node = self, cause = "Undefined variable in interpolated string")
             return {"text"}
         except Exception as e:
@@ -86,6 +90,7 @@ class InterpolatedString(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Interpolated strings are only compatible with "text" and "any" types, so if the new inference value is not compatible, raise an error.
@@ -97,7 +102,7 @@ class BooleanLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         return {"boolean"}
 
     def execute(self, env: Environment) -> bool:
@@ -106,6 +111,7 @@ class BooleanLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Boolean literals are only compatible with "boolean" and "any" types, so if the new inference value is not compatible, raise an error.
@@ -113,7 +119,7 @@ class BooleanLiteral(ASTNode):
 
 @dataclass
 class NullLiteral(ASTNode):
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         return {"null"}
     
     def execute(self, env: Environment) -> None:
@@ -122,10 +128,11 @@ class NullLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Null literals are compatible with all types, so they can be narrowed to any type without error.
-        pass
+        raise Exception("NullLiteral: inference: Null literals cannot be narrowed to type '{new_inference_value}' because they are compatible with all types.", self)
 
 @dataclass
 class ListLiteral(ASTNode):
@@ -133,13 +140,13 @@ class ListLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
             if len(self.elements) == 0:
                 return {"list<any>"}
-            element_type = self.elements[0].check(v_table, f_table)
+            element_type = self.elements[0].check(v_table, f_table, inference_context)
             for elem in self.elements[1:]:
-                elem_type = elem.check(v_table, f_table)
+                elem_type = elem.check(v_table, f_table, inference_context)
                 if elem_type != element_type:
                     raise TraceError(node = self, cause = f"List elements must all be of the same type, expected {element_type}, got {elem_type}")
             return {f"list<{element_type}>"}
@@ -155,6 +162,7 @@ class ListLiteral(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # List literals are only compatible with "list<elem_type>" and "any" types, so if the new inference value is not compatible, raise an error.
@@ -166,13 +174,14 @@ class Identifier(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> set[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             vvvprint(f"Identifier: check: Looking up variable '{self.name}' in variable table...")
             var_type = v_table.lookup(self.name)
             vvvprint(f"Identifier: check: Variable '{self.name}' found with type '{var_type}'")
-            self.value_node_pairs.append((var_type.copy(), self))
-        return var_type
+            self.type_node_pairs.append((var_type.copy(), self))
+            vvvprint(f"Identifier: check: Remembered type for variable '{self.name}': {var_type}")
+            return var_type
         except Exception as e:
             raise TraceError(node = self, cause=e)
 
@@ -182,46 +191,71 @@ class Identifier(ASTNode):
         try:
             vvvprint(f"Identifier: execute: Variable '{self.name}' found. Retrieving value...")
             value = env.lookup_variable(self.name)
-            vvvprint(f"Value of variable '{self.name}': {value}")
+            vvvprint(f"Identifier: execute: Value of variable '{self.name}': {value}")
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-            vvvprint(f"Identifier: execute: Value of variable '{self.name}': {value}")
 
     def inference(
         self,
         v_table: ScopeStack,
         f_table: FuncTable,
+        inference_context: InferenceContext,
         old_inference_value: set[str],
         new_inference_value: set[str],
     ) -> None:
-        
-        if not self.value_node_pairs:
-            raise Exception(f"Identifier: inference: No remembered type found for variable '{self.name}', '{self}' has not been checked.", self)
-        remembered_type = self.value_node_pairs[0][0].copy()
-        narrowed = remembered_type & old_inference_value
-        if not narrowed:
-            raise Exception(f"Identifier: inference: Cannot narrow variable '{self.name}' from type '{remembered_type}' to incompatible type '{new_inference_value}'.", self)
-        narrowed = new_inference_value & remembered_type
-        if not narrowed:
-            raise Exception(f"Identifier: inference: Cannot narrow variable '{self.name}' from type '{remembered_type}' to incompatible type '{new_inference_value}'.", self)
         try:
+            vvvprint(f"Identifier: inference: Starting inference for variable '{self.name}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'...")
+            if not self.type_node_pairs:
+                raise Exception(f"Identifier: inference: No remembered type found for variable '{self.name}', '{self}' has not been checked.", self)
+            vvvprint(f"Identifier: inference: Current type-node pairs for variable '{self.name}': {self.type_node_pairs}")
+
+
+            vvvprint(f"Identifier: inference: Looking up current type of variable '{self.name}' in variable table...")
+            remembered_type = self.type_node_pairs[0][0].copy()
+            vvvprint(f"Identifier: inference: Remembered type for variable '{self.name}': {remembered_type}")
+            current_type = v_table.lookup(self.name).copy()
+            vvvprint(f"Identifier: inference: Current type for variable '{self.name}' from variable table: {current_type}")             
+
+
+            vvvprint(f"Identifier: inference: Checking compatibility of new inference value '{new_inference_value}' with current type '{current_type}' and remembered type '{remembered_type}' for variable '{self.name}'...")
+            narrowed = remembered_type & new_inference_value
+            
+            if not narrowed:
+                raise Exception(f"Identifier: inference: New inference value '{new_inference_value}' is incompatible with remembered type '{remembered_type}' for variable '{self.name}'.", self)
+            vvvprint(f"Identifier: inference: New inference value '{new_inference_value}' is compatible with remembered type '{remembered_type}' for variable '{self.name}'. Narrowed type: {narrowed}")
+            
+            narrowed = new_inference_value & current_type
+            if not narrowed:
+                raise Exception(f"Identifier: inference: Cannot narrow variable '{self.name}' from type '{current_type}' to incompatible type '{new_inference_value}'.", self)
+            if narrowed == current_type:
+                vvvprint(f"Identifier: inference: New inference value '{new_inference_value}' does not narrow the type of variable '{self.name}' (current type: '{current_type}'). No update needed.")
+                self.type_node_pairs[0] = (narrowed.copy(), self.type_node_pairs[0][1])
+                return
+            
+            vvvprint(f"Identifier: inference: Updating variable table with new narrowed type for variable '{self.name}'...")
             v_table.bind(self.name, narrowed.copy())
+            vvvprint(f"Identifier: inference: Updated type for variable '{self.name}' in variable table: {v_table.lookup(self.name)}")
+            self.type_node_pairs[0] = (narrowed.copy(), self.type_node_pairs[0][1])
+            vvvprint(f"Identifier: inference: Updated remembered type for variable '{self.name}': {self.type_node_pairs[0][0]}")
+            inference_context.mark_infered()
+            vvvprint(f"Identifier: inference: Inference for variable '{self.name}' completed successfully, inference context marked as changed for a variable type update.")
+            
+            return
         except Exception as e:
-            raise Exception(f"Identifier: inference: Error updating variable '{self.name}' in variable table during inference: {e}", self, cause=e)
-        self.value_node_pairs[0] = (narrowed.copy(), self.value_node_pairs[0][1])
-        return
+            raise TraceError(node = self, cause = e)
         
 
 @dataclass
 class TaskCall(ASTNode):
+    "TODO: Implement type checking for task calls"
     name: str
     arguments: Optional[List[ASTNode]] = None
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[str]:
         try:
             signature = f_table.lookup(self.name)
             
@@ -272,41 +306,71 @@ class ListLookup(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
-            target_type = self.target.check(v_table, f_table)
+            
             index_type = self.index.check(v_table, f_table)
-            if not target_type.startswith("list<") or not target_type.endswith(">"):
-                raise TraceError(node = self, cause = f"Cannot index type '{target_type}'. Expected a list.")
-            if index_type != "number":
-                raise TraceError(node = self, cause = f"List index must be of type 'number', got '{index_type}'")
-            return target_type[5:-1]
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
-        target_types = self.target.check(v_table, f_table)
-        index_type = self.index.check(v_table, f_table)
-        vvvprint(f"ListLookup: Target types: {target_types}, Index type: {index_type}")
-        if index_type != "number":
-            vvvprint(f"ListLookup: Index type '{index_type}' is not 'number'.")
-            if index_type == "UNKNOWN":
-                vvvprint(f"ListLookup: Type Check: Index type is unknown. Attempting inference.")
-                self.index.inference(v_table, f_table, index_type, {"number"})
-                vvvprint(f"ListLookup: Type Check: After inference, index type is now 'number'.")
-            else:
-                raise Exception(f"ListLookup: List index must be of type 'number', got '{index_type}'", self)
-        vvvprint(f"ListLookup: Checking if target types are compatible with list lookup...")
-        return_types = set()
-        for target_type in target_types:
+            vvvprint(f"ListLookup: Target types: {target_types}, Index type: {index_type}")
+            if index_type != {"number"}:
+                vvvprint(f"ListLookup: Index type '{index_type}' is not 'number'.")
+                if index_type == {"UNKNOWN"} or {"number"} <= index_type:
+                    vvvprint(f"ListLookup: Attempting to narrow index type from '{index_type}' to 'number' for list lookup...")
+                    self.index.inference(v_table, f_table, index_type, {"number"})
+                    vvvprint(f"ListLookup: Index type narrowed to 'number' successfully.")
+                    self.type_node_pairs.append(({"number"}, self.index))
+                    vvvprint(f"ListLookup: Remembered index type 'number' for inference{self.type_node_pairs}.")
+                else:
+                    raise Exception(f"ListLookup: List index must be of type 'number', got '{index_type}'", self)
+                
+
+            target_types = self.target.check(v_table, f_table)
+            
+            
+            # check if any of the target types are can be a list type and if so, extract the element types.
+            if target_types == {"UNKNOWN"}:
+                vvvprint(f"ListLookup: Target type is UNKNOWN. Attempting to narrow target type to a list type for list lookup...")
+                set_list_types = set("list<" + "UNKNOWN" + ">")
+                vvvprint(f"ListLookup: Narrowing target type to '{set_list_types}' for list lookup...")
+                self.target.inference(v_table, f_table, target_types, set_list_types, inference_context)
+                self.type_node_pairs.append((set_list_types, self.target))
+                return set("UNKNOWN")
+            
+            if not any(t.startswith("list<") and t.endswith(">") for t in target_types):
+                raise Exception(f"ListLookup: Cannot index into type '{target_types}', expected a list type", self)
+            
+            if any(not (t.startswith("list<") and t.endswith(">")) for t in target_types):
+                vvvprint(f"ListLookup: Warning: Some target types '{target_types}' are not list types, but at least one is. Proceeding with list lookup inference based on compatible list types.")
+                new_target_types = set()
+                for t in target_types:
+                    if t.startswith("list<") and t.endswith(">"):
+                        new_target_types.add(t)
+                
+                self.target.inference(v_table, f_table, target_types, new_target_types, inference_context)
+
+                self.type_node_pairs.append((new_target_types, self.target))
+                return_types = set()
+                for target_type in new_target_types:
+                    if target_type.startswith("list<") and target_type.endswith(">"):
+                        return_types.add(target_type[5:-1])
+                self.type_node_pairs.append((return_types, self))
+                
+
+                
+            vvvprint(f"ListLookup: Index type '{index_type}' is valid for list lookup.")
+            return_types = set()
+            
             for target_type in target_types:
                 if target_type.startswith("list<") and target_type.endswith(">"):
                     return_types.add(target_type[5:-1])
-        if not return_types:
-            raise Exception(f"ListLookup: Cannot index into type '{target_types}', expected a list type", self)
-        vvvprint(f"ListLookup: Target types compatible with list lookup. Return types: {return_types}")
-        self.value_node_pairs.append((return_types, self))
-
-        return return_types
+            if not return_types:
+                raise Exception(f"ListLookup: Cannot index into type '{target_types}', expected a list type", self)
+            vvvprint(f"ListLookup: Target types compatible with list lookup. Return types: {return_types}")
+            self.type_node_pairs.append((return_types, self))
+        
+            return return_types
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
     
     def execute(self, env: Environment) -> Any:
         vvvprint(f"ListLookup: execute: Executing list lookup. Target: {self.target}, Index: {self.index}")
@@ -328,37 +392,112 @@ class ListLookup(ASTNode):
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
+                inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
+        
+        try:
+            vvvprint(f"ListLookup: inference: Starting inference for list lookup. inference gose past this statement. marked infered as true for list lookup.")
+            
+            vvvprint(f"ListLookup: inference: Marked infered as true for list lookup.")
+            
+            
+            if not self.type_node_pairs:
+                raise Exception("ListLookup: inference: No type information available for list lookup during type inference {self} has not been checked.", self)
+            vvvprint(f"ListLookup: inference: Current type-node pairs for list lookup: {self.type_node_pairs}")
+            remembered_types = self.type_node_pairs[0][0].copy()
+            vvvprint(f"ListLookup: inference: Remembered type for list lookup: {remembered_types}")
+
+            
+            
+            vvvprint(f"ListLookup: inference: Checking compatibility of new inference value '{new_inference_value}' with current types from variable table '{curent_types_list_from}' and remembered type '{remembered_types}' for list lookup...")
+            narowed = remembered_types & old_inference_value
+            vvvprint(f"ListLookup: inference: Narrowed remembered types based on old inference value: {narowed}")
+            if not narowed:
+                raise Exception(f"ListLookup: inference: Cannot narrow list lookup from type '{remembered_types}' to incompatible type '{old_inference_value}'.", self)
+            vvvprint(f"ListLookup: inference: Narrowed remembered types are compatible with old inference value. Proceeding with inference...")
+            narowed = remembered_types & new_inference_value
+            vvvprint(f"ListLookup: inference: Narrowed remembered types based on new inference value: {narowed}")
+            if not narowed:
+                raise Exception(f"ListLookup: inference: New inference value '{new_inference_value}' is incompatible with remembered type '{remembered_types}' for list lookup.", self)
+            vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' is compatible with remembered type '{remembered_types}' for list lookup. Proceeding with inference...") 
+            
+            vvvprint(f"ListLookup: inference: Looking up current types for list lookup in variable table...")
+            curent_types_list_from = v_table.lookup(self.type_node_pairs[0][1].name).copy()
+            vvvprint(f"ListLookup: inference: Current types for list lookup from variable table: {curent_types_list_from}")                        
+
+            vvvprint(f"ListLookup: inference: Extracting element types from current list types for list lookup...")
+            curent_types = set()
+            vvvprint(f"ListLookup: inference: Extracting element types from current list types...")
+            for current_type in curent_types_list_from:
+                if current_type.startswith("list<") and current_type.endswith(">"):
+                    curent_types.add(current_type[5:-1])
+                else:
+                    raise Exception(f"ListLookup: inference: Current type '{current_type}' for variable '{self.type_node_pairs[0][1].name}' is not a list type.", self)
+            vvvprint(f"ListLookup: inference: Extracted element types from current list types: {curent_types}")
+
+            vvvprint(f"ListLookup: inference: Checking compatibility of new inference value '{new_inference_value}' with current element types '{curent_types}' for list lookup...")
+            new_narrowed = new_inference_value & curent_types
+            vvvprint(f"ListLookup: inference: New narrowed types based on new inference value: {new_narrowed}")
+
+            vvvprint(f"ListLookup: inference: Checking if new narrowed types are compatible with current element types for list lookup...")
+            if not new_narrowed:
+                raise Exception(f"ListLookup: inference: New inference value '{new_inference_value}' is incompatible with current types '{curent_types}' for list lookup.", self)
+            vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' is compatible with current types '{curent_types}' for list lookup.")
+
+            vvvprint(f"ListLookup: inference: Checking if new narrowed types are the same as current element types for list lookup...")
+            if new_narrowed == curent_types:
+                vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' does not narrow the current types for list lookup (current types: '{curent_types}'). No update needed.")
+                self.type_node_pairs[0] = (set(f"list<{t}>" for t in new_narrowed), self.type_node_pairs[0][1])
+                return
+            
+
+            vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' narrows the current types for list lookup. Updating variable table and remembered types...")
+            new_list_types = set()
+            for new_type in new_narrowed:
+                new_list_types.add(f"list<{new_type}>")
+            vvvprint(f"ListLookup: inference: Updating variable '{self.type_node_pairs[0][1].name}' in variable table to new inferred types '{new_list_types}'...")
+            v_table.bind(self.type_node_pairs[0][1].name, new_list_types)
+            vvvprint(f"ListLookup: inference: Updated variable '{self.type_node_pairs[0][1].name}' in variable table to new inferred type '{new_list_types}' based on new inference value '{new_inference_value}'.")
+            self.type_node_pairs[0] = (new_list_types, self.type_node_pairs[0][1])
+            inference_context.mark_infered()
+            vvvprint(f"ListLookup: inference: Updated type-node pair for list lookup to new inferred type '{new_list_types}'.")
+
+
+                
+        except Exception as e:
+            raise TraceError(node = self, cause = e)    
+
+
         vvvprint(f"ListLookup: inference: Starting inference for list lookup with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'...")
-        if not self.value_node_pairs:
+        if not self.type_node_pairs:
             raise Exception("ListLookup: inference: No type information available for list lookup during type inference", self)
-        vvvprint(f"ListLookup: Current value-node pairs: {self.value_node_pairs}")
+        vvvprint(f"ListLookup: Current type-node pairs: {self.type_node_pairs}")
     
-        if old_inference_value != self.value_node_pairs[0][0]:
-            vvvprint(f"ListLookup: inference: Old inference value '{old_inference_value}' does not match remembered type '{self.value_node_pairs[0][0]}'. No update performed.")
-            if self.value_node_pairs[0][0].issubset(old_inference_value):
-                vvvprint(f"ListLookup: inference: Remembered type '{self.value_node_pairs[0][0]}' is a subset of old inference value '{old_inference_value}'. No update performed.")
-                if new_inference_value.issubset(self.value_node_pairs[0][0]):
-                    vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' is a subset of remembered type '{self.value_node_pairs[0][0]}'. No update performed.")
+        if old_inference_value != self.type_node_pairs[0][0]:
+            vvvprint(f"ListLookup: inference: Old inference value '{old_inference_value}' does not match remembered type '{self.type_node_pairs[0][0]}'. No update performed.")
+            if self.type_node_pairs[0][0].issubset(old_inference_value):
+                vvvprint(f"ListLookup: inference: Remembered type '{self.type_node_pairs[0][0]}' is a subset of old inference value '{old_inference_value}'. No update performed.")
+                if new_inference_value.issubset(self.type_node_pairs[0][0]):
+                    vvvprint(f"ListLookup: inference: New inference value '{new_inference_value}' is a subset of remembered type '{self.type_node_pairs[0][0]}'. No update performed.")
                     new_list_types = set()
                     for new_type in new_inference_value:
                         new_list_types.add(f"list<{new_type}>")
-                    v_table.bind(self.value_node_pairs[0][1].name, new_list_types)
-                    vvvprint(f"ListLookup: inference: Updated variable '{self.value_node_pairs[0][1].name}' in variable table to new inferred type '{new_list_types}' based on new inference value '{new_inference_value}'.")
-                    self.value_node_pairs[0] = (new_list_types, self.value_node_pairs[0][1])
-                    vvvprint(f"ListLookup: inference: Updated value-node pair for list lookup to new inferred type '{new_list_types}'.")
+                    v_table.bind(self.type_node_pairs[0][1].name, new_list_types)
+                    vvvprint(f"ListLookup: inference: Updated variable '{self.type_node_pairs[0][1].name}' in variable table to new inferred type '{new_list_types}' based on new inference value '{new_inference_value}'.")
+                    self.type_node_pairs[0] = (new_list_types, self.type_node_pairs[0][1])
+                    vvvprint(f"ListLookup: inference: Updated type-node pair for list lookup to new inferred type '{new_list_types}'.")
                     return
-            raise Exception(f"ListLookup: inference: {self.value_node_pairs[0][0]} is not compatible with old inference values '{old_inference_value}' and new inference value '{new_inference_value}'.", self)
+            raise Exception(f"ListLookup: inference: {self.type_node_pairs[0][0]} is not compatible with old inference values '{old_inference_value}' and new inference value '{new_inference_value}'.", self)
             return
-        vvvprint(f"ListLookup: inference: Old inference value matches remembered type. Updating variable '{self.value_node_pairs[0][1].name}' in variable table to new inference value '{new_inference_value}'...")
+        vvvprint(f"ListLookup: inference: Old inference value matches remembered type. Updating variable '{self.type_node_pairs[0][1].name}' in variable table to new inference value '{new_inference_value}'...")
         new_list_types = set()
         for new_type in new_inference_value:
             new_list_types.add(f"list<{new_type}>")
-        v_table.bind(self.value_node_pairs[0][1].name, new_list_types)
-        vvvprint(f"ListLookup: inference: Updated variable '{self.value_node_pairs[0][1].name}' in variable table to new inferred type '{new_list_types}' based on new inference value '{new_inference_value}'.")
-        self.value_node_pairs[0] = (new_list_types, self.value_node_pairs[0][1])
-        vvvprint(f"ListLookup: inference: Updated value-node pair for list lookup to new inferred type '{new_list_types}'.")
+        v_table.bind(self.type_node_pairs[0][1].name, new_list_types)
+        vvvprint(f"ListLookup: inference: Updated variable '{self.type_node_pairs[0][1].name}' in variable table to new inferred type '{new_list_types}' based on new inference value '{new_inference_value}'.")
+        self.type_node_pairs[0] = (new_list_types, self.type_node_pairs[0][1])
+        vvvprint(f"ListLookup: inference: Updated type-node pair for list lookup to new inferred type '{new_list_types}'.")
 
                     
                         
