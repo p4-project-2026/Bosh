@@ -292,21 +292,6 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
-    def length(self, meta, args):
-        node = UnaryOp(operator="length", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def first(self, meta, args):
-        node = UnaryOp(operator="first", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def last(self, meta, args):
-        node = UnaryOp(operator="last", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
     def floor(self, meta, args):
         node = UnaryOp(operator="floor", operand=args[0])
         node.set_meta(meta, self._filename)
@@ -324,6 +309,21 @@ class BoshTransformer(Transformer):
 
     def list_look(self, meta, args):
         node = ListLookup(target=args[0], index=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def length(self, meta, args):
+        node = AccessOp(target=args[0], operation="length")
+        node.set_meta(meta, self._filename)
+        return node
+
+    def first(self, meta, args):
+        node = AccessOp(target=args[0], operation="first")
+        node.set_meta(meta, self._filename)
+        return node
+
+    def last(self, meta, args):
+        node = AccessOp(target=args[0], operation="last")
         node.set_meta(meta, self._filename)
         return node
 
