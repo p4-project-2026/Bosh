@@ -4,6 +4,8 @@ from ..semantics.symbol_table_scope_stacker import SymbolTableScopeStacker as Sc
 from ..semantics.func_table import FuncTable
 from ..executor.environment.function_binding import FunctionBinding
 from ..executor.environment.environment import Environment
+from bosh.helper_functions.type_helper import UNKNOWN_TYPE, ANY_TYPE, EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
+import bosh.helper_functions.type_helper as t_h
 
 @dataclass
 class Position():
@@ -28,7 +30,7 @@ class InferenceContext:
 class ASTNode():
     pos: Optional[Position] = None
     def __init__(self):
-        self.type_node_pairs: list[tuple[set[str], "ASTNode"]] = []
+        self.child_return_types: dict[str, tuple[set[str], "ASTNode"]] = {}
 
     def set_meta(self, meta, filename: Optional[str] = None):
         if meta is not None:
@@ -52,17 +54,16 @@ class ASTNode():
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         try:
-            new_list = []
+            new_dict = {}
 
-            for value, node in stype:
+            for key, (value, node) in self.child_return_types.items():
                 # i want to check if all the values in inference_value are in value and vice versa, and if so, run inference on the node with new_inference_value then replace value with new_inference_value and check the next one
                 if old_inference_value == value:
                     node.inference(v_table, f_table, inference_context, old_inference_value, new_inference_value)
-                    new_list.append((new_inference_value.copy(), node))
-                    
+                    new_dict[key] = (new_inference_value.copy(), node)
                 else:
-                    new_list.append((value, node))
-            stype = new_list
+                    new_dict[key] = (value.copy(), node)
+            self.child_return_types = new_dict
             return 
         except Exception as e:
             raise TraceError(node = self, cause = e)
