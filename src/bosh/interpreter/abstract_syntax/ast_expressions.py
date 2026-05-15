@@ -316,7 +316,7 @@ class BinaryOp(ASTNode):
                         raise TraceError(node = self, cause = f"Logical operator '{op}' requires boolean operands, got '{left_type}' and '{right_type}'")
                     return "boolean"
                 
-                case "lt" | "gt" | "gte" | "lte":
+                case "lt" | "gt" | "goet" | "loet":
                     if left_type not in ["number", "decimal", "date", "time"] or right_type not in ["number", "decimal", "date", "time"]:
                         raise TraceError(node = self, cause = f"Relational operator '{op}' requires numeric or temporal operands, got '{left_type}' and '{right_type}'.")
                     return "boolean"
@@ -408,21 +408,11 @@ class UnaryOp(ASTNode):
                     raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
                 return "number"
             
-            elif op == "length":
-                is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
-                if operand_type != "text" and not is_list:
-                    raise TraceError(node = self, cause = f"Unary operator 'length' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
+            elif op == "sqrt":
+                if operand_type not in ["number", "decimal"]:
+                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
                 return "number"
-        
-            elif op in ["first", "last"]:
-                is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
-                if operand_type != "text" and not is_list:
-                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
-                if operand_type == "text":
-                    return "text"
-                else:
-                    return operand_type[5:-1]
-                
+
             else:
                 raise TraceError(node = self, cause = f"Unsupported unary operator '{op}'")
         except Exception as e:
@@ -445,6 +435,8 @@ class UnaryOp(ASTNode):
                     return math.ceil(self.operand.execute(env))
                 case "round":
                     return int(round(self.operand.execute(env)))
+                case "sqrt":
+                    return math.sqrt(self.operand.execute(env))
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
         except Exception as e:
@@ -480,6 +472,21 @@ class AccessOp(ASTNode):
                     if arg_type != "text":
                         raise TraceError(node = self, cause = f"Argument for operation '{op}' must be of type 'text', got '{arg_type}'.")
                 return "boolean"
+
+            elif op == "length":
+                is_list = isinstance(target_type, str) and target_type.startswith("list<") and target_type.endswith(">")
+                if target_type != "text" and not is_list:
+                    raise TraceError(node = self, cause = f"Unary operator 'length' not supported for type '{target_type}'. Expected 'text' or 'list'.")
+                return "number"
+            
+            elif op in ["first", "last"]:
+                is_list = isinstance(target_type, str) and target_type.startswith("list<") and target_type.endswith(">")
+                if target_type != "text" and not is_list:
+                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{target_type}'. Expected 'text' or 'list'.")
+                if target_type == "text":
+                    return "text"
+                else:
+                    return target_type[5:-1]
             
             elif op == "unit":
                 if target_type in ["number", "decimal"]:
@@ -516,6 +523,12 @@ class AccessOp(ASTNode):
                 case "regex":
                     import re
                     return re.search(arg_value, target_value) is not None
+                case "length":
+                    return len(target_value)
+                case "first":
+                    return target_value[0]
+                case "last":
+                    return target_value[-1]
                 case "unit":
                     # This will be handled by the Unit AST node, so we can just return the value here
                     return target_value
