@@ -13,8 +13,12 @@ class Print(ASTNode):
     def execute(self, env: Environment) -> None:
         try:
             value = self.expression.execute(env)
-            value = value if type(value) != bool else ("true" if value else "false")
-            print(value)
+            if isinstance(value, list):
+                print("(" + ", ".join(str(v) for v in value) + ")")
+            elif isinstance(value, bool):
+                print("true" if value else "false")
+            else:
+                print(value)
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 

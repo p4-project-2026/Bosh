@@ -2,6 +2,7 @@ import os
 from .ast_base import *
 import math
 import datetime
+import re
 
 @dataclass
 class NumberLiteral(ASTNode):
@@ -263,20 +264,19 @@ class TypeCast(ASTNode):
                 raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
             if original_type == self.target_type:
                 return original_type
-            if original_type == "number" and self.target_type == "decimal":
-                return "decimal"
-            if original_type == "decimal" and self.target_type == "number":
-                return "number"
-            if original_type in ["number", "decimal"] and self.target_type == "text":
-                return "text"
-            if original_type == "boolean" and self.target_type == "text":
-                return "text"
-            if original_type == "text" and self.target_type == "boolean":
-                return "boolean"
-            if original_type == "text" and self.target_type in ["number", "decimal"]:
-                return self.target_type
-            if original_type == "date" and self.target_type == "text":
-                return "text"
+            # Weak casting: number -> float -> string, boolean -> string, date -> string
+            if self.target_type == "text":
+                if original_type in ["number", "decimal", "boolean", "date"]:
+                    return "text"
+            if self.target_type in ["number", "decimal"]:
+                if original_type in ["number", "decimal"]:
+                    return self.target_type
+
+            # Strong casting: float -> number, string -> number/decimal/boolean/date (if possible)
+            if original_type == "text":
+                if self.target_type in ["number", "decimal", "boolean", "date"]:
+                    return self.target_type
+            
             raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -330,7 +330,7 @@ class BinaryOp(ASTNode):
                         return "decimal" if "decimal" in [left_type, right_type] else "number"
 
                     # string concatenation only for plus
-                    if op == "plus" and left_type == "text" and right_type == "text":
+                    if op == "plus" and left_type in ["text", "boolean", "number", "decimal", "date"] and right_type in ["text", "boolean", "number", "decimal", "date"]:
                         return "text"
 
                     # time <op> number or number <op> time -> time (allow any arithmetic)
@@ -394,8 +394,10 @@ class BinaryOp(ASTNode):
                     if isinstance(right_val, datetime.datetime) and isinstance(left_val, (int, float)):
                         return right_val + datetime.timedelta(milliseconds=left_val)
                     # string concatenation
-                    if isinstance(left_val, str) and isinstance(right_val, str):
-                        return left_val + right_val
+                    if isinstance(left_val, str) or isinstance(right_val, str):
+                        if isinstance(left_val, bool):
+                            left_val = "true" if left_val else "false"
+                        return str(left_val) + str(right_val)
                     # fallback to python add (may raise)
                     return left_val + right_val
                 case "minus":
@@ -575,7 +577,6 @@ class AccessOp(ASTNode):
                 case "ends_with":
                     return target_value.endswith(arg_value)
                 case "regex":
-                    import re
                     return re.search(arg_value, target_value) is not None
                 case "length":
                     return len(target_value)
