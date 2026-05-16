@@ -78,6 +78,14 @@ class ScopeStack(Generic[T]):
                 vvvprint(f"{self.__class__.__name__}: Variable '{name}' found in scope for assignment. Value: {scope.lookup(name)}")
                 return scope.lookup(name)
         raise Exception(f"Variable '{name}' not found in scope.")
+    
+    def contains(self, name: str) -> bool:
+        for scope in reversed(self.stack):
+            if scope.contains(name):
+                return True
+            if scope.function_scope:  # If we reach a function scope or global scope, stop searching
+                break
+        return False
 
     def bind(self, name: str, value: T):
         vvvprint(f"{self.__class__.__name__}: Binding variable '{name}' to value {value} in current scope...")
