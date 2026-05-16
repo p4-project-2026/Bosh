@@ -9,25 +9,40 @@ class Assign(ASTNode):
 
 
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            vvvprint(f"Assign: Checking assignment of value '{self.value}' to variable '{self.target.name}'...")
-            value_type = self.value.check(v_table, f_table)
-            vvvprint(f"Assign: Value '{self.value}' has type '{value_type}'")
+            
+            value_type = self.value.check(v_table=v_table,
+                                          f_table=f_table, 
+                                          inference_context=inference_context
+                                          )
+            
             if value_type is None:
                 raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
-            old_types = None
-            try:
-                vvvprint(f"Assign: Looking up variable '{self.target.name}' for type checking...")
-                old_types = v_table.lookup(self.target.name)
-                if value_type 
-
+            old_types = v_table.lookup(self.target.name) if self.target.name in v_table.table else {ANY_TYPE}
+            
+            if not t_h.is_compatible(old_types, value_type):
+                raise Exception(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{old_types}'", self)
+            
+            narrowed_type = t_h.narrow(old_types, value_type)
+            if narrowed_type != value_type:
+                self.value.inference(v_table=v_table,
+                                     f_table=f_table,
+                                     inference_context=inference_context,
+                                     old_types=old_types,
+                                     narrowed_type=narrowed_type
+                                     )
+            if old_types != narrowed_type:
+                v_table.bind(self.target.name, narrowed_type)
+            self.child_return_types["value"] = (narrowed_type, self.value)
+            self.child_return_types["self"] = (narrowed_type, self)
+            return
+            
+            
 
             
 
-            vvvprint(f"Assign: Attempting to bind variable '{self.target.name}' to type '{value_type}'...")            
-            v_table.bind(self.target.name, value_type)
-            vvvprint(f"Assign: Variable '{self.target.name}' bound to type '{value_type}' successfully.")
+                     
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
