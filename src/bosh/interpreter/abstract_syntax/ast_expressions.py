@@ -654,10 +654,10 @@ class BinaryOp(ASTNode):
 
                         self.child_return_types["self"] = (return_types.copy(), self)
                         return return_types
-            """
-            match op:
 
-                case "plus":
+--------------------------------------------------
+
+                         case "plus":
                     concatenation_case = {"text"}
                     if t_h.is_compatible(left_type, concatenation_case) or t_h.is_compatible(right_type, concatenation_case):
                         self.child_return_types["left"] = (left_type.copy(), self.left)
@@ -707,12 +707,16 @@ class BinaryOp(ASTNode):
                         return_types.add("decimal")
                     self.child_return_types["self"] = (return_types.copy(), self)
                     return return_types 
+            """
+            match op:
+
+               
 
                     
                     
                     
                     
-                case "minus" | "mult" | "div":
+                case  "plus" | "minus" | "mult" | "div":
                     valid_input_types = {"number", "decimal"}
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
