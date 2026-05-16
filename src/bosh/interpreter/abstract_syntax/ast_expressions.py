@@ -656,13 +656,63 @@ class BinaryOp(ASTNode):
                         return return_types
             """
             match op:
-                
+
+                case "plus":
+                    concatenation_case = {"text"}
+                    if t_h.is_compatible(left_type, concatenation_case) or t_h.is_compatible(right_type, concatenation_case):
+                        self.child_return_types["left"] = (left_type.copy(), self.left)
+                        self.child_return_types["right"] = (right_type.copy(), self.right)
+                        self.child_return_types["self"] = ({"text"}, self)
+                        return {"text"}
+
+                    addition_case = {"number", "decimal"}
+
+                    if not t_h.is_compatible(left_type, addition_case):
+                        raise Exception(
+                                        f"Binary operator '{op}' not supported for left type '{left_type}'. "
+                                        f"Expected number, decimal, or text.",
+                                        self
+                                        )
+                    if not t_h.is_compatible(right_type, addition_case):
+                        raise Exception(
+                                        f"Binary operator '{op}' not supported for right type '{right_type}'. "
+                                        f"Expected number, decimal, or text.",
+                                        self
+                                        )
+
+                    left_narrowed = t_h.narrow(left_type, addition_case)
+                    right_narrowed = t_h.narrow(right_type, addition_case)
+                    if left_narrowed != left_type:
+                        self.left.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=left_type.copy(),
+                        new_inference_value=left_narrowed.copy(),
+                        )
+                    if right_narrowed != right_type:
+                        self.right.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=right_type.copy(),
+                        new_inference_value=right_narrowed.copy(),
+                        )
+                    self.child_return_types["left"] = (left_narrowed.copy(), self.left)
+                    self.child_return_types["right"] = (right_narrowed.copy(), self.right)
+                    return_types = set()
+                    if "number" in left_narrowed and "number" in right_narrowed:
+                        return_types.add("number")
+                    if "decimal" in left_narrowed or "decimal" in right_narrowed:
+                        return_types.add("decimal")
+                    self.child_return_types["self"] = (return_types.copy(), self)
+                    return return_types 
 
                     
                     
                     
                     
-                case "plus" | "minus" | "mult" | "div":
+                case "minus" | "mult" | "div":
                     valid_input_types = {"number", "decimal"}
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
