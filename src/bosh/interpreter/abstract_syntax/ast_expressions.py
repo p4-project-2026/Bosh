@@ -891,9 +891,7 @@ class BinaryOp(ASTNode):
         if not t_h.is_compatible(new_inference_value, self.child_return_types["self"][0]):
             raise Exception(f"BinaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
         match self.operator:
-            case "plus":
-                pass
-            case "minus" | "mult" | "div":
+            case  "plus" | "minus" | "mult" | "div":
                 if new_inference_value == {"number"}:
                     new_left_inference = {"number"}
                     new_right_inference = {"number"}
