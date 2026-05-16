@@ -7,6 +7,6 @@ def python_type_to_bosh_type(python_type):
         str: "text",
         bool: "boolean",
         list: "array",
-        # datetime.datetime: "date",
+        datetime: "date",
     }
     return type_mapping.get(python_type, "unknown")

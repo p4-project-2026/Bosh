@@ -1,4 +1,5 @@
 from .ast_base import *
+import os
 
 @dataclass
 class Print(ASTNode):
@@ -101,27 +102,35 @@ class ForAll(ASTNode):
             self.body.check(v_table, f_table)
             v_table.exit_scope()
         except Exception as e:
-            raise TraceError(node = self, cause = e, hide_trace = True)
-        
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> None:
         try:
-            value = None
-            iterable_value = self.iterable.execute(env)
-            if iterable_value is None:
-                return
-            if isinstance(iterable_value, str):
-                iterable_value = [iterable_value]
+            iterable_val = self.iterable.execute(env)
             
-            for item in iterable_value:
+            elements_to_iterate = []
+            if isinstance(iterable_val, str):
+                if not os.path.exists(iterable_val):
+                    raise ValueError(f"Directory path '{iterable_val}' does not exist.")
+                if not os.path.isdir(iterable_val):
+                    raise ValueError(f"Path '{iterable_val}' is a file, not a directory.")
+                
+                for item in os.listdir(iterable_val):
+                    full_path = os.path.join(iterable_val, item)
+                    elements_to_iterate.append(full_path.replace("\\", "/"))
+                    
+            elif isinstance(iterable_val, list):
+                elements_to_iterate = iterable_val
+            else:
+                raise ValueError(f"Iterable must evaluate to a list or a directory string, got {type(iterable_val).__name__}")
+
+            for element in elements_to_iterate:
                 env.new_scope()
                 try:
-                    env.assign_variable(self.iterator_name, item)
-                    value = self.body.execute(env)
-                    if value is not None:
-                        break
+                    env.assign_variable(self.iterator_name, element)
+                    self.body.execute(env)
                 finally:
-                    env.exit_scope()
-            return value
+                    env.exit_scope()                
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
@@ -214,8 +223,10 @@ class Quit(ASTNode):
 
 @dataclass
 class ListAdd(ASTNode):
-    target: ASTNode
+    op: str
     item: ASTNode
+    target: ASTNode
+    index: Optional[ASTNode] = None
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         try:
@@ -235,7 +246,13 @@ class ListAdd(ASTNode):
         try:
             target_value = self.target.execute(env)
             item_value = self.item.execute(env)
-            target_value.append(item_value)
+            if self.op == "insert" and self.index is not None:
+                index_value = self.index.execute(env)
+                target_value.insert(index_value, item_value)
+            elif self.op == "append":
+                target_value.append(item_value)
+            elif self.op == "prepend":
+                target_value.insert(0, item_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 

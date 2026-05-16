@@ -89,7 +89,8 @@ class BoshTransformer(Transformer):
         return node
 
     def add_to_list(self, meta, args):
-        node = ListAdd(target=args[1], item=args[0])
+        index = args[3] if len(args) > 3 else None
+        node = ListAdd(op=args[0], item=args[1], target=args[2], index=index)
         node.set_meta(meta, self._filename)
         return node
 
@@ -483,4 +484,6 @@ class BoshTransformer(Transformer):
             token.value = "decimal"
         if token.value == "string":
             token.value = "text"
+        if token.value == "bool":
+            token.value = "boolean"
         return token.value

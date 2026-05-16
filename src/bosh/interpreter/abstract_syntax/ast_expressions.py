@@ -296,8 +296,8 @@ class TypeCast(ASTNode):
                 case "boolean":
                     return bool(value)
                 case "date":
-                    if isinstance(value, str):
-                        return datetime.datetime.fromisoformat(value)
+                    if isinstance(value, (datetime.datetime, str)):
+                        return datetime.datetime.fromisoformat(str(value))
                     raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
@@ -359,10 +359,6 @@ class BinaryOp(ASTNode):
                     raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
 
                 case "eq" | "neq":
-                    numeric_eq = (left_type in ["number", "decimal"] and right_type in ["number", "decimal"])
-                    null_eq = (left_type == "null" or right_type == "null")
-                    if left_type != right_type and not numeric_eq and not null_eq:
-                        raise TraceError(node = self, cause = f"Operator '{op}' not supported for types '{left_type}' and '{right_type}'")
                     return "boolean"
                 
                 case "eq_type" | "neq_type":
@@ -422,12 +418,30 @@ class BinaryOp(ASTNode):
                 case "pow":
                     return left_val ** right_val
                 case "eq":
+                    if type(left_val) != type(right_val):
+                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+                            pass
+                        else:
+                            return False
                     return left_val == right_val
                 case "neq":
+                    if type(left_val) != type(right_val):
+                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+                            pass
+                        else:
+                            return True
                     return left_val != right_val
-                case "eq_type":
-                    return python_type_to_bosh_type(type(left_val)) == right_val
-                case "neq_type":
+                case "eq_type" | "neq_type":
+                    if right_val in ["folder", "file"]:
+                        if isinstance(left_val, str):
+                            if right_val == "folder":
+                                return os.path.isdir(left_val)
+                            else:
+                                return os.path.isfile(left_val)
+                        else:
+                            raise TraceError(node = self, cause = f"Left operand must be a string when comparing to 'file' or 'folder', got '{type(left_val).__name__}'")
+                    if self.operator == "eq_type":
+                        return python_type_to_bosh_type(type(left_val)) == right_val
                     return python_type_to_bosh_type(type(left_val)) != right_val
                 case "or":
                     return bool(left_val) or bool(right_val)

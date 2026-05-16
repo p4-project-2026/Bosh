@@ -15,15 +15,14 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | stmt ("else" | "otherwise") stmt                              -> if_unable
                 | ("for all" | "for each") IDENT "in" expr? ":"? in_code_block  -> for_all
                 | "repeat until" expr ":"?  in_code_block                       -> repeat
-                | "count" IDENT? "from" expr "to" expr ":"? in_code_block    -> count
+                | "count" IDENT? "from" expr "to" expr ":"? in_code_block       -> count
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
                 | ("return") expr                                               -> return_
-                | "append" expr "to" expr                                       -> add_to_list
-                | "remove" expr "from" expr                                     -> remove_from_list
-                | "remove element" expr "from" expr                             -> remove_from_list_index
+                | INSERT expr "to" term ("at" "index"? expr)?                   -> add_to_list
+                | "remove" "element"? expr "from" expr                          -> remove_from_list
                 | ( "run" | "call" ) IDENT ("using" "(" expr ("," expr)* ")")?  -> call_func
-
+INSERT : "append" | "prepend" | "insert"
 
 ?def_stmt       : IDENT "is" expr               -> assign
                 | IDENT "is" "a" TYPE expr?     -> assign_type
@@ -117,7 +116,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
 TYPE    : ("text" | "string")
         | ("int" | "number")
         | ("float" | "decimal")
-        | "boolean"
+        | ("boolean" | "bool")
         | "date"
         | "time" 
         | "list"
