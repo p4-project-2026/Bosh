@@ -162,9 +162,9 @@ class ListLiteral(ASTNode):
         try:
             self.child_return_types.clear()
             if len(self.elements) == 0:
-                self.child_return_types["element"] = ({ANY_TYPE}, self)
-                self.child_return_types["self"] = ({UNKNOWN_LIST_TYPE}, self) # remember the return type for inference
-                return {EMPTY_LIST_TYPE}
+                list_type = {EMPTY_LIST_TYPE}
+                self.child_return_types["self"] = (list_type, self) # remember the return type for inference
+                return list_type
             element_type = self.elements[0].check(v_table, f_table, inference_context)
             
             for elem in self.elements[1:]:
@@ -175,7 +175,7 @@ class ListLiteral(ASTNode):
             self.child_return_types["element"] = (element_type.copy(), self.elements[0])# all elements have the same type, so we can just use the first one to remember the type for inference. this node will not be infered itself, it's just for consistency and potential future use.
             self.child_return_types["self"] = (list_type.copy(), self) # remember the return type for inference
             
-            return list_type.copy()
+            return list_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
