@@ -30,6 +30,12 @@ class InferenceContext:
 class ASTNode():
     pos: Optional[Position] = None
     def __init__(self):
+        """
+        child_return_types is a dictionary that maps a string key to a tuple of a set of strings and an ASTNode.
+        The string key is used to identify the child node, the set of strings is used to remember the return type of that child node,
+        and the ASTNode is used to reference the child node itself for inference purposes. This allows us to update the remembered return type for a child node during inference when we encounter a situation where we can narrow the type of a variable based on new information.
+        it can also be used to get the types in Execution.
+        """
         self.child_return_types: dict[str, tuple[set[str], "ASTNode"]] = {}
 
     def set_meta(self, meta, filename: Optional[str] = None):
@@ -41,7 +47,7 @@ class ASTNode():
                 filename=filename
             )
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         raise NotImplementedError(self.__class__.__name__ + " does not implement check()")
     
     def execute(self, env: Environment) -> Any:
@@ -54,17 +60,7 @@ class ASTNode():
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         try:
-            new_dict = {}
-
-            for key, (value, node) in self.child_return_types.items():
-                # i want to check if all the values in inference_value are in value and vice versa, and if so, run inference on the node with new_inference_value then replace value with new_inference_value and check the next one
-                if old_inference_value == value:
-                    node.inference(v_table, f_table, inference_context, old_inference_value, new_inference_value)
-                    new_dict[key] = (new_inference_value.copy(), node)
-                else:
-                    new_dict[key] = (value.copy(), node)
-            self.child_return_types = new_dict
-            return 
+            raise NotImplementedError(self.__class__.__name__ + " has not just implemented inference(), but it is needed for inference. This error is raised to indicate that this node needs to implement inference() in order to be used in inference, and to provide a clear error message if it is not implemented.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -75,7 +71,7 @@ class ASTNode():
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         vvvprint(f"Block: Checking block with {len(self.statements)} statements...")
         return_type = None
         for stmt in self.statements:
