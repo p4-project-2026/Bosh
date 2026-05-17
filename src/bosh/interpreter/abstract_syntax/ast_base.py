@@ -16,7 +16,8 @@ class Position():
 
 @dataclass
 class InferenceContext:
-    __changed: bool = False
+    def __init__(self):
+        self.__changed: bool = False
 
     def has_changed(self) -> bool:
         return self.__changed
@@ -116,10 +117,37 @@ class Block(ASTNode):
 @dataclass
 class Program(ASTNode):
     block: Block
+    def __post_init__(self):
+        super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
-        vvvprint("Program: Starting type checking of program...")
-        return self.block.check(v_table, f_table, inference_context)
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+        try:
+            self.child_return_types.clear()
+            vvvprint("Program: Starting type checking of program...")
+
+            inference_context = InferenceContext()
+            return_value = None
+            
+            while True:
+                inference_context.reset()
+                vvvprint("Program: Starting a new inference iteration...")
+
+                return_value = self.block.check(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context
+                )
+
+                if not inference_context.has_changed():
+                    vvvprint("Program: No changes in inference, finished type checking.")
+                    break
+
+                vvvprint("Program: Changes detected in inference, starting another iteration...")
+
+            return return_value
+        
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> Any:
         vvvprint("Program: Starting execution of program...")
@@ -131,4 +159,4 @@ class Program(ASTNode):
                 inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
-        vvvprint("Program: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
+         raise Exception(f"Program: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
