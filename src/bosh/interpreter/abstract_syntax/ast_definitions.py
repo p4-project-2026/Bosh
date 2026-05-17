@@ -12,10 +12,11 @@ class Assign(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
-            value_type = self.value.check(v_table=v_table,
-                                          f_table=f_table, 
-                                          inference_context=inference_context
-                                          )
+            value_type = self.value.check(
+                v_table=v_table,
+                f_table=f_table, 
+                inference_context=inference_context
+                )
             
             if value_type is None:
                 raise Exception(f"Value assigned to '{self.target.name}' is undefined.", self)
@@ -27,15 +28,18 @@ class Assign(ASTNode):
                 
                 narrowed_type = t_h.narrow(old_types, value_type)
                 if narrowed_type != value_type:
-                    self.value.inference(v_table=v_table,
-                                         f_table=f_table,
-                                         inference_context=inference_context,
-                                         old_inference_value=value_type.copy(),
-                                         new_inference_value=narrowed_type.copy()
-                                         )
+                    self.value.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=value_type.copy(),
+                        new_inference_value=narrowed_type.copy()
+                        )
+                    
                 if old_types != narrowed_type:
                     v_table.bind(self.target.name, narrowed_type.copy())
                     inference_context.mark_infered()
+                    
                 self.child_return_types["value"] = (narrowed_type.copy(), self.value)
                 return
             else:
@@ -80,49 +84,49 @@ class AssignType(ASTNode):
 
             if self.value:
                 value_type = self.value.check(
-                                              v_table=v_table,
-                                              f_table=f_table,
-                                              inference_context=inference_context,
-                                              )
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    )
 
                 if value_type is None:
                     raise Exception(
-                                    f"Value assigned to '{self.target.name}' is undefined.",
-                                    self,
-                                    )
+                        f"Value assigned to '{self.target.name}' is undefined.",
+                        self,
+                        )
 
                 if not t_h.is_compatible(declared_type, value_type):
                     raise Exception(
-                                    f"Cannot assign value of type '{value_type}' to variable "
-                                    f"'{self.target.name}' of type '{self.var_type}'",
-                                    self,
-                                    )
+                        f"Cannot assign value of type '{value_type}' to variable "
+                        f"'{self.target.name}' of type '{self.var_type}'",
+                        self,
+                        )
 
                 narrowed_value_type = t_h.narrow(value_type, declared_type)
 
                 if narrowed_value_type != value_type:
                     self.value.inference(
-                                         v_table=v_table,
-                                         f_table=f_table,
-                                         inference_context=inference_context,
-                                         old_inference_value=value_type.copy(),
-                                         new_inference_value=narrowed_value_type.copy(),
-                                        )
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=value_type.copy(),
+                        new_inference_value=narrowed_value_type.copy(),
+                        )
 
                 self.child_return_types["value"] = (
-                                                    narrowed_value_type.copy(),
-                                                    self.value,
-                                                    )
+                    narrowed_value_type.copy(),
+                    self.value,
+                    )
 
             if v_table.contains(self.target.name):
                 old_type = v_table.lookup(self.target.name)
 
                 if not t_h.is_compatible(old_type, declared_type):
                     raise Exception(
-                                    f"Cannot assign type '{self.var_type}' to variable "
-                                    f"'{self.target.name}' of type '{old_type}'",
-                                    self,
-                                    )
+                        f"Cannot assign type '{self.var_type}' to variable "
+                        f"'{self.target.name}' of type '{old_type}'",
+                        self,
+                        )
 
                 narrowed_declared_type = t_h.narrow(old_type, declared_type)
                 if narrowed_declared_type != old_type:
