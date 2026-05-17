@@ -969,10 +969,10 @@ class UnaryOp(ASTNode):
                         new_inference_value=narrowed.copy(),
                         )
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
-                    self.child_return_types["self"] = ({"decimal"}, self)
-                    return {"decimal"}
-                case "length":
-                    
+                    self.child_return_types["self"] = (narrowed.copy(), self)
+                    return narrowed.copy()
+                
+                case "length":    
                     if not t_h.has_list_type(operand_type):
                         raise Exception(
                                         f"Unary operator 'length' not supported for type '{operand_type}'. "
@@ -980,7 +980,7 @@ class UnaryOp(ASTNode):
                                         self
                                         )
                     if t_h.has_none_list_type(operand_type):
-                        narrowed = t_h.narrow(operand_type, UNKNOWN_LIST_TYPE)
+                        narrowed = t_h.narrow(operand_type, EMPTY_LIST_TYPE)
                         self.operand.inference(
                         v_table=v_table,
                         f_table=f_table,
@@ -1014,6 +1014,7 @@ class UnaryOp(ASTNode):
                     return_type = t_h.get_list_element_types(operand_type)
                     self.child_return_types["self"] = (return_type.copy(), self)
                     return return_type
+                
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{op}'")
         
@@ -1043,6 +1044,78 @@ class UnaryOp(ASTNode):
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]
+                ) -> None:
+        
+        if not self.child_return_types["self"][0]:
+            raise Exception(f"UnaryOp inference: No type information available for unary operator during inference. This node has not been checked. Node: {self}", self)
+        remembered_types = self.child_return_types["self"][0]
+        if old_inference_value != remembered_types:
+            raise Exception(f"UnaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{remembered_types}' for unary operator. "
+                            f"Something went wrong in the inference pathing. Node: {self}", self)
+        if not t_h.is_compatible(new_inference_value, remembered_types):
+            raise Exception(f"UnaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{remembered_types}' for unary operator. "
+                            f"Something went wrong in the inference pathing. Node: {self}", self)
+        if old_inference_value == new_inference_value:
+            raise Exception(f"UnaryOp inference: New inference value is the same as the old inference value '{old_inference_value}' for unary operator. "
+                            f"This probably means the parent passed a non-narrowing inference request. Node: {self}", self)
+        match self.operator:
+            
+            case "-" | "neg" | "negative" | "exponent":
+                if new_inference_value == {"number"}:
+                    new_operand_inference = {"number"}
+                    self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=self.child_return_types["operand"][0].copy(),
+                        new_inference_value=new_operand_inference.copy(),
+                        )
+                    self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
+                    self.child_return_types["self"] = ({"number"}, self)
+                    return
+
+                new_operand_inference = {"decimal"}
+                self.operand.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=self.child_return_types["operand"][0].copy(),
+                    new_inference_value=new_operand_inference.copy(),
+                    )
+                self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
+                self.child_return_types["self"] = ({"decimal"}, self)
+                return
+            case "not_" | "not" | "!":
+                raise Exception(f"Inference for 'not' operator is not supported because it only supports 'boolean' types and returns 'boolean', so there is no need for inference. "
+                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            case "floor" | "ceiling" | "round":
+                raise Exception(f"Inference for 'floor', 'ceiling', and 'round' operators is not supported because they only support 'number' types and return 'number', so there is no need for inference. "
+                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            case "length":
+                raise Exception(f"Inference for 'length' operator is not supported because it only supports text and list types and returns 'number', so there is no need for inference. "
+                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            case "first" | "last":
+                self.child_return_types["self"] = (new_inference_value.copy(), self)
+                new_list_inference = t_h.make_set_list_types(new_inference_value)
+                self.operand.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=self.child_return_types["operand"][0].copy(),
+                    new_inference_value=new_list_inference.copy(),
+                    )
+                self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
+                return
+            case _:
+                raise Exception(f"Inference for unary operator '{self.operator}' is not supported. If you are seeing this error, it means something went wrong somewhere. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+
 
 @dataclass
 class AccessOp(ASTNode):
