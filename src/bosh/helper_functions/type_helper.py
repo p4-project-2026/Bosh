@@ -25,15 +25,16 @@ def make_set_list_types(types: set[str]) -> set[str]:
 # 'has' functions for type sets
 
 def has_list_type(type_set: set[str]) -> bool:
-    if is_unknown_type(type_set)
+    if is_unknown_type(type_set):
         return True
     return any(is_list_type(t) for t in type_set)
 
 def has_only_list_types(type_set: set[str]) -> bool:
     return all(is_list_type(t) for t in type_set)
 
-def has_none_list_type(type_set: set[str]) -> bool:
-    if is_unknown_type(type_set)
+def has_non_list_type(type_set: set[str]) -> bool:
+    # if the type set is unknown, we have to assume it could have non-list types
+    if is_unknown_type(type_set):
         return True
     return any(not is_list_type(t) for t in type_set)
 
@@ -56,6 +57,8 @@ def has_only_concrete_list_types(types: set[str]) -> bool:
 # list types
 
 def is_list_type(type_name: str) -> bool:
+    if type_name == UNKNOWN_TYPE:
+        return True
     vvvprint(f"Type Helper: Checking if type '{type_name}' is a list type...")
     return type_name.startswith("list<") and type_name.endswith(">")
 
@@ -113,14 +116,16 @@ def get_all_non_list_types(types: set[str]) -> set[str]:
     vvvprint(f"Type Helper: Getting all non-list types from set '{types}'...")
     return {t for t in types if not is_list_type(t)}
 
-def get_list_element_types(list_type: set[str]) -> Optional[set[str]]:
+def get_list_element_types(list_type: set[str]) -> set[str]:
     vvvprint(f"Type Helper: Getting list element types from list type set '{list_type}'...")
     return_type = set()
+    if is_unknown_type(list_type):
+        return {UNKNOWN_TYPE}
     for t in list_type:
         if is_list_type(t):
             elem_type = t[5:-1]
             return_type.add(elem_type)
-    return return_type if return_type else None
+    return return_type
 
 
 #'misc' functions
@@ -155,6 +160,11 @@ def narrow(a: set[str], b: set[str]) -> set[str]:
     return a & b
 
 def contains(types: set[str], target: str) -> bool:
+    if is_unknown_type(types):
+        return True
+    if is_list_type(target):
+        if is_unknown_list_type(types):
+            return True
     return target in types
 
 def contains_numeric_type(types: set[str]) -> bool:
