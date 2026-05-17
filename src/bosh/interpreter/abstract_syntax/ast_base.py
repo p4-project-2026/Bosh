@@ -27,6 +27,14 @@ class InferenceContext:
     def reset(self):
         self.__changed = False
 
+    def load_state(self, other: "InferenceContext"):
+        self.__changed = other.__changed
+    
+    def save_state(self) -> "InferenceContext":
+        new_context = InferenceContext()
+        new_context.__changed = self.__changed
+        return new_context
+
 class ASTNode():
     pos: Optional[Position] = None
     def __init__(self):
@@ -47,7 +55,7 @@ class ASTNode():
                 filename=filename
             )
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         raise NotImplementedError(self.__class__.__name__ + " does not implement check()")
     
     def execute(self, env: Environment) -> Any:
@@ -71,7 +79,7 @@ class ASTNode():
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         vvvprint(f"Block: Checking block with {len(self.statements)} statements...")
         return_type = None
         for stmt in self.statements:
@@ -116,3 +124,11 @@ class Program(ASTNode):
     def execute(self, env: Environment) -> Any:
         vvvprint("Program: Starting execution of program...")
         return self.block.execute(env)
+    
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        vvvprint("Program: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
