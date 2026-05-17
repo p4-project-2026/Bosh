@@ -8,13 +8,13 @@ T = TypeVar('T')
 @dataclass
 class FunctionSignature:
     param: List[str]
-    param_types: Dict[str, str]
-    return_type: Optional[str] = None
+    param_types: Dict[str, set[str]]
+    return_type: Optional[set[str]]
     
-    def __init__(self, parameters: Dict[str, str], return_type: Optional[str] = None):
+    def __init__(self, parameters: Dict[str, set[str]], return_type: Optional[set[str]] = None):
         self.param = list(parameters.keys())
         self.param_types = parameters
-        self.return_type = return_type
+        self.return_type = return_type if return_type is not None else set()
 
 class FuncTable(Table[FunctionSignature]):
     
