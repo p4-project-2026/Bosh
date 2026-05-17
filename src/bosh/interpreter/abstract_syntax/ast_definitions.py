@@ -174,6 +174,7 @@ class TaskDecl(ASTNode):
             
             return_type = None
             while True:
+                vvvprint(f"TaskDecl: Starting inference iteration for task '{self.name}'...")
 
                 inference_context.reset()
 
@@ -187,7 +188,7 @@ class TaskDecl(ASTNode):
                     vvvprint(f"TaskDecl: No changes in inference context after checking body of task '{self.name}', breaking inference loop.")
                     break
                 
-                vvvprint(f"TaskDecl: Changes detected in inference context after checking body of task '{self.name}', starting another inference iteration.")
+
             
             parameter_dict = {param: v_table.lookup(param) for param in self.parameters}
             f_table.bind(
@@ -197,7 +198,7 @@ class TaskDecl(ASTNode):
                     return_type=return_type
                 )
             )
-            
+            vvvprint(f"TaskDecl: Task '{self.name}' bound successfully to function table with signature: parameters {parameter_dict} and return type '{return_type}'.")
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
         except Exception as e:

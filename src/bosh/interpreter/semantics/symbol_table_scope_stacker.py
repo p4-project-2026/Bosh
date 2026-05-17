@@ -1,9 +1,9 @@
 from bosh.interpreter.executor.environment.scope_stack import ScopeStack
-from .symbol_table import symbol_table
+from .symbol_table import Symbol_Table
 
 class SymbolTableScopeStacker(ScopeStack):
     def __init__(self):
-        super().__init__(table_class=symbol_table)
+        super().__init__(table_class=Symbol_Table)
 
     def bind(self, name: str, type_value: set[str]):
         for scope in reversed(self.stack):
