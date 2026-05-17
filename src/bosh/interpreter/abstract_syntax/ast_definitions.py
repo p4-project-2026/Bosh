@@ -6,43 +6,43 @@ from ..semantics.func_table import FunctionSignature
 class Assign(ASTNode):
     target: Identifier
     value: ASTNode
+    def __post_init__(self):
+        super().__init__()
 
-
-    
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            
+            self.child_return_types.clear()
             value_type = self.value.check(v_table=v_table,
                                           f_table=f_table, 
                                           inference_context=inference_context
                                           )
             
             if value_type is None:
-                raise TraceError(node = self, cause = f"Value assigned to '{self.target.name}' is undefined.")
-            old_types = v_table.lookup(self.target.name) if self.target.name in v_table.table else {ANY_TYPE}
+                raise Exception(f"Value assigned to '{self.target.name}' is undefined.", self)
             
-            if not t_h.is_compatible(old_types, value_type):
-                raise Exception(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{old_types}'", self)
-            
-            narrowed_type = t_h.narrow(old_types, value_type)
-            if narrowed_type != value_type:
-                self.value.inference(v_table=v_table,
-                                     f_table=f_table,
-                                     inference_context=inference_context,
-                                     old_types=old_types,
-                                     narrowed_type=narrowed_type
-                                     )
-            if old_types != narrowed_type:
-                v_table.bind(self.target.name, narrowed_type)
-            self.child_return_types["value"] = (narrowed_type, self.value)
-            self.child_return_types["self"] = (narrowed_type, self)
-            return
-            
-            
-
-            
-
-                     
+            if v_table.contains(self.target.name):
+                old_types = v_table.lookup(self.target.name)
+                if not t_h.is_compatible(old_types, value_type):
+                    raise Exception(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{old_types}'", self)
+                
+                narrowed_type = t_h.narrow(old_types, value_type)
+                if narrowed_type != value_type:
+                    self.value.inference(v_table=v_table,
+                                         f_table=f_table,
+                                         inference_context=inference_context,
+                                         old_inference_value=value_type.copy(),
+                                         new_inference_value=narrowed_type.copy()
+                                         )
+                if old_types != narrowed_type:
+                    v_table.bind(self.target.name, narrowed_type.copy())
+                    inference_context.mark_infered()
+                self.child_return_types["value"] = (narrowed_type.copy(), self.value)
+                return
+            else:
+                v_table.bind(self.target.name, value_type.copy())
+                self.child_return_types["value"] = (value_type.copy(), self.value)
+                return
+                
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -69,18 +69,68 @@ class AssignType(ASTNode):
     target: ASTNode
     var_type: str
     value: Optional[ASTNode]
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            vvvprint(f"AssignType: Checking assignment of value '{self.value}' to variable '{self.target}' with declared type '{self.var_type}'...")
-            value_type = self.value.check(v_table, f_table, inference_context) if self.value else None
-            vvvprint(f"AssignType: Value '{self.value}' has type '{value_type}'")
-            if value_type and value_type != self.var_type:
-                raise BoshTypeError(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'", self)
-            vvvprint(f"AssignType: Attempting to bind variable '{self.target.name}' to type '{self.var_type}'...")
-            vvvprint(f"AssignType: Successfully bound variable '{self.target.name}' to type '{self.var_type}'.")
-            v_table.bind(self.target.name, self.var_type)
-            vvvprint(f"AssignType: Variable '{self.target.name}' bound to type '{self.var_type}' successfully.")
+            self.child_return_types.clear()
+
+            declared_type = {self.var_type}
+
+            if self.value:
+                value_type = self.value.check(
+                                              v_table=v_table,
+                                              f_table=f_table,
+                                              inference_context=inference_context,
+                                              )
+
+                if value_type is None:
+                    raise Exception(
+                                    f"Value assigned to '{self.target.name}' is undefined.",
+                                    self,
+                                    )
+
+                if not t_h.is_compatible(declared_type, value_type):
+                    raise Exception(
+                                    f"Cannot assign value of type '{value_type}' to variable "
+                                    f"'{self.target.name}' of type '{self.var_type}'",
+                                    self,
+                                    )
+
+                narrowed_value_type = t_h.narrow(value_type, declared_type)
+
+                if narrowed_value_type != value_type:
+                    self.value.inference(
+                                         v_table=v_table,
+                                         f_table=f_table,
+                                         inference_context=inference_context,
+                                         old_inference_value=value_type.copy(),
+                                         new_inference_value=narrowed_value_type.copy(),
+                                        )
+
+                self.child_return_types["value"] = (
+                                                    narrowed_value_type.copy(),
+                                                    self.value,
+                                                    )
+
+            if v_table.contains(self.target.name):
+                old_type = v_table.lookup(self.target.name)
+
+                if not t_h.is_compatible(old_type, declared_type):
+                    raise Exception(
+                                    f"Cannot assign type '{self.var_type}' to variable "
+                                    f"'{self.target.name}' of type '{old_type}'",
+                                    self,
+                                    )
+
+                narrowed_declared_type = t_h.narrow(old_type, declared_type)
+                if narrowed_declared_type != old_type:
+                    v_table.bind(self.target.name, narrowed_declared_type.copy())
+                    inference_context.mark_infered()
+            else:
+                v_table.bind(self.target.name, declared_type.copy())
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
             
@@ -93,13 +143,13 @@ class AssignType(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
                 
-    def inference(
+    def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
                 inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
-        raise Exception("AssignType does not return a value and cannot be used in inference.")
+        raise Exception(f"AssignType does not return a value and cannot be used in inference.", self)
 
 
 @dataclass
@@ -107,28 +157,45 @@ class TaskDecl(ASTNode):
     name: str
     parameters: List[str]
     body: Block
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            "TODO: Refactor to type check the body first to determine the return type, then bind the function signature with the correct return type, then type check the body again to ensure it matches the signature"
-            vvvprint(f"TaskDecl: Checking task declaration of '{self.name}' with parameters {self.parameters}...")
-            param_types = {param: "any" for param in self.parameters}
-            signature = FunctionSignature(parameters=param_types, return_type="any")
-            vvvprint(f"TaskDecl: Created function signature for task '{self.name}': {signature}")
-            vvvprint(f"TaskDecl: Attempting to bind task '{self.name}' with signature {signature} in function table...")
-            f_table.bind(self.name, signature)
-            vvvprint(f"TaskDecl: Task '{self.name}' bound successfully in function table.")
-            vvvprint(f"TaskDecl: Entering new scope for task '{self.name}' body checking...")
+            self.child_return_types.clear()
+            saved_inference_state = inference_context.save_state()
             v_table.new_scope()
-            vvvprint(f"TaskDecl: New scope entered for task '{self.name}'. Checking task body...")
-            vvvprint(f"TaskDecl: Binding parameters {self.parameters} to type 'any' in task '{self.name}' scope...")
             for param in self.parameters:
-                v_table.bind(param, "any")
-            vvvprint(f"TaskDecl: Parameters {self.parameters} bound successfully in task '{self.name}' scope. Checking task body...")
-            body_type = self.body.check(v_table, f_table)
-            vvvprint(f"TaskDecl: Task body checked. Determined return type: {body_type}")
-            signature.return_type = body_type if body_type else "any"
+                v_table.bind(param, {UNKNOWN_TYPE})
+            
+            return_type = None
+            while True:
+
+                inference_context.reset()
+
+                return_type = self.body.check(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context
+                    )
+                
+                if not inference_context.has_changed():
+                    vvvprint(f"TaskDecl: No changes in inference context after checking body of task '{self.name}', breaking inference loop.")
+                    break
+                
+                vvvprint(f"TaskDecl: Changes detected in inference context after checking body of task '{self.name}', starting another inference iteration.")
+            
+            parameter_dict = {param: v_table.lookup(param) for param in self.parameters}
+            f_table.bind(
+                self.name,
+                FunctionSignature(
+                    parameters=parameter_dict,
+                    return_type=return_type
+                )
+            )
+            
             v_table.exit_scope()
+            inference_context.load_state(saved_inference_state)
         except Exception as e:
             raise TraceError(node = self, cause = e)
             
@@ -142,3 +209,11 @@ class TaskDecl(ASTNode):
             env.bind_function(self.name, function_binding)
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception(f"TaskDecl: does not return a value and cannot be used in inference. something went wrong in inference pathing.", self)
