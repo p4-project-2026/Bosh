@@ -157,7 +157,7 @@ class NullLiteral(ASTNode):
         # Null literals are compatible with all types, so they can be narrowed to any type without error.
         raise Exception("NullLiteral: inference: Null literals only return a single type, it should not be called during type inference. " \
         "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-    "DONE"
+        "DONE"
 
 @dataclass
 class ListLiteral(ASTNode):
@@ -242,7 +242,7 @@ class Identifier(ASTNode):
     ) -> None:
         try:
             vvvprint(f"Identifier: inference: Starting inference for variable '{self.name}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'...")
-            if not self.child_return_types:
+            if "self" not in self.child_return_types:
                 raise Exception(f"Identifier: inference: No type information available for variable '{self.name}' during type inference. {self} has not been checked.", self)
             vvvprint(f"Identifier: inference: Current child return types for variable '{self.name}': {self.child_return_types}")
 
@@ -349,34 +349,30 @@ class ListLookup(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
-            vvvprint(f"ListLookup: check: Starting type check for list lookup. Target: {self.target}, Index: {self.index}")
             index_type = self.index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if index_type is None:
+                raise Exception("ListLookup: List index cannot be of type 'None'", self)
+            
+            valid_index_types = {"number"}
+            if not t_h.is_compatible(index_type, valid_index_types):
+                raise Exception(f"ListLookup: List index must be of type 'number', got '{index_type}'", self)
             if index_type != {"number"}:
-                vvvprint(f"ListLookup: check: Index type '{index_type}' is not 'number'. Checking if it's compatible...")
-                if t_h.is_unknown_type(index_type) or t_h.contains(index_type, "number"):
-                    vvvprint(f"ListLookup: check: Index type '{index_type}' is compatible with 'number'. Running inference on index with new inference value 'number'...")
-                    self.index.inference(v_table=v_table,
-                                         f_table=f_table, 
-                                         inference_context=inference_context, 
-                                         old_inference_value=index_type,
-                                         new_inference_value={"number"}
-                                         )
-                    vvvprint(f"ListLookup: check: Index type '{index_type}' inferred to 'number'.")
-                    self.child_return_types["index"] = ({"number"}, self.index)
-                else:
-                    raise Exception(f"ListLookup: List index must be of type 'number', got '{index_type}'", self)
-            else:
-                vvvprint(f"ListLookup: check: Index type '{index_type}' is 'number'.")
-                self.child_return_types["index"] = (index_type.copy(), self.index)
-            vvvprint(f"ListLookup: check: Checking target of list lookup...")
+                self.index.inference(v_table=v_table,
+                                     f_table=f_table, 
+                                     inference_context=inference_context, 
+                                     old_inference_value=index_type,
+                                     new_inference_value={"number"}
+                                     )
+                index_type = {"number"}
+            
+            self.child_return_types["index"] = (index_type.copy(), self.index)
+
             target_types = self.target.check(v_table=v_table,
                                              f_table=f_table,
                                              inference_context=inference_context
                                              )
-            vvvprint(f"ListLookup: check: Target types: {target_types}")
-            
+                        
             # check if any of the target types are can be a list type and if so, extract the element types.
-            vvvprint(f"ListLookup: check: Checking if target types are compatible with list types...")
             if t_h.is_unknown_type(target_types):
                 set_list_types = {UNKNOWN_LIST_TYPE}
                 vvvprint(f"ListLookup: check: Target types are unknown, treating as '{set_list_types}' for inference.")
@@ -398,7 +394,7 @@ class ListLookup(ASTNode):
             vvvprint(f"ListLookup: check: Target types '{target_types}' contain list types.")
 
             vvvprint(f"ListLookup: check: Extracting element types from target types '{target_types}' for return type of list lookup...")
-            if t_h.has_none_list_type(target_types):
+            if t_h.has_non_list_type(target_types):
                 vvvprint(f"ListLookup: check: Target types '{target_types}' contain non-list types. Extracting list types for inference...")
                 new_target_types = t_h.get_all_list_types(target_types)
                 vvvprint(f"ListLookup: check: Extracted list types: {new_target_types}")
@@ -456,7 +452,7 @@ class ListLookup(ASTNode):
         try:
             
             vvvprint(f"ListLookup: inference: Starting inference for list lookup. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'")
-            if not self.child_return_types:
+            if "self" not in self.child_return_types:
                 raise Exception(f"ListLookup: inference: No type information available for list lookup during type inference {self} has not been checked.", self)
             vvvprint(f"ListLookup: inference: Current child return types: {self.child_return_types}")
             remembered_types = self.child_return_types["self"][0].copy()
@@ -505,19 +501,12 @@ class ListLookup(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)    
 
-
-        
-
-                    
-                        
-
-            
-        
-
 @dataclass
 class Unit(ASTNode):
     target: ASTNode
     unit_type: str
+    def __post_init__(self):
+        super().__init__()
 
     def check(self, v_table: ScopeStack, f_table: FuncTable,  inference_context: InferenceContext) -> set[str]:
         try:
@@ -526,18 +515,23 @@ class Unit(ASTNode):
                                              f_table=f_table,
                                              inference_context=inference_context
                                              )
-            if not t_h.is_only(target_type, "number") and not t_h.is_only(target_type, "decimal"):
-                possible_types = {"number", "decimal"}
-                narrowed = t_h.narrow(target_type, possible_types)
-                if not narrowed:
-                    raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.", self)
+            
+            possible_types = {"number", "decimal"}
+            if not t_h.is_compatible(target_type, possible_types):
+                raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.", self)
+            
+            narrowed = t_h.narrow(target_type, possible_types)
+            
+            if narrowed != target_type:
                 self.target.inference(v_table=v_table,
                                       f_table=f_table,
                                       inference_context=inference_context,
                                       old_inference_value=target_type.copy(),
                                       new_inference_value=narrowed.copy()
                                       )
+                
                 target_type = narrowed.copy()
+
             self.child_return_types["target"] = (target_type.copy(), self.target)
             self.child_return_types["self"] = ({"time"}, self) # the return type of a unit is always time, so we can just set it directly without needing to remember it for inference.
             return {"time"}
@@ -574,14 +568,20 @@ class Unit(ASTNode):
                 old_inference_value: set[str],
                 new_inference_value: set[str]
                 ) -> None:
-            raise Exception("Unit inference is not supported because the return type of a unit is always 'time', so there is no need for inference. If you are seeing this error, " \
-            "it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            raise Exception(
+                            f"Unit inference is not supported because the return type of a unit is always 'time'. "
+                            f"If you are seeing this error, something went wrong in inference pathing. "
+                            f"new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}",
+                            self
+                            )
 
 @dataclass
 class BinaryOp(ASTNode):
     left: ASTNode
     operator: str
     right: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
@@ -594,20 +594,17 @@ class BinaryOp(ASTNode):
                                           f_table=f_table, 
                                           inference_context=inference_context
                                           )
-            if left_type is None or right_type is None:
-                raise Exception("Binary operator check failed: left or right operand has no type. left_type: {left_type}, right_type: {right_type}", self)
             
+            if left_type is None or right_type is None:
+                raise Exception(
+                                f"Binary operator check failed: left or right operand has no type. "
+                                f"left_type: {left_type}, right_type: {right_type}",
+                                self
+                                )
             
             op = self.operator
 
- 
             match op:
-
-               
-
-                    
-                    
-                    
                     
                 case  "plus" | "minus" | "mult" | "div":
                     valid_input_types = {"number", "decimal"}
@@ -624,8 +621,6 @@ class BinaryOp(ASTNode):
                                         f"Expected number or decimal.",
                                         self
                                         )
-
-
 
                     left_narrowed = t_h.narrow(left_type, valid_input_types)
                     right_narrowed = t_h.narrow(right_type, valid_input_types)
@@ -650,14 +645,20 @@ class BinaryOp(ASTNode):
 
                     self.child_return_types["left"] = (left_narrowed.copy(), self.left)
                     self.child_return_types["right"] = (right_narrowed.copy(), self.right)
-
                     return_types = set()
 
                     if "number" in left_narrowed and "number" in right_narrowed:
                         return_types.add("number")
-
                     if "decimal" in left_narrowed or "decimal" in right_narrowed:
                         return_types.add("decimal")
+                    
+                    if not return_types:
+                        #Sanity check.
+                        raise Exception(
+                        f"Internal type error: numeric operator '{op}' produced no return type "
+                        f"from left={left_narrowed}, right={right_narrowed}",
+                        self
+                        )
 
                     self.child_return_types["self"] = (return_types.copy(), self)
                     return return_types
@@ -676,7 +677,6 @@ class BinaryOp(ASTNode):
                                         self
                                         )
 
-                    
                     if left_type != {"number"}:
                         self.left.inference(
                         v_table=v_table,
@@ -685,6 +685,7 @@ class BinaryOp(ASTNode):
                         old_inference_value=left_type.copy(),
                         new_inference_value={"number"},
                         )
+
                     if right_type != {"number"}:
                         self.right.inference(
                         v_table=v_table,
@@ -693,13 +694,11 @@ class BinaryOp(ASTNode):
                         old_inference_value=right_type.copy(),
                         new_inference_value={"number"},
                         )
+
                     self.child_return_types["left"] = ({"number"}, self.left)
                     self.child_return_types["right"] = ({"number"}, self.right)
                     self.child_return_types["self"] = ({"number"}, self)
                     return {"number"}
-
-                    
-
 
                 case "eq" | "neq" | "lt" | "gt" | "lte" | "gte":
                     if left_type == right_type:
@@ -709,34 +708,35 @@ class BinaryOp(ASTNode):
                         return {"boolean"}
                     if not t_h.is_compatible(left_type, right_type):
                         raise Exception(
-                                        f"Binary operator '{op}' only supports operands of the same type. Got left type '{left_type}' and right type '{right_type}'.",
+                                        f"Binary operator '{op}' only supports operands of compatible types. "
+                                        f"Got left type '{left_type}' and right type '{right_type}'.",
                                         self
                                         )
-                    narrowe = t_h.narrow(left_type, right_type)
-                    if narrowe != left_type:
+                    
+                    narrowed = t_h.narrow(left_type, right_type)
+                    if narrowed != left_type:
                         self.left.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=left_type.copy(),
-                        new_inference_value=narrowe.copy(),
+                        new_inference_value=narrowed.copy(),
                         )
-                    self.child_return_types["left"] = (narrowe.copy(), self.left)
-                    if narrowe != right_type:
+
+                    self.child_return_types["left"] = (narrowed.copy(), self.left)
+                    if narrowed != right_type:
                         self.right.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=right_type.copy(),
-                        new_inference_value=narrowe.copy(),
+                        new_inference_value=narrowed.copy(),
                         )
-                    self.child_return_types["right"] = (narrowe.copy(), self.right)
+
+                    self.child_return_types["right"] = (narrowed.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
                     return {"boolean"}
 
-                
-
-                    
                 case "or" | "and":
                     valid_input_types = {"boolean"}
                     if not t_h.is_compatible(left_type, valid_input_types):
@@ -745,12 +745,14 @@ class BinaryOp(ASTNode):
                                         f"Expected boolean.",
                                         self
                                         )
+                    
                     if not t_h.is_compatible(right_type, valid_input_types):
                         raise Exception(
                                         f"Binary operator '{op}' not supported for right type '{right_type}'. "
                                         f"Expected boolean.",
                                         self
                                         )
+                    
                     if left_type != {"boolean"}:
                         self.left.inference(
                         v_table=v_table,
@@ -759,6 +761,7 @@ class BinaryOp(ASTNode):
                         old_inference_value=left_type.copy(),
                         new_inference_value={"boolean"},
                         )
+
                     if right_type != {"boolean"}:
                         self.right.inference(
                         v_table=v_table,
@@ -767,26 +770,15 @@ class BinaryOp(ASTNode):
                         old_inference_value=right_type.copy(),
                         new_inference_value={"boolean"},
                         )
+
                     self.child_return_types["left"] = ({"boolean"}, self.left)
                     self.child_return_types["right"] = ({"boolean"}, self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
                     return {"boolean"}
                
                 case _:
-                    raise TraceError(node = self, cause = f"Unsupported operator '{op}'")
+                    raise Exception(f"Binary operator '{op}' is not supported", self)
 
-
-
-
-
-
-
-
-
-
-            
-
-  
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -831,62 +823,129 @@ class BinaryOp(ASTNode):
                 old_inference_value: set[str],
                 new_inference_value: set[str]
                 ) -> None:
-        if not self.child_return_types["self"][0]:
-            raise Exception(f"BinaryOp inference: No type information available for binary operator during inference. This node has not been checked. Node: {self}", self)
-        if old_inference_value != self.child_return_types["self"][0]:
-            raise Exception(f"BinaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
-        if not t_h.is_compatible(new_inference_value, self.child_return_types["self"][0]):
-            raise Exception(f"BinaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
-        match self.operator:
-            case  "plus" | "minus" | "mult" | "div":
-                if new_inference_value == {"number"}:
-                    new_left_inference = {"number"}
-                    new_right_inference = {"number"}
-                    if self.child_return_types["left"][0] != new_left_inference:
-                        self.left.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=self.child_return_types["left"][0].copy(),
-                            new_inference_value=new_left_inference.copy(),
-                        )
-                        self.child_return_types["left"] = (new_left_inference.copy(), self.left)
-                    if self.child_return_types["right"][0] != new_right_inference:
-                        self.right.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=self.child_return_types["right"][0].copy(),
-                            new_inference_value=new_right_inference.copy(),
-                        )
-                        self.child_return_types["right"] = (new_right_inference.copy(), self.right)
-                    self.child_return_types["self"] = ({"number"}, self)
-                    return
-                else:
-                    self.child_return_types["self"] = ({"decimal"}, self)
-                    return
+        try:
+            if "self" not in self.child_return_types:
+                raise Exception(f"BinaryOp inference: No type information available for binary operator during inference. This node has not been checked. Node: {self}", self)
+            if old_inference_value != self.child_return_types["self"][0]:
+                raise Exception(f"BinaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
+            if not t_h.is_compatible(new_inference_value, self.child_return_types["self"][0]):
+                raise Exception(f"BinaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
             
-            case "mod":
-                raise Exception(f"Inference for 'mod' operator is not supported because it only supports 'number' types, so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            match self.operator:
+                case  "plus" | "minus" | "mult" | "div":
+                    if new_inference_value == {"number"}:
+                        new_left_inference = {"number"}
+                        new_right_inference = {"number"}
+                        if self.child_return_types["left"][0] != new_left_inference:
+                            self.left.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=self.child_return_types["left"][0].copy(),
+                                new_inference_value=new_left_inference.copy(),
+                            )
+    
+                            self.child_return_types["left"] = (new_left_inference.copy(), self.left)
+    
+                        if self.child_return_types["right"][0] != new_right_inference:
+                            self.right.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=self.child_return_types["right"][0].copy(),
+                                new_inference_value=new_right_inference.copy(),
+                            )
+    
+                            self.child_return_types["right"] = (new_right_inference.copy(), self.right)
+    
+                        self.child_return_types["self"] = ({"number"}, self)
+                        return
+                    
+                    else:
+                        left_values = self.child_return_types["left"][0]
+                        right_values = self.child_return_types["right"][0]
+                        if not "decimal" in left_values:
+                            # left cannot explain decimal result,
+                            # so right must be decimal
+                            new_right_values = {"decimal"}
+                            self.right.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=right_values.copy(),
+                                new_inference_value=new_right_values.copy(),
+                            )
+                            right_values = new_right_values.copy()
+    
+                        
+                        elif not "decimal" in right_values:
+                            # right cannot explain decimal result,
+                            # so left must be decimal
+                            new_left_values = {"decimal"}
+                            self.left.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=left_values.copy(),
+                                new_inference_value=new_left_values.copy(),
+                            )
+                            left_values = new_left_values.copy()
+    
+                        self.child_return_types["left"] = (left_values.copy(), self.left)
+                        self.child_return_types["right"] = (right_values.copy(), self.right)
+                        self.child_return_types["self"] = (new_inference_value, self)
             
-            case "eq" | "neq" | "lt" | "gt" | "lte" | "gte":
-                raise Exception(f"Inference for comparison operators is not supported because they only support operands of the same type and return 'boolean', so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-            
-            case "or" | "and":
-                raise Exception(f"Inference for logical operators is not supported because they only support 'boolean' types and return 'boolean', so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+                        return
+                
+                case "mod":
+                    raise Exception(
+                                    f"Inference for 'mod' is not supported because 'mod' always returns 'number'. "
+                                    f"If you are seeing this, something went wrong in inference pathing. "
+                                    f"new_inference_value: {new_inference_value}, "
+                                    f"old_inference_value: {old_inference_value}",
+                                    self
+                                    )
+                
+                case "eq" | "neq" | "lt" | "gt" | "lte" | "gte":
+                    raise Exception(
+                                    f"Inference for comparison operator '{self.operator}' is not supported because "
+                                    f"comparisons always return 'boolean'. If you are seeing this, something went "
+                                    f"wrong in inference pathing. new_inference_value: {new_inference_value}, "
+                                    f"old_inference_value: {old_inference_value}",
+                                    self
+                                    )
+                
+                case "or" | "and":
+                    raise Exception(
+                                    f"Inference for logical operator '{self.operator}' is not supported because "
+                                    f"logical operators always return 'boolean'. If you are seeing this, something "
+                                    f"went wrong in inference pathing. new_inference_value: {new_inference_value}, "
+                                    f"old_inference_value: {old_inference_value}",
+                                    self
+                                    )
+    
+                case _:
+                    raise Exception(f"Unsupported operator '{self.operator}' for inference in BinaryOp. Node: {self}", self)
+        
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
 
 @dataclass
 class UnaryOp(ASTNode):
     operator: str
     operand: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext = None) -> set[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
-            operand_type = self.operand.check(v_table, f_table)
+            operand_type = self.operand.check(v_table=v_table,
+                                              f_table=f_table,
+                                              inference_context=inference_context
+                                              )
+            
             op = self.operator
             match op:
                 case "-" | "neg" | "negative":
@@ -897,6 +956,7 @@ class UnaryOp(ASTNode):
                                         f"Expected number or decimal.",
                                         self
                                         )
+                    
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
@@ -906,6 +966,7 @@ class UnaryOp(ASTNode):
                         old_inference_value=operand_type.copy(),
                         new_inference_value=narrowed.copy(),
                         )
+
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = (narrowed.copy(), self)
                     return narrowed
@@ -918,6 +979,7 @@ class UnaryOp(ASTNode):
                                         f"Expected boolean.",
                                         self
                                         )
+                    
                     if operand_type != {"boolean"}:
                         self.operand.inference(
                         v_table=v_table,
@@ -926,6 +988,7 @@ class UnaryOp(ASTNode):
                         old_inference_value=operand_type.copy(),
                         new_inference_value={"boolean"},
                         )
+
                     self.child_return_types["operand"] = ({"boolean"}, self.operand)
                     self.child_return_types["self"] = ({"boolean"}, self)
                     return {"boolean"}
@@ -938,6 +1001,7 @@ class UnaryOp(ASTNode):
                                         f"Expected number or decimal.",
                                         self
                                         )
+                    
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
@@ -947,6 +1011,7 @@ class UnaryOp(ASTNode):
                         old_inference_value=operand_type.copy(),
                         new_inference_value=narrowed.copy(),
                         )
+
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = ({"number"}, self)
                     return {"number"}
@@ -959,6 +1024,7 @@ class UnaryOp(ASTNode):
                                         f"Expected number or decimal.",
                                         self
                                         )
+                    
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
@@ -968,27 +1034,31 @@ class UnaryOp(ASTNode):
                         old_inference_value=operand_type.copy(),
                         new_inference_value=narrowed.copy(),
                         )
+
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = (narrowed.copy(), self)
-                    return narrowed.copy()
+                    return narrowed
                 
                 case "length":    
                     if not t_h.has_list_type(operand_type):
                         raise Exception(
                                         f"Unary operator 'length' not supported for type '{operand_type}'. "
-                                        f"Expected text or list.",
+                                        f"Expected a list.",
                                         self
                                         )
-                    if t_h.has_none_list_type(operand_type):
-                        narrowed = t_h.narrow(operand_type, EMPTY_LIST_TYPE)
+                    
+                    if t_h.has_non_list_type(operand_type):
+                        new_operand_type = t_h.get_all_list_types(operand_type)
                         self.operand.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=operand_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                        new_inference_value=new_operand_type.copy(),
                         )
-                        operand_type = narrowed.copy()
+
+                        operand_type = new_operand_type.copy()
+
                     self.child_return_types["operand"] = (operand_type.copy(), self.operand)
                     self.child_return_types["self"] = ({"number"}, self)
                     return {"number"}
@@ -997,26 +1067,29 @@ class UnaryOp(ASTNode):
                     if not t_h.has_list_type(operand_type):
                         raise Exception(
                                         f"Unary operator '{op}' not supported for type '{operand_type}'. "
-                                        f"Expected text or list.",
+                                        f"Expected a list.",
                                         self
                                         )
-                    if t_h.has_none_list_type(operand_type):
-                        narrowed = t_h.narrow(operand_type, UNKNOWN_LIST_TYPE)
+                    
+                    if t_h.has_non_list_type(operand_type):
+                        new_operand_type = t_h.get_all_list_types(operand_type)
                         self.operand.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=operand_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                        new_inference_value=new_operand_type.copy(),
                         )
-                        operand_type = narrowed.copy()
+
+                        operand_type = new_operand_type.copy()
+
                     self.child_return_types["operand"] = (operand_type.copy(), self.operand)
                     return_type = t_h.get_list_element_types(operand_type)
                     self.child_return_types["self"] = (return_type.copy(), self)
                     return return_type
                 
                 case _:
-                    raise TraceError(node = self, cause = f"Unsupported unary operator '{op}'")
+                    raise Exception(f"Unsupported unary operator '{op}'", self)
         
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -1042,6 +1115,7 @@ class UnaryOp(ASTNode):
                     return int(round(self.operand.execute(env)))
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
+                
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -1053,7 +1127,7 @@ class UnaryOp(ASTNode):
                 new_inference_value: set[str]
                 ) -> None:
         
-        if not self.child_return_types["self"][0]:
+        if "self" not in self.child_return_types:
             raise Exception(f"UnaryOp inference: No type information available for unary operator during inference. This node has not been checked. Node: {self}", self)
         remembered_types = self.child_return_types["self"][0]
         if old_inference_value != remembered_types:
@@ -1065,42 +1139,35 @@ class UnaryOp(ASTNode):
         if old_inference_value == new_inference_value:
             raise Exception(f"UnaryOp inference: New inference value is the same as the old inference value '{old_inference_value}' for unary operator. "
                             f"This probably means the parent passed a non-narrowing inference request. Node: {self}", self)
+        
         match self.operator:
             
             case "-" | "neg" | "negative" | "exponent":
-                if new_inference_value == {"number"}:
-                    new_operand_inference = {"number"}
-                    self.operand.inference(
+                
+                new_operand_inference = new_inference_value.copy()
+                self.operand.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=self.child_return_types["operand"][0].copy(),
                         new_inference_value=new_operand_inference.copy(),
                         )
-                    self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
-                    self.child_return_types["self"] = ({"number"}, self)
-                    return
-
-                new_operand_inference = {"decimal"}
-                self.operand.inference(
-                    v_table=v_table,
-                    f_table=f_table,
-                    inference_context=inference_context,
-                    old_inference_value=self.child_return_types["operand"][0].copy(),
-                    new_inference_value=new_operand_inference.copy(),
-                    )
+                    
                 self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
-                self.child_return_types["self"] = ({"decimal"}, self)
+                self.child_return_types["self"] = (new_inference_value.copy(), self)
                 return
+            
+            
             case "not_" | "not" | "!":
                 raise Exception(f"Inference for 'not' operator is not supported because it only supports 'boolean' types and returns 'boolean', so there is no need for inference. "
                                 f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
             case "floor" | "ceiling" | "round":
-                raise Exception(f"Inference for 'floor', 'ceiling', and 'round' operators is not supported because they only support 'number' types and return 'number', so there is no need for inference. "
+                raise Exception(f"Inference for 'floor', 'ceiling', and 'round' operators is not supported because they only support 'number' and 'decimal' types and return 'number', so there is no need for inference. "
                                 f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
             case "length":
                 raise Exception(f"Inference for 'length' operator is not supported because it only supports text and list types and returns 'number', so there is no need for inference. "
                                 f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+            
             case "first" | "last":
                 self.child_return_types["self"] = (new_inference_value.copy(), self)
                 new_list_inference = t_h.make_set_list_types(new_inference_value)
@@ -1111,17 +1178,20 @@ class UnaryOp(ASTNode):
                     old_inference_value=self.child_return_types["operand"][0].copy(),
                     new_inference_value=new_list_inference.copy(),
                     )
+                
                 self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
                 return
+            
             case _:
                 raise Exception(f"Inference for unary operator '{self.operator}' is not supported. If you are seeing this error, it means something went wrong somewhere. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-
 
 @dataclass
 class AccessOp(ASTNode):
     target: Optional[ASTNode]
     operation: str
     argument: Optional[ASTNode] = None
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
@@ -1146,13 +1216,16 @@ class AccessOp(ASTNode):
                     arg_type = self.argument.check(v_table, f_table)
                     if arg_type != "text":
                         raise TraceError(node = self, cause = f"Argument for operation '{op}' must be of type 'text', got '{arg_type}'.")
+                    
                 return "boolean"
             
             elif op == "unit":
                 if target_type in ["number", "decimal"]:
                     return "time"
+                
                 elif target_type == "time":
                     return "number"
+                
                 else:
                     raise TraceError(node = self, cause = f"Time units require a numeric, date, or time target, got '{target_type}'.")
             
@@ -1164,6 +1237,7 @@ class AccessOp(ASTNode):
             
             else:
                 raise TraceError(node = self, cause = f"Unsupported access operation '{op}'")
+            
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
