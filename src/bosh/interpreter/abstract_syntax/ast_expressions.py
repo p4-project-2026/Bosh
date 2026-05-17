@@ -1,4 +1,5 @@
 import os
+from unittest import case
 from .ast_base import *
 import math
 
@@ -397,7 +398,7 @@ class ListLookup(ASTNode):
             vvvprint(f"ListLookup: check: Target types '{target_types}' contain list types.")
 
             vvvprint(f"ListLookup: check: Extracting element types from target types '{target_types}' for return type of list lookup...")
-            if t_h.has_non_list_type(target_types):
+            if t_h.has_none_list_type(target_types):
                 vvvprint(f"ListLookup: check: Target types '{target_types}' contain non-list types. Extracting list types for inference...")
                 new_target_types = t_h.get_all_list_types(target_types)
                 vvvprint(f"ListLookup: check: Extracted list types: {new_target_types}")
@@ -599,115 +600,7 @@ class BinaryOp(ASTNode):
             
             op = self.operator
 
-            
-            """
-                    Concatenation_case = {"text"}
-                    Addition_case = {"number", "decimal"}
-                    if not t_h.is_compatible(left_type, Concatenation_case) or not t_h.is_compatible(right_type, Concatenation_case):
-                        # if it's not compatible with the concatenation case, it must be compatible with the addition case, otherwise it's an error.
-                        if not t_h.is_compatible(left_type, Addition_case):
-                            raise Exception(
-                                            f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                                            f"Expected number, decimal, or text.",
-                                            self
-                                            )
-
-                        if not t_h.is_compatible(right_type, Addition_case):
-                            raise Exception(
-                                            f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                                            f"Expected number, decimal, or text.",
-                                            self
-                                            )
-
-                        # if it's compatible with the addition case, we need to narrow the types to number and decimal for the return type inference.
-                        left_narrowed = t_h.narrow(left_type, Addition_case)
-                        right_narrowed = t_h.narrow(right_type, Addition_case)
-
-                        if left_narrowed != left_type:
-                            self.left.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=left_type.copy(),
-                            new_inference_value=left_narrowed.copy(),
-                            )
-
-                        if right_narrowed != right_type:
-                            self.right.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=right_type.copy(),
-                            new_inference_value=right_narrowed.copy(),
-                            )
-
-                        self.child_return_types["left"] = (left_narrowed.copy(), self.left)
-                        self.child_return_types["right"] = (right_narrowed.copy(), self.right)
-
-                        return_types = set()
-
-                        if "number" in left_narrowed and "number" in right_narrowed:
-                            return_types.add("number")
-
-                        if "decimal" in left_narrowed or "decimal" in right_narrowed:
-                            return_types.add("decimal")
-
-                        self.child_return_types["self"] = (return_types.copy(), self)
-                        return return_types
-
---------------------------------------------------
-
-                         case "plus":
-                    concatenation_case = {"text"}
-                    if t_h.is_compatible(left_type, concatenation_case) or t_h.is_compatible(right_type, concatenation_case):
-                        self.child_return_types["left"] = (left_type.copy(), self.left)
-                        self.child_return_types["right"] = (right_type.copy(), self.right)
-                        self.child_return_types["self"] = ({"text"}, self)
-                        return {"text"}
-
-                    addition_case = {"number", "decimal"}
-
-                    if not t_h.is_compatible(left_type, addition_case):
-                        raise Exception(
-                                        f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                                        f"Expected number, decimal, or text.",
-                                        self
-                                        )
-                    if not t_h.is_compatible(right_type, addition_case):
-                        raise Exception(
-                                        f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                                        f"Expected number, decimal, or text.",
-                                        self
-                                        )
-
-                    left_narrowed = t_h.narrow(left_type, addition_case)
-                    right_narrowed = t_h.narrow(right_type, addition_case)
-                    if left_narrowed != left_type:
-                        self.left.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=left_type.copy(),
-                        new_inference_value=left_narrowed.copy(),
-                        )
-                    if right_narrowed != right_type:
-                        self.right.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=right_type.copy(),
-                        new_inference_value=right_narrowed.copy(),
-                        )
-                    self.child_return_types["left"] = (left_narrowed.copy(), self.left)
-                    self.child_return_types["right"] = (right_narrowed.copy(), self.right)
-                    return_types = set()
-                    if "number" in left_narrowed and "number" in right_narrowed:
-                        return_types.add("number")
-                    if "decimal" in left_narrowed or "decimal" in right_narrowed:
-                        return_types.add("decimal")
-                    self.child_return_types["self"] = (return_types.copy(), self)
-                    return return_types 
-            """
+ 
             match op:
 
                
@@ -990,47 +883,140 @@ class UnaryOp(ASTNode):
     operator: str
     operand: ASTNode
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext = None) -> set[str]:
         try:
+            self.child_return_types.clear()
             operand_type = self.operand.check(v_table, f_table)
             op = self.operator
-            if op in ["-", "neg", "negative"]:
-                if operand_type not in ["number", "decimal"]:
-                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
-                return operand_type
-            
-            elif op in ["not_", "not", "!"]:
-                if operand_type != "boolean":
-                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'boolean'.")
-                return "boolean"
-            
-            elif op in ["floor", "ceiling", "round"]:
-                if operand_type not in ["number", "decimal"]:
-                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
-                return "number"
-            
-            elif op == "exponent":
-                if operand_type not in ["number", "decimal"]:
-                    raise TraceError(node = self, cause = f"Unary operator 'exponent' not supported for type '{operand_type}'. Expected 'number' or 'decimal'.")
-                return "decimal"
-            
-            elif op == "length":
-                is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
-                if operand_type != "text" and not is_list:
-                    raise TraceError(node = self, cause = f"Unary operator 'length' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
-                return "number"
-        
-            elif op in ["first", "last"]:
-                is_list = isinstance(operand_type, str) and operand_type.startswith("list<") and operand_type.endswith(">")
-                if operand_type != "text" and not is_list:
-                    raise TraceError(node = self, cause = f"Unary operator '{op}' not supported for type '{operand_type}'. Expected 'text' or 'list'.")
-                if operand_type == "text":
-                    return "text"
-                else:
-                    return operand_type[5:-1]
+            match op:
+                case "-" | "neg" | "negative":
+                    valid_input_types = {"number", "decimal"}
+                    if not t_h.is_compatible(operand_type, valid_input_types):
+                        raise Exception(
+                                        f"Unary operator '{op}' not supported for type '{operand_type}'. "
+                                        f"Expected number or decimal.",
+                                        self
+                                        )
+                    narrowed = t_h.narrow(operand_type, valid_input_types)
+                    if narrowed != operand_type:
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value=narrowed.copy(),
+                        )
+                    self.child_return_types["operand"] = (narrowed.copy(), self.operand)
+                    self.child_return_types["self"] = (narrowed.copy(), self)
+                    return narrowed
                 
-            else:
-                raise TraceError(node = self, cause = f"Unsupported unary operator '{op}'")
+                case "not_" | "not" | "!":
+                    valid_input_types = {"boolean"}
+                    if not t_h.is_compatible(operand_type, valid_input_types):
+                        raise Exception(
+                                        f"Unary operator '{op}' not supported for type '{operand_type}'. "
+                                        f"Expected boolean.",
+                                        self
+                                        )
+                    if operand_type != {"boolean"}:
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value={"boolean"},
+                        )
+                    self.child_return_types["operand"] = ({"boolean"}, self.operand)
+                    self.child_return_types["self"] = ({"boolean"}, self)
+                    return {"boolean"}
+                
+                case "floor" | "ceiling" | "round":
+                    valid_input_types = {"number", "decimal"}
+                    if not t_h.is_compatible(operand_type, valid_input_types):
+                        raise Exception(
+                                        f"Unary operator '{op}' not supported for type '{operand_type}'. "
+                                        f"Expected number or decimal.",
+                                        self
+                                        )
+                    narrowed = t_h.narrow(operand_type, valid_input_types)
+                    if narrowed != operand_type:
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value=narrowed.copy(),
+                        )
+                    self.child_return_types["operand"] = (narrowed.copy(), self.operand)
+                    self.child_return_types["self"] = ({"number"}, self)
+                    return {"number"}
+                
+                case "exponent":
+                    valid_input_types = {"number", "decimal"}
+                    if not t_h.is_compatible(operand_type, valid_input_types):
+                        raise Exception(
+                                        f"Unary operator 'exponent' not supported for type '{operand_type}'. "
+                                        f"Expected number or decimal.",
+                                        self
+                                        )
+                    narrowed = t_h.narrow(operand_type, valid_input_types)
+                    if narrowed != operand_type:
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value=narrowed.copy(),
+                        )
+                    self.child_return_types["operand"] = (narrowed.copy(), self.operand)
+                    self.child_return_types["self"] = ({"decimal"}, self)
+                    return {"decimal"}
+                case "length":
+                    
+                    if not t_h.has_list_type(operand_type):
+                        raise Exception(
+                                        f"Unary operator 'length' not supported for type '{operand_type}'. "
+                                        f"Expected text or list.",
+                                        self
+                                        )
+                    if t_h.has_none_list_type(operand_type):
+                        narrowed = t_h.narrow(operand_type, UNKNOWN_LIST_TYPE)
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value=narrowed.copy(),
+                        )
+                        operand_type = narrowed.copy()
+                    self.child_return_types["operand"] = (operand_type.copy(), self.operand)
+                    self.child_return_types["self"] = ({"number"}, self)
+                    return {"number"}
+                
+                case "first" | "last":
+                    if not t_h.has_list_type(operand_type):
+                        raise Exception(
+                                        f"Unary operator '{op}' not supported for type '{operand_type}'. "
+                                        f"Expected text or list.",
+                                        self
+                                        )
+                    if t_h.has_none_list_type(operand_type):
+                        narrowed = t_h.narrow(operand_type, UNKNOWN_LIST_TYPE)
+                        self.operand.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=operand_type.copy(),
+                        new_inference_value=narrowed.copy(),
+                        )
+                        operand_type = narrowed.copy()
+                    self.child_return_types["operand"] = (operand_type.copy(), self.operand)
+                    return_type = t_h.get_list_element_types(operand_type)
+                    self.child_return_types["self"] = (return_type.copy(), self)
+                    return return_type
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported unary operator '{op}'")
+        
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
