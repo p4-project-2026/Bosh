@@ -178,7 +178,7 @@ class ListLiteral(ASTNode):
                 elem_type = elem.check(v_table, f_table, inference_context)
                 if elem_type != element_type:
                     raise Exception(f"List elements must all be of the same type, expected {element_type}, got {elem_type}", self)
-                list_type = t_h.make_list(elem_type)
+                list_type = t_h.make_set_list_types(elem_type)
             self.child_return_types["element"] = (element_type.copy(), self.elements[0])# all elements have the same type, so we can just use the first one to remember the type for inference. this node will not be infered itself, it's just for consistency and potential future use.
             self.child_return_types["self"] = (list_type.copy(), self) # remember the return type for inference
             
@@ -1202,50 +1202,143 @@ class AccessOp(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
-            target_type = self.target.check(v_table, f_table) if self.target else None
+            self.child_return_types.clear()
+            vvprint(f"AccessOp: Checking access operation '{self.operation}'...")
+
+            target_type = self.target.check(v_table=v_table, f_table=f_table, inference_context=inference_context) if self.target else None
             op = self.operation
 
-            if op == "file_name":
-                if target_type != "text":
-                    raise TraceError(node = self, cause = f"Cannot get file name of type '{target_type}'. Expected 'file' or 'folder'.")
-                return "text"
-            
-            elif op == "age":
-                if target_type != "text":
-                    raise TraceError(node = self, cause = f"Cannot get age of type '{target_type}'. Expected 'file' or 'folder'.")
-                return "number"
-            
-            elif op in ["starts_with", "ends_with", "regex"]:
-                if target_type != "text":
-                    raise TraceError(node = self, cause = f"Cannot apply operation '{op}' to type '{target_type}'. Expected 'text'.")
 
-                if self.argument is not None:
-                    arg_type = self.argument.check(v_table, f_table)
-                    if arg_type != "text":
-                        raise TraceError(node = self, cause = f"Argument for operation '{op}' must be of type 'text', got '{arg_type}'.")
+
+            match op:
+                
+                case "file_name":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    if not t_h.contains(target_type, "text"):
+                        raise Exception(f"Cannot get file name from type '{target_type}'. {op} Expected 'text'.")
                     
-                return "boolean"
-            
-            elif op == "unit":
-                if target_type in ["number", "decimal"]:
-                    return "time"
+                    if target_type != {"text"}:
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value={"text"},
+                        )
+                        target_type = {"text"}
+                    
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    self.child_return_types["self"] = ({"text"}, self)
+
+                    vvprint(f"AccessOp: Operation 'file_name' on target type '{target_type}' is valid. Returning 'text'.")
+                    return {"text"}
                 
-                elif target_type == "time":
-                    return "number"
+                case "age":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    if not t_h.contains(target_type, "text"):
+                        raise Exception(f"Cannot get age from type '{target_type}'. {op} Expected 'text'.")
+                    
+                    if target_type != {"text"}:
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value={"text"},
+                        )
+
+                        target_type = {"text"}
+
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    self.child_return_types["self"] = ({"time"}, self)
+                    return {"time"}
                 
-                else:
-                    raise TraceError(node = self, cause = f"Time units require a numeric, date, or time target, got '{target_type}'.")
-            
-            elif op == "now":
-                return "date"
-            
-            elif op == "here":
-                return "text"
-            
-            else:
-                raise TraceError(node = self, cause = f"Unsupported access operation '{op}'")
+                case "starts_with" | "ends_with" | "regex":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    if not t_h.contains(target_type, "text"):
+                        raise Exception(f"Cannot apply operation '{op}' to type '{target_type}'. {op} Expected 'text'.")
+                    
+                    if target_type != {"text"}:
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value={"text"},
+                        )
+
+                        target_type = {"text"}
+
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    if self.argument is not None:
+                        arg_type = self.argument.check(
+                            v_table=v_table, 
+                            f_table=f_table, 
+                            inference_context=inference_context
+                        )
+                        if arg_type is None:
+                            raise Exception(f"Argument for operation '{op}' cannot be None.", self)
+                        if not t_h.contains(arg_type, "text"):
+                            raise Exception(f"Argument for operation '{op}' must contain 'text', got '{arg_type}'.")
+                        if arg_type != {"text"}:
+                            self.argument.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=arg_type.copy(),
+                                new_inference_value={"text"},
+                            )
+                            arg_type = {"text"}
+                        
+                        self.child_return_types["argument"] = ({"text"}, self.argument)
+
+                    self.child_return_types["self"] = ({"boolean"}, self)
+                    return {"boolean"}
+
+                case "unit":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    valid_target_types = {"number", "decimal", "time", "date"}
+                    narrowed_target_type = t_h.narrow(target_type, valid_target_types)
+                    if narrowed_target_type == set():
+                        raise Exception(f"Cannot get unit of type '{target_type}'. {op} Expected number, decimal, time, or date.")
+                    
+                    if narrowed_target_type != target_type:
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value=narrowed_target_type.copy(),
+                        )
+                        target_type = narrowed_target_type.copy()
+                    
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    
+                    return_types = set()
+                    if t_h.is_compatible(target_type, {"number", "decimal"}):
+                        return_types.add("time")
+                    if t_h.is_compatible(target_type, {"time", "date"}):
+                        return_types.add("number")
+                    
+                    self.child_return_types["self"] = (return_types.copy(), self)
+                    return return_types
+                
+                case "now":
+                    self.child_return_types["self"] = ({"date"}, self)
+                    return {"date"}
+
+                case "here":
+                    self.child_return_types["self"] = ({"text"}, self)
+                    return {"text"}
+                
+                case _:
+                    raise Exception(f"Unsupported access operation '{op}'", self)
             
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -1278,3 +1371,6 @@ class AccessOp(ASTNode):
                     raise TraceError(node = self, cause = f"Unsupported access operation '{self.operation}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+    def inference(self, v_table, f_table, inference_context):
+        pass
