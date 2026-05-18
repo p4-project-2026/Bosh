@@ -17,6 +17,9 @@ dev = [
     "pytest>=9.0.3",
 ]
 
+[tool.pytest.ini_options]
+addopts = "--tb=no -vv"
+
 [project.scripts]
 bosh = "bosh.app.bosh:main"
 bosh_no_try = "bosh.app.bosh:main_no_try"

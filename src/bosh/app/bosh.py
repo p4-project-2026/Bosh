@@ -27,7 +27,7 @@ class Main:
             raise CLIError(f"Error initializing CLI", cause=e)
 
         # run Interpreter
-        Interpreter().run(ArgumentHandler.file, CLIHandler.run_type)
+        Interpreter().initializer(ArgumentHandler.file, CLIHandler.run_type)
 
         # Cli terminator
         CLIHandler().terminator()

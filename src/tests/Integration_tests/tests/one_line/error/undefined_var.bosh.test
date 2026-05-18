@@ -1,0 +1,7 @@
+say X
+===
+Error when running Bosh:
+    [ERROR]: at line 1
+        say X
+            ^
+Undefined variable 'X'

@@ -1,0 +1,7 @@
+say 1 and true
+===
+Error when running Bosh:
+    [ERROR]: at line 1
+        say 1 and true
+            ^^^^^^^^^^
+Logical operator 'and' requires boolean operands, got 'number' and 'boolean'

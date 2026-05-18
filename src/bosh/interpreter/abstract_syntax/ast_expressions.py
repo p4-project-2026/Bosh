@@ -2,9 +2,8 @@ import os
 from unittest import case
 from .ast_base import *
 import math
-
-
-
+import datetime
+import re
 
 @dataclass
 class NumberLiteral(ASTNode):
@@ -111,6 +110,19 @@ class InterpolatedString(ASTNode):
         raise Exception("InterpolatedString: inference: Interpolated strings only return a single type, it should not be called during type inference. " \
         "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
         "DONE"
+        
+@dataclass
+class DateLiteral(ASTNode):
+    value: str
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        return "date"
+    
+    def execute(self, env: Environment) -> datetime.datetime:
+        try:
+            return datetime.datetime.fromisoformat(self.value)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
 @dataclass
 class BooleanLiteral(ASTNode):
@@ -584,6 +596,112 @@ class Unit(ASTNode):
                             self
                             )
 
+
+@dataclass  
+class TypeCast(ASTNode):
+    target: ASTNode
+    target_type: str
+
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        try:
+            original_type = self.target.check(v_table, f_table)
+            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
+                raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+            if original_type == self.target_type:
+                return original_type
+            # Weak casting: number -> float -> string, boolean -> string, date -> string
+            if self.target_type == "text":
+                if original_type in ["number", "decimal", "boolean", "date"]:
+                    return "text"
+            if self.target_type in ["number", "decimal"]:
+                if original_type in ["number", "decimal"]:
+                    return self.target_type
+
+            # Strong casting: float -> number, string -> number/decimal/boolean/date (if possible)
+            if original_type == "text":
+                if self.target_type in ["number", "decimal", "boolean", "date"]:
+                    return self.target_type
+            
+            raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env: Environment) -> Any:
+        try:
+            value = self.target.execute(env)
+            match self.target_type:
+                case "number":
+                    return int(value)
+                case "decimal":
+                    return float(value)
+                case "text":
+                    if isinstance(value, bool):
+                        return "true" if value else "false"
+                    return str(value)
+                case "boolean":
+                    return bool(value)
+                case "date":
+                    if isinstance(value, (datetime.datetime, str)):
+                        return datetime.datetime.fromisoformat(str(value))
+                    raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+
+@dataclass  
+class TypeCast(ASTNode):
+    target: ASTNode
+    target_type: str
+
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        try:
+            original_type = self.target.check(v_table, f_table)
+            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
+                raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+            if original_type == self.target_type:
+                return original_type
+            # Weak casting: number -> float -> string, boolean -> string, date -> string
+            if self.target_type == "text":
+                if original_type in ["number", "decimal", "boolean", "date"]:
+                    return "text"
+            if self.target_type in ["number", "decimal"]:
+                if original_type in ["number", "decimal"]:
+                    return self.target_type
+
+            # Strong casting: float -> number, string -> number/decimal/boolean/date (if possible)
+            if original_type == "text":
+                if self.target_type in ["number", "decimal", "boolean", "date"]:
+                    return self.target_type
+            
+            raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env: Environment) -> Any:
+        try:
+            value = self.target.execute(env)
+            match self.target_type:
+                case "number":
+                    return int(value)
+                case "decimal":
+                    return float(value)
+                case "text":
+                    if isinstance(value, bool):
+                        return "true" if value else "false"
+                    return str(value)
+                case "boolean":
+                    return bool(value)
+                case "date":
+                    if isinstance(value, (datetime.datetime, str)):
+                        return datetime.datetime.fromisoformat(str(value))
+                    raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
+                case _:
+                    raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
 @dataclass
 class BinaryOp(ASTNode):
     left: ASTNode
@@ -793,32 +911,79 @@ class BinaryOp(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
+            left_val = self.left.execute(env) if isinstance(self.left, ASTNode) else self.left
+            right_val = self.right.execute(env) if isinstance(self.right, ASTNode) else self.right
             match self.operator:
                 case "plus":
-                    return self.left.execute(env) + self.right.execute(env)
+                    # datetime + milliseconds
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                        return left_val + datetime.timedelta(milliseconds=right_val)
+                    # milliseconds + datetime -> swap
+                    if isinstance(right_val, datetime.datetime) and isinstance(left_val, (int, float)):
+                        return right_val + datetime.timedelta(milliseconds=left_val)
+                    # string concatenation
+                    if isinstance(left_val, str) or isinstance(right_val, str):
+                        if isinstance(left_val, bool):
+                            left_val = "true" if left_val else "false"
+                        return str(left_val) + str(right_val)
+                    # fallback to python add (may raise)
+                    return left_val + right_val
                 case "minus":
-                    return self.left.execute(env) - self.right.execute(env)
+                    # datetime - datetime -> timedelta
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, datetime.datetime):
+                        return left_val - right_val
+                    # datetime - milliseconds
+                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                        return left_val - datetime.timedelta(milliseconds=right_val)
+                    # numeric subtraction
+                    if isinstance(left_val, (int, float)) and isinstance(right_val, (int, float)):
+                        return left_val - right_val
+                    return left_val - right_val
                 case "mult":
-                    return self.left.execute(env) * self.right.execute(env)
+                    return left_val * right_val
                 case "div":
-                    return self.left.execute(env) / self.right.execute(env)
+                    return left_val / right_val
                 case "mod":
-                    return self.left.execute(env) % self.right.execute(env)
+                    return left_val % right_val
+                case "pow":
+                    return left_val ** right_val
                 case "eq":
-                    return self.left.execute(env) == self.right.execute(env)
+                    if type(left_val) != type(right_val):
+                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+                            pass
+                        else:
+                            return False
+                    return left_val == right_val
                 case "neq":
-                    return self.left.execute(env) != self.right.execute(env)
+                    if type(left_val) != type(right_val):
+                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+                            pass
+                        else:
+                            return True
+                    return left_val != right_val
+                case "eq_type" | "neq_type":
+                    if right_val in ["folder", "file"]:
+                        if isinstance(left_val, str):
+                            if right_val == "folder":
+                                return os.path.isdir(left_val)
+                            else:
+                                return os.path.isfile(left_val)
+                        else:
+                            raise TraceError(node = self, cause = f"Left operand must be a string when comparing to 'file' or 'folder', got '{type(left_val).__name__}'")
+                    if self.operator == "eq_type":
+                        return python_type_to_bosh_type(type(left_val)) == right_val
+                    return python_type_to_bosh_type(type(left_val)) != right_val
                 case "or":
-                    return self.left.execute(env) or self.right.execute(env)
+                    return bool(left_val) or bool(right_val)
                 case "and":
-                    return self.left.execute(env) and self.right.execute(env)
+                    return bool(left_val) and bool(right_val)
                 case "lt":
-                    return self.left.execute(env) < self.right.execute(env)
+                    return left_val < right_val
                 case "gt":
                     return self.left.execute(env) > self.right.execute(env)
-                case "lte":
+                case "loet":
                     return self.left.execute(env) <= self.right.execute(env)
-                case "gte":
+                case "goet":
                     return self.left.execute(env) >= self.right.execute(env)
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported operator '{self.operator}'")
@@ -1118,10 +1283,10 @@ class UnaryOp(ASTNode):
                     return math.floor(self.operand.execute(env))
                 case "ceiling":
                     return math.ceil(self.operand.execute(env))
-                case "exponent":
-                    return math.exp(self.operand.execute(env))
                 case "round":
                     return int(round(self.operand.execute(env)))
+                case "sqrt":
+                    return math.sqrt(self.operand.execute(env))
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
                 
@@ -1357,14 +1522,18 @@ class AccessOp(ASTNode):
                 case "ends_with":
                     return target_value.endswith(arg_value)
                 case "regex":
-                    import re
                     return re.search(arg_value, target_value) is not None
+                case "length":
+                    return len(target_value)
+                case "first":
+                    return target_value[0]
+                case "last":
+                    return target_value[-1]
                 case "unit":
                     # This will be handled by the Unit AST node, so we can just return the value here
                     return target_value
                 case "now":
-                    import datetime
-                    return datetime.datetime.now().isoformat()
+                    return datetime.datetime.now()
                 case "here":
                     return os.getcwd()
                 case _:

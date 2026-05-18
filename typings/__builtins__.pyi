@@ -20,3 +20,4 @@ indent: Any
 get_code: Any
 get_line: Any
 get_filename: Any
+python_type_to_bosh_type: Any

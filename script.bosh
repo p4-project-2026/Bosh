@@ -6,3 +6,5 @@ B is A
 T is B
 B is 2
 say T
+
+say true is a text

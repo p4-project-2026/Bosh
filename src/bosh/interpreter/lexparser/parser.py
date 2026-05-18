@@ -62,6 +62,16 @@ class BoshTransformer(Transformer):
         node = RepeatUntil(condition=args[0], body=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def count(self, meta, args):
+        iterator_name = str(args[0]) if isinstance(args[0], str) else None
+        args = args[1:] if iterator_name else args
+        from_ = args[0]
+        to_ = args[1]
+        body = args[2]
+        node = Count(iterator_name=iterator_name, from_=from_, to_=to_, body=body)
+        node.set_meta(meta, self._filename)
+        return node
 
     def quit(self, meta, args):
         node = Quit()
@@ -79,7 +89,8 @@ class BoshTransformer(Transformer):
         return node
 
     def add_to_list(self, meta, args):
-        node = ListAdd(target=args[1], item=args[0])
+        index = args[3] if len(args) > 3 else None
+        node = ListAdd(op=args[0], item=args[1], target=args[2], index=index)
         node.set_meta(meta, self._filename)
         return node
 
@@ -139,7 +150,7 @@ class BoshTransformer(Transformer):
             new = True
             args = args[1:]
         location = args[2] if len(args) > 2 else None
-        node = Make(entity_type=args[0], name=args[1], location=location, new=new)
+        node = Make(new=new, entity_type=args[0], name=args[1], location=location)
         node.set_meta(meta, self._filename)
         return node
 
@@ -216,6 +227,16 @@ class BoshTransformer(Transformer):
         node = BinaryOp(operator="neq", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def eq_type(self, meta, args):
+        node = BinaryOp(operator="eq_type", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def neq_type(self, meta, args):
+        node = BinaryOp(operator="neq_type", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
 
     def gt(self, meta, args):
         node = BinaryOp(operator="gt", left=args[0], right=args[1])
@@ -227,13 +248,13 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
-    def gte(self, meta, args):
-        node = BinaryOp(operator="gte", left=args[0], right=args[1])
+    def goet(self, meta, args):
+        node = BinaryOp(operator="goet", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
 
-    def lte(self, meta, args):
-        node = BinaryOp(operator="lte", left=args[0], right=args[1])
+    def loet(self, meta, args):
+        node = BinaryOp(operator="loet", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
 
@@ -261,6 +282,16 @@ class BoshTransformer(Transformer):
         node = BinaryOp(operator="mod", left=args[0], right=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def pow(self, meta, args):
+        node = BinaryOp(operator="pow", left=args[0], right=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+
+    def sqrt(self, meta, args):
+        node = UnaryOp(operator="sqrt", operand=args[0])
+        node.set_meta(meta, self._filename)
+        return node
 
     def not_(self, meta, args):
         node = UnaryOp(operator="not", operand=args[0])
@@ -269,21 +300,6 @@ class BoshTransformer(Transformer):
 
     def neg(self, meta, args):
         node = UnaryOp(operator="neg", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def length(self, meta, args):
-        node = UnaryOp(operator="length", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def first(self, meta, args):
-        node = UnaryOp(operator="first", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
-    def last(self, meta, args):
-        node = UnaryOp(operator="last", operand=args[0])
         node.set_meta(meta, self._filename)
         return node
 
@@ -297,11 +313,6 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
-    def exponent(self, meta, args):
-        node = UnaryOp(operator="exponent", operand=args[0])
-        node.set_meta(meta, self._filename)
-        return node
-
     def round(self, meta, args):
         node = UnaryOp(operator="round", operand=args[0])
         node.set_meta(meta, self._filename)
@@ -309,6 +320,21 @@ class BoshTransformer(Transformer):
 
     def list_look(self, meta, args):
         node = ListLookup(target=args[0], index=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def length(self, meta, args):
+        node = AccessOp(target=args[0], operation="length")
+        node.set_meta(meta, self._filename)
+        return node
+
+    def first(self, meta, args):
+        node = AccessOp(target=args[0], operation="first")
+        node.set_meta(meta, self._filename)
+        return node
+
+    def last(self, meta, args):
+        node = AccessOp(target=args[0], operation="last")
         node.set_meta(meta, self._filename)
         return node
 
@@ -339,6 +365,11 @@ class BoshTransformer(Transformer):
 
     def unit(self, meta, args):
         node = Unit(target=args[0], unit_type=str(args[1]).lower())
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def type_cast(self, meta, args):
+        node = TypeCast(target=args[0], target_type=str(args[1]).lower())
         node.set_meta(meta, self._filename)
         return node
 
@@ -376,6 +407,11 @@ class BoshTransformer(Transformer):
             parts.append(part)
 
         node = InterpolatedString(parts=parts)
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def date(self, meta, args):
+        node = DateLiteral(value=str(args[0]))
         node.set_meta(meta, self._filename)
         return node
     
@@ -442,4 +478,12 @@ class BoshTransformer(Transformer):
         return "year"
     
     def TYPE(self, token):
+        if token.value == "int":
+            token.value = "number"
+        if token.value == "float":
+            token.value = "decimal"
+        if token.value == "string":
+            token.value = "text"
+        if token.value == "bool":
+            token.value = "boolean"
         return token.value
