@@ -45,3 +45,26 @@ class SymbolTableScopeStacker(ScopeStack):
         vvvprint(f"SymbolTableScopeStacker: Domain converted to list successfully. Domain list: {domain_list}")
         return domain_list
     
+    def snapshot(self) -> Symbol_Table:
+        return super().snapshot()
+    
+    def update_snapshot(self, snapshot: Symbol_Table):
+        try:
+            vvvprint(f"SymbolTableScopeStacker: Updating snapshot...")
+            domain = snapshot.domain()
+
+            for name in domain:
+                if self.contains(name):
+                    snapshot.bind(name, self.lookup(name))
+        
+            vvvprint(f"SymbolTableScopeStacker: Snapshot's visible variables updated successfully: {domain}")
+        except Exception as e:
+            raise Exception(f"Error updating snapshot: {e}")
+
+    def enter_function_scope(self, function_scope: Symbol_Table):
+        in_function_scope = function_scope.copy()
+        in_function_scope.function_scope = True
+        self.stack.append(in_function_scope)
+        self.new_scope()  # Create a new scope for the function body
+
+        
