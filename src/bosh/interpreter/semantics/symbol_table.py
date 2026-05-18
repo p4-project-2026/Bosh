@@ -62,3 +62,4 @@ class Symbol_Table(Table[set[str]]):
             return self.table[name].copy()
         raise Exception(f"Variable '{name}' not found in scope.")
     
+    
