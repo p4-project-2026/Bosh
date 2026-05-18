@@ -1,4 +1,8 @@
-task X uses (A)
-    say B
+task X uses (B)
+    return B at index 1
 
-X result using (1)
+A is X result using ((7, 3 , 4, 2))
+B is A
+T is B
+B is 2
+say T
