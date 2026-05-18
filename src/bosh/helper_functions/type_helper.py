@@ -159,7 +159,9 @@ def narrow(a: set[str], b: set[str]) -> set[str]:
     
     return a & b
 
-def contains(types: set[str], target: str) -> bool:
+def contains(types: Optional[set[str]], target: str) -> bool:
+    if types is None:
+        return False
     if is_unknown_type(types):
         return True
     if is_list_type(target):
@@ -167,5 +169,7 @@ def contains(types: set[str], target: str) -> bool:
             return True
     return target in types
 
-def contains_numeric_type(types: set[str]) -> bool:
+def contains_numeric_type(types: Optional[set[str]]) -> bool:
+    if types is None:
+        return False
     return any(t in NUMERIC_TYPES for t in types)
