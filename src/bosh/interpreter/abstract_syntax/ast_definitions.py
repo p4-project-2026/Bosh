@@ -1,3 +1,5 @@
+from bosh.interpreter.semantics.symbol_table import Symbol_Table
+
 from .ast_base import *
 from .ast_expressions import Identifier
 from ..semantics.func_table import FunctionSignature
@@ -161,16 +163,26 @@ class TaskDecl(ASTNode):
     name: str
     parameters: List[str]
     body: Block
+    captured_scope: Optional[Symbol_Table] = None
     def __post_init__(self):
         super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
+            vvvprint(f"TaskDecl: Checking task declaration for task '{self.name}' with parameters {self.parameters}...")
+    
             saved_inference_state = inference_context.save_state()
-            v_table.new_scope()
+            if self.captured_scope is None:
+                self.captured_scope = v_table.snapshot()
+                v_table.new_scope()
+            else:
+                v_table.update_snapshot(self.captured_scope)  # Update the snapshot with the current visible scopes so that it captures the correct environment for the function definition
+                v_table.enter_function_scope(self.captured_scope)  # Enter the function scope to ensure parameters are bound in the correct scope for checking the function body
+            
+            
             for param in self.parameters:
-                v_table.bind(param, {UNKNOWN_TYPE})
+                v_table.bind_local(param, {UNKNOWN_TYPE})
             
             return_type = None
             while True:
@@ -182,7 +194,7 @@ class TaskDecl(ASTNode):
                     v_table=v_table, 
                     f_table=f_table, 
                     inference_context=inference_context
-                    )
+                )
                 
                 if not inference_context.has_changed():
                     vvvprint(f"TaskDecl: No changes in inference context after checking body of task '{self.name}', breaking inference loop.")
@@ -195,9 +207,15 @@ class TaskDecl(ASTNode):
                 self.name,
                 FunctionSignature(
                     parameters=parameter_dict,
-                    return_type=return_type
+                    return_type=return_type,
+                    function_def=self
                 )
             )
+
+            self.child_return_types["body"] = (return_type, self.body)
+            for param in self.parameters:
+                self.child_return_types[param] = (parameter_dict[param], None)
+            
             vvvprint(f"TaskDecl: Task '{self.name}' bound successfully to function table with signature: parameters {parameter_dict} and return type '{return_type}'.")
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
