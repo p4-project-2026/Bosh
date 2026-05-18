@@ -4,12 +4,37 @@ from os import path
 @dataclass
 class GoTo(ASTNode):
     path: ASTNode
+    def __post_init__(self):
+        super().__init__()
 
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            path_type = self.path.check(v_table, f_table, inference_context)
-            if path_type not in ["folder", "text"]:
-                raise TraceError(node = self, cause = f"Path in 'go to' statement must be of type 'text', got '{path_type}'")
+            self.child_return_types.clear()
+            vvprint(f"Checking: 'go to' statement with path '{self.path}'...")
+
+            path_type = self.path.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if not path_type:
+                raise Exception("Unable to determine type of path in 'go to' statement.")
+            if not t_h.is_compatible(path_type, {"folder", "text"}):
+                raise Exception(f"Path in 'go to' statement must be of type 'text' or 'folder', got '{path_type}'")
+            narrowed_path_type = t_h.narrow(path_type, {"folder", "text"})
+            if narrowed_path_type != path_type:
+                self.path.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=path_type, 
+                    new_inference_value=narrowed_path_type
+                )
+                path_type = narrowed_path_type
+            
+            self.child_return_types[self.path] = (path_type, self.path)
+            vvvprint(f"Go to statement checked successfully with path type '{narrowed_path_type}'")
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -20,6 +45,16 @@ class GoTo(ASTNode):
             env.go_to(path.abspath(path_value))
         else:
             raise TraceError(node = self, cause = f"Path '{path_value}' does not exist or is not a directory.")
+        
+    def inference(
+            self, 
+            v_table, 
+            f_table, 
+            inference_context, 
+            old_inference_value, 
+            new_inference_value
+            ) -> None:
+        raise Exception("Inference should not be called on 'go to' statements since they do not produce a value.")
 
 
 @dataclass
@@ -33,18 +68,38 @@ class Make(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            if self.entity_type != "text":
-                raise TraceError(node = self, cause = f"Entity type in make statement must be 'text', got '{self.entity_type}'")
+            self.child_return_types.clear()
 
-            location_type = self.location.check(v_table, f_table, inference_context) if self.location else "text"
+            
+            if not self.entity_type:
+                raise Exception("Entity type in make statement cannot be empty.")
+            
+            if self.entity_type not in ["folder", "file"]:
+                # I don't think this is correct, but anyway.
+                raise Exception(f"Invalid entity type '{self.entity_type}' in make statement. Must be 'folder' or 'file'.")
 
-            if location_type != "text":
-                raise TraceError(node = self, cause = f"Path in make statement must be of type 'text', got '{location_type}'")
+            name_type = self.name.check(
+                v_table, 
+                f_table, 
+                inference_context
+            )
+            
+            if not t_h.contains(name_type, "text"):
+                raise Exception(f"Name in make statement must be of type 'text', got '{name_type}'")
+            
+            location_type = self.location.check(
+                v_table, 
+                f_table, 
+                inference_context
+            )
 
-            try:
-                v_table.bind(self.name.name, self.entity_type)
-            except Exception as e:
-                raise TraceError(node = self, cause = e)
+            if not t_h.contains(location_type, "text"):
+                raise Exception(f"Location in make statement must be of type 'text', got '{location_type}'")
+            
+
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
             name_type = self.name.check(v_table, f_table, inference_context)
             if name_type is not None and name_type != "text":
@@ -57,13 +112,27 @@ class Make(ASTNode):
         # location_value = self.location.execute(env) if self.location else env.get_current_path()
         pass  # TODO: Implement logic to create the folder/file at the specified location
         
+    def inference(
+            self, 
+            v_table, 
+            f_table, 
+            inference_context, 
+            old_inference_value, 
+            new_inference_value
+            ) -> None:
+        raise Exception("Inference should not be called on 'make' statements since they do not produce a value.")   
 
 @dataclass
 class Delete(ASTNode):
     target: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
+            self.child_return_types.clear()
+            if self.target is None:
+                raise Exception("Delete statement requires a target.")
             target_type = self.target.check(v_table, f_table, inference_context)
             if target_type != "text":
                 raise TraceError(node = self, cause = f"Cannot delete type '{target_type}'. Expected 'text'.")
