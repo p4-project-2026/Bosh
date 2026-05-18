@@ -1372,5 +1372,42 @@ class AccessOp(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def inference(self, v_table, f_table, inference_context):
-        pass
+    def inference(self, v_table, f_table, inference_context, old_inference_value, new_inference_value):
+        
+        if "self" not in self.child_return_types:
+            raise Exception(f"AccessOp inference: No type information available for access operation during inference. This node has not been checked. Node: {self}", self)
+        if len(self.child_return_types["self"][0]) == 1:
+            raise Exception(f"AccessOp inference: Only one possible return type '{self.child_return_types['self'][0]}' for access operation '{self.operation}'. Inference should not be necessary. Node: {self}", self)
+        match self.operation:
+            
+            case "unit":
+                remembered_return_types = self.child_return_types["self"][0]
+                if old_inference_value != remembered_return_types:
+                    raise Exception(
+                        f"AccessOp inference: Old inference value '{old_inference_value}' does not match remembered return types '{remembered_return_types}' for access operation 'unit'. "
+                        f"Something went wrong in the inference pathing. Node: {self}", self)
+                if not t_h.is_compatible(new_inference_value, remembered_return_types):
+                    raise Exception(
+                        f"AccessOp inference: New inference value '{new_inference_value}' is not compatible with remembered return types '{remembered_return_types}' for access operation 'unit'. "
+                        f"Something went wrong in the inference pathing. Node: {self}", self)
+
+                new_target_inference = set()
+                if new_inference_value == {"time"}:
+                    new_target_inference = {"number", "decimal"}
+                    
+                elif new_inference_value == {"number"}:
+                    new_target_inference = {"time", "date"}
+                else:
+                    raise Exception(
+                        f"AccessOp inference: this It should not be possible. operation:{self.operation} new_inference_value: {new_inference_value}", self)
+
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=self.child_return_types["target"][0].copy(),
+                    new_inference_value=new_target_inference.copy(),
+                )
+                self.child_return_types["target"] = (new_target_inference.copy(), self.target)
+                self.child_return_types["self"] = (new_inference_value.copy(), self)
+                
