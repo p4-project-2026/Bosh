@@ -672,6 +672,8 @@ class ListRemoveAt(ASTNode):
 @dataclass
 class Return(ASTNode):
     expression: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
@@ -685,6 +687,7 @@ class Return(ASTNode):
             )
             
             self.child_return_types["expression"] = (return_type.copy(), self.expression)
+            self.child_return_types["self"] = (return_type, self)
             vvvprint(f"Return: Return statement check successful with return type '{return_type}'.")
             return return_type
         except Exception as e:
