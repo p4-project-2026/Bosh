@@ -32,9 +32,10 @@ class ScopeStack(Generic[T]):
 
     def enter_function_scope(self, function_def: FunctionBinding):
         vvvprint(f"{self.__class__.__name__}: Entering function scope for function with parameters {function_def.parameters}...")
-        function_scope = function_def.captured_scope.copy(function_scope=True)
+        function_scope = function_def.captured_scope.copy()
+        function_scope.function_scope = True  # Mark the function scope
         self.stack.append(function_scope)
-        vvvprint(f"{self.__class__.__name__}: Captured function scope from definition entered successfully.")
+
         self.new_scope()  # Create a new scope for the function body
         vvvprint(f"{self.__class__.__name__}: Function body scope entered successfully.")
 
@@ -51,8 +52,7 @@ class ScopeStack(Generic[T]):
         vvvprint(f"{self.__class__.__name__}: Merging visible scopes into snapshot...")
         for scope in reversed(visible_scopes):
             snapshot.update(scope.get_snapshot())
-        vvvprint(f"{self.__class__.__name__}: Visible scopes merged into snapshot successfully.")
-        vvvprint(f"{self.__class__.__name__}: Snapshot content: {snapshot}")
+
         snapshot_table= self.table_class(table=snapshot)
         vvvprint(f"{self.__class__.__name__}: Snapshot table created successfully.")
         return snapshot_table
