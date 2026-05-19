@@ -12,22 +12,19 @@ class NumberLiteral(ASTNode):
         super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
-        self.child_return_types["self"] = ({"number"}, self) # remember the return type for inference
-        return {"number"}
-    
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"number"}, self) # remember the return type for inference
+            vvvprint("NumberLiteral: check: Number literal has type 'number'. Remembered type for number literal set to 'number' for inference.")
+            return {"number"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> float:
         return self.value
     
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # Number literals are only compatible with "number", "decimal", and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("NumberLiteral: inference: Number literals only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+
+
 
 
 @dataclass
@@ -37,22 +34,19 @@ class DecimalLiteral(ASTNode):
         super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
-        self.child_return_types["self"] = ({"decimal"}, self) # remember the return type for inference
-        return {"decimal"}
-    
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"decimal"}, self) # remember the return type for inference
+            vvvprint("DecimalLiteral: check: Decimal literal has type 'decimal'. Remembered type for decimal literal set to 'decimal' for inference.")
+            return {"decimal"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> float:
         return self.value
 
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # Decimal literals are only compatible with "decimal" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("DecimalLiteral: inference: Decimal literals only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+
+        
 @dataclass
 class StringLiteral(ASTNode):
     value: str
@@ -60,22 +54,19 @@ class StringLiteral(ASTNode):
         super().__init__()
 
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
-        self.child_return_types["self"] = ({"text"}, self) # remember the return type for inference
-        return {"text"}
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"text"}, self) # remember the return type for inference
+            vvvprint("StringLiteral: check: String literal has type 'text'. Remembered type for string literal set to 'text' for inference.")
+            return {"text"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> str:
         return self.value
 
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # String literals are only compatible with "text" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("StringLiteral: inference: String literals only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+
+        
 
 @dataclass
 class InterpolatedString(ASTNode):
@@ -100,29 +91,30 @@ class InterpolatedString(ASTNode):
             result += str(value)
         return result
     
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # Interpolated strings are only compatible with "text" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("InterpolatedString: inference: Interpolated strings only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+
         
 @dataclass
 class DateLiteral(ASTNode):
     value: str
+    def  __post_init__(self):
+        super().__init__() 
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        return "date"
-    
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"date"}, self) # remember the return type for inference
+            vvvprint(f"DateLiteral: check: Checking date literal with value '{self.value}'...")
+            return {"date"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> datetime.datetime:
         try:
             return datetime.datetime.fromisoformat(self.value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+
 
 @dataclass
 class BooleanLiteral(ASTNode):
@@ -131,8 +123,13 @@ class BooleanLiteral(ASTNode):
         super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
-        self.child_return_types["self"] = ({"boolean"}, self) # remember the return type for inference
-        return {"boolean"}
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"boolean"}, self) # remember the return type for inference
+            vvvprint("BooleanLiteral: check: Boolean literal has type 'boolean'. Remembered type for boolean literal set to 'boolean' for inference.")
+            return {"boolean"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> bool:
         return self.value
@@ -144,9 +141,9 @@ class BooleanLiteral(ASTNode):
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Boolean literals are only compatible with "boolean" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("BooleanLiteral: inference: Boolean literals only return a single type, it should not be called during type inference. " \
+            raise Exception("BooleanLiteral: inference: Boolean literals only return a single type, it should not be called during type inference. " \
         "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+
 
 @dataclass
 class NullLiteral(ASTNode):
@@ -154,9 +151,14 @@ class NullLiteral(ASTNode):
         super().__init__()
 
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
-        self.child_return_types["self"] = ({"null"}, self) # remember the return type for inference
-        return {"null"}
-    
+        try:
+            self.child_return_types.clear()
+            self.child_return_types["self"] = ({"null"}, self) # remember the return type for inference
+            vvvprint("NullLiteral: check: Null literal has type 'null'. Remembered type for null literal set to 'null' for inference.")
+            return {"null"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
     def execute(self, env: Environment) -> None:
         return None
 
@@ -167,9 +169,9 @@ class NullLiteral(ASTNode):
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # Null literals are compatible with all types, so they can be narrowed to any type without error.
-        raise Exception("NullLiteral: inference: Null literals only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-        "DONE"
+        raise TraceError(node = self, cause = Exception(f"NullLiteral: inference: Null literals only return a single type, it should not be called during type inference. " \
+        f"something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self))
+        
 
 @dataclass
 class ListLiteral(ASTNode):
@@ -180,20 +182,27 @@ class ListLiteral(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
+            vvvprint(f"ListLiteral: check: Checking list literal with elements '{self.elements}'...")
+
             if len(self.elements) == 0:
                 list_type = {EMPTY_LIST_TYPE}
                 self.child_return_types["self"] = (list_type, self) # remember the return type for inference
                 return list_type
             element_type = self.elements[0].check(v_table, f_table, inference_context)
-            
+            vvvprint(f"ListLiteral: check: First element type is '{element_type}'.")
+
             for elem in self.elements[1:]:
                 elem_type = elem.check(v_table, f_table, inference_context)
                 if elem_type != element_type:
                     raise Exception(f"List elements must all be of the same type, expected {element_type}, got {elem_type}", self)
-                list_type = t_h.make_set_list_types(elem_type)
+            
+            list_type = t_h.make_set_list_types(element_type)
+
+
             self.child_return_types["element"] = (element_type.copy(), self.elements[0])# all elements have the same type, so we can just use the first one to remember the type for inference. this node will not be infered itself, it's just for consistency and potential future use.
             self.child_return_types["self"] = (list_type.copy(), self) # remember the return type for inference
-            
+
+            vvvprint(f"ListLiteral: check: List literal has type '{list_type}'. Remembered type for list literal set to '{list_type}' for inference.")
             return list_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -211,8 +220,11 @@ class ListLiteral(ASTNode):
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
         # List literals are only compatible with "list<elem_type>" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception("ListLiteral: inference: List literals only returns a single type, it should not be be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+        raise Exception(f"ListLiteral: inference: List literals only returns a single type, it should not be be called during type inference. " \
+        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}")
+
+
+
 
 @dataclass
 class Identifier(ASTNode):
@@ -231,7 +243,7 @@ class Identifier(ASTNode):
             vvvprint(f"Identifier: check: Identifier '{self.name}' has type '{var_type}'. Remembered type for identifier '{self.name}' set to '{var_type}' for inference.")
             return var_type
         except Exception as e:
-            raise TraceError(node = self, cause=e)
+            raise Exception(f"Identifier: check: Variable '{self.name}' is not defined.", self) from e
 
 
     def execute(self, env: Environment) -> Any:
@@ -242,7 +254,7 @@ class Identifier(ASTNode):
             vvvprint(f"Identifier: execute: Value of variable '{self.name}': {value}")
             return value
         except Exception as e:
-            raise TraceError(node = self, cause = e)
+            raise Exception(f"Identifier: execute: Error occurred while executing identifier '{self.name}'.", self) from e
 
 
     def inference(
@@ -284,8 +296,8 @@ class Identifier(ASTNode):
             return
             "DONE"
         except Exception as e:
-            raise TraceError(node = self, cause = e)
-        
+            raise Exception(f"Identifier: inference: Error occurred while inferring type for identifier '{self.name}'.", self) from e
+
 
 @dataclass
 class TaskCall(ASTNode):
@@ -345,7 +357,7 @@ class TaskCall(ASTNode):
             
             return None
         except Exception as e:
-            raise TraceError(node = self, cause=e)
+            raise Exception(f"Task Call: check: Error occurred while checking task call '{self.name}'.", self) from e
 
     def execute(self, env: Environment) -> Any:
         try:
@@ -510,7 +522,7 @@ class ListLookup(ASTNode):
             self.child_return_types["target"] = (list_types.copy(), self.target)
 
         except Exception as e:
-            raise TraceError(node = self, cause = e)    
+            raise Exception(f"ListLookup: inference: Error occurred while inferring type for list lookup.", self) from e
 
 @dataclass
 class Unit(ASTNode):
@@ -1258,6 +1270,29 @@ class UnaryOp(ASTNode):
                     self.child_return_types["self"] = (narrowed.copy(), self)
                     return narrowed
                 
+                case "sqrt":
+                    valid_input_types = {"number", "decimal"}
+                    if not t_h.is_compatible(operand_type, valid_input_types):
+                        raise Exception(
+                                        f"Unary operator 'sqrt' not supported for type '{operand_type}'. "
+                                        f"Expected number or decimal.",
+                                        self
+                                        )
+                    narrowed = t_h.narrow(operand_type, valid_input_types)
+                    if narrowed != operand_type:
+                        self.operand.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=narrowed.copy(),
+                        )
+                        operand_type = narrowed.copy()
+
+                    self.child_return_types["operand"] = (narrowed.copy(), self.operand)
+                    self.child_return_types["self"] = ({"decimal"}, self)
+                    return {"decimal"}
+
                 case "length":    
                     if not t_h.has_list_type(operand_type):
                         raise Exception(
@@ -1346,64 +1381,71 @@ class UnaryOp(ASTNode):
                     new_inference_value: set[str]
                 ) -> None:
         
-        if "self" not in self.child_return_types:
-            raise Exception(f"UnaryOp inference: No type information available for unary operator during inference. This node has not been checked. Node: {self}", self)
-        remembered_types = self.child_return_types["self"][0]
-        if old_inference_value != remembered_types:
-            raise Exception(f"UnaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{remembered_types}' for unary operator. "
-                            f"Something went wrong in the inference pathing. Node: {self}", self)
-        if not t_h.is_compatible(new_inference_value, remembered_types):
-            raise Exception(f"UnaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{remembered_types}' for unary operator. "
-                            f"Something went wrong in the inference pathing. Node: {self}", self)
-        if old_inference_value == new_inference_value:
-            raise Exception(f"UnaryOp inference: New inference value is the same as the old inference value '{old_inference_value}' for unary operator. "
-                            f"This probably means the parent passed a non-narrowing inference request. Node: {self}", self)
-        
-        match self.operator:
-            
-            case "-" | "neg" | "negative" | "exponent":
-                
-                new_operand_inference = new_inference_value.copy()
-                self.operand.inference(
+        try:
+            if "self" not in self.child_return_types:
+                raise Exception(f"UnaryOp inference: No type information available for unary operator during inference. This node has not been checked. Node: {self}", self)
+            remembered_types = self.child_return_types["self"][0]
+            if old_inference_value != remembered_types:
+                raise Exception(f"UnaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{remembered_types}' for unary operator. "
+                                f"Something went wrong in the inference pathing. Node: {self}", self)
+            if not t_h.is_compatible(new_inference_value, remembered_types):
+                raise Exception(f"UnaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{remembered_types}' for unary operator. "
+                                f"Something went wrong in the inference pathing. Node: {self}", self)
+            if old_inference_value == new_inference_value:
+                raise Exception(f"UnaryOp inference: New inference value is the same as the old inference value '{old_inference_value}' for unary operator. "
+                                f"This probably means the parent passed a non-narrowing inference request. Node: {self}", self)
+
+            match self.operator:
+
+                case "-" | "neg" | "negative" | "exponent":
+
+                    new_operand_inference = new_inference_value.copy()
+                    self.operand.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=self.child_return_types["operand"][0].copy(),
+                                new_inference_value=new_operand_inference.copy(),
+                            )
+
+                    self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
+                    self.child_return_types["self"] = (new_inference_value.copy(), self)
+                    return
+
+                case "sqrt":
+                    raise Exception(f"Inference for 'sqrt' operator is not supported because it only supports 'number' and 'decimal' types and returns 'decimal', so there is no need for inference. "
+                                    f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+                    
+
+                case "not_" | "not" | "!":
+                    raise Exception(f"Inference for 'not' operator is not supported because it only supports 'boolean' types and returns 'boolean', so there is no need for inference. "
+                                    f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+                case "floor" | "ceiling" | "round":
+                    raise Exception(f"Inference for 'floor', 'ceiling', and 'round' operators is not supported because they only support 'number' and 'decimal' types and return 'number', so there is no need for inference. "
+                                    f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+                case "length":
+                    raise Exception(f"Inference for 'length' operator is not supported because it only supports text and list types and returns 'number', so there is no need for inference. "
+                                    f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+
+                case "first" | "last":
+                    self.child_return_types["self"] = (new_inference_value.copy(), self)
+                    new_list_inference = t_h.make_set_list_types(new_inference_value)
+                    self.operand.inference(
                             v_table=v_table,
                             f_table=f_table,
                             inference_context=inference_context,
                             old_inference_value=self.child_return_types["operand"][0].copy(),
-                            new_inference_value=new_operand_inference.copy(),
+                            new_inference_value=new_list_inference.copy(),
                         )
-                    
-                self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
-                self.child_return_types["self"] = (new_inference_value.copy(), self)
-                return
-            
-            
-            case "not_" | "not" | "!":
-                raise Exception(f"Inference for 'not' operator is not supported because it only supports 'boolean' types and returns 'boolean', so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-            case "floor" | "ceiling" | "round":
-                raise Exception(f"Inference for 'floor', 'ceiling', and 'round' operators is not supported because they only support 'number' and 'decimal' types and return 'number', so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-            case "length":
-                raise Exception(f"Inference for 'length' operator is not supported because it only supports text and list types and returns 'number', so there is no need for inference. "
-                                f"If you are seeing this error, it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
-            
-            case "first" | "last":
-                self.child_return_types["self"] = (new_inference_value.copy(), self)
-                new_list_inference = t_h.make_set_list_types(new_inference_value)
-                self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=self.child_return_types["operand"][0].copy(),
-                        new_inference_value=new_list_inference.copy(),
-                    )
-                
-                self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
-                return
-            
-            case _:
-                raise Exception(f"Inference for unary operator '{self.operator}' is not supported. If you are seeing this error, it means something went wrong somewhere. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
 
+                    self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
+                    return
+
+                case _:
+                    raise Exception(f"Inference for unary operator '{self.operator}' is not supported. If you are seeing this error, it means something went wrong somewhere. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 @dataclass
 class AccessOp(ASTNode):
     target: Optional[ASTNode]
@@ -1467,6 +1509,52 @@ class AccessOp(ASTNode):
                     self.child_return_types["self"] = ({"time"}, self)
                     return {"time"}
                 
+                case "first" | "last":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    if not t_h.has_list_type(target_type):
+                        raise Exception(f"Cannot get '{op}' element of type '{target_type}'. {op} Expected a list.")
+                    
+                    if t_h.has_non_list_type(target_type):
+                        new_target_type = t_h.get_all_list_types(target_type)
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value=new_target_type.copy(),
+                        )
+
+                        target_type = new_target_type.copy()
+
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    return_type = t_h.get_list_element_types(target_type)
+                    self.child_return_types["self"] = (return_type.copy(), self)
+                    return return_type
+
+                case "length":
+                    if target_type is None:
+                        raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
+                    if not t_h.has_list_type(target_type):
+                        raise Exception(f"Cannot get length of type '{target_type}'. {op} Expected a list.")
+                    
+                    if t_h.has_non_list_type(target_type):
+                        new_target_type = t_h.get_all_list_types(target_type)
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=target_type.copy(),
+                            new_inference_value=new_target_type.copy(),
+                        )
+
+                        target_type = new_target_type.copy()
+                    
+                    self.child_return_types["target"] = (target_type.copy(), self.target)
+                    self.child_return_types["self"] = ({"number"}, self)
+                    return {"number"}
+                    
+
                 case "starts_with" | "ends_with" | "regex":
                     if target_type is None:
                         raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
@@ -1587,41 +1675,81 @@ class AccessOp(ASTNode):
             raise TraceError(node = self, cause = e)
         
     def inference(self, v_table, f_table, inference_context, old_inference_value, new_inference_value):
-        
-        if "self" not in self.child_return_types:
-            raise Exception(f"AccessOp inference: No type information available for access operation during inference. This node has not been checked. Node: {self}", self)
-        if len(self.child_return_types["self"][0]) == 1:
-            raise Exception(f"AccessOp inference: Only one possible return type '{self.child_return_types['self'][0]}' for access operation '{self.operation}'. Inference should not be necessary. Node: {self}", self)
-        match self.operation:
-            
-            case "unit":
-                remembered_return_types = self.child_return_types["self"][0]
-                if old_inference_value != remembered_return_types:
-                    raise Exception(
-                        f"AccessOp inference: Old inference value '{old_inference_value}' does not match remembered return types '{remembered_return_types}' for access operation 'unit'. "
-                        f"Something went wrong in the inference pathing. Node: {self}", self)
-                if not t_h.is_compatible(new_inference_value, remembered_return_types):
-                    raise Exception(
-                        f"AccessOp inference: New inference value '{new_inference_value}' is not compatible with remembered return types '{remembered_return_types}' for access operation 'unit'. "
-                        f"Something went wrong in the inference pathing. Node: {self}", self)
+        try:
+            if "self" not in self.child_return_types:
+                raise Exception(f"AccessOp inference: No type information available for access operation during inference. This node has not been checked. Node: {self}", self)
+            if len(self.child_return_types["self"][0]) == 1:
+                raise Exception(f"AccessOp inference: Only one possible return type '{self.child_return_types['self'][0]}' for access operation '{self.operation}'. Inference should not be necessary. Node: {self}", self)
+            if old_inference_value != self.child_return_types["self"][0]:
+                raise Exception(f"AccessOp inference: Old inference value '{old_inference_value}' does not match remembered return types '{self.child_return_types['self'][0]}' for access operation '{self.operation}'. "
+                                f"Something went wrong in the inference pathing. Node: {self}", self)
+            match self.operation:
 
-                new_target_inference = set()
-                if new_inference_value == {"time"}:
-                    new_target_inference = {"number", "decimal"}
-                    
-                elif new_inference_value == {"number"}:
-                    new_target_inference = {"time", "date"}
-                else:
+                case "file_name" | "age" | "starts_with" | "ends_with" | "regex" | "length" | "now" | "here":
                     raise Exception(
-                        f"AccessOp inference: this It should not be possible. operation:{self.operation} new_inference_value: {new_inference_value}", self)
+                        f"Inference for access operation '{self.operation}' is not supported because it only supports one return type, so there is no need for inference. If you are seeing this error, "
+                        f"it means something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}",
+                        self
+                    )
 
-                self.target.inference(
-                    v_table=v_table,
-                    f_table=f_table,
-                    inference_context=inference_context,
-                    old_inference_value=self.child_return_types["target"][0].copy(),
-                    new_inference_value=new_target_inference.copy(),
-                )
-                self.child_return_types["target"] = (new_target_inference.copy(), self.target)
-                self.child_return_types["self"] = (new_inference_value.copy(), self)
+                case "unit":
+                    remembered_return_types = self.child_return_types["self"][0]
+                    if old_inference_value != remembered_return_types:
+                        raise Exception(
+                            f"AccessOp inference: Old inference value '{old_inference_value}' does not match remembered return types '{remembered_return_types}' for access operation 'unit'. "
+                            f"Something went wrong in the inference pathing. Node: {self}", self)
+                    if not t_h.is_compatible(new_inference_value, remembered_return_types):
+                        raise Exception(
+                            f"AccessOp inference: New inference value '{new_inference_value}' is not compatible with remembered return types '{remembered_return_types}' for access operation 'unit'. "
+                            f"Something went wrong in the inference pathing. Node: {self}", self)
+
+                    new_target_inference = set()
+                    if new_inference_value == {"time"}:
+                        new_target_inference = {"number", "decimal"}
+
+                    elif new_inference_value == {"number"}:
+                        new_target_inference = {"time", "date"}
+                    else:
                 
+                        raise Exception(
+                            f"AccessOp inference: this It should not be possible. operation:{self.operation} new_inference_value: {new_inference_value}", self)
+
+                    self.target.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=self.child_return_types["target"][0].copy(),
+                        new_inference_value=new_target_inference.copy(),
+                    )
+                    self.child_return_types["target"] = (new_target_inference.copy(), self.target)
+                    self.child_return_types["self"] = (new_inference_value.copy(), self)
+
+                case "first" | "last":
+                    if "target" not in self.child_return_types:
+                        raise Exception(f"AccessOp inference: No type information available for target during inference of access operation '{self.operation}'. This node has not been checked. Node: {self}", self)
+                    remembered_target_types = self.child_return_types["target"][0]
+
+                    new_target_value = t_h.make_set_list_types(new_inference_value)
+                    if new_target_inference != remembered_target_types:
+                        self.target.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=remembered_target_types.copy(),
+                            new_inference_value=new_target_value.copy(),
+                        )
+                        self.child_return_types["target"] = (new_target_value.copy(), self.target)
+                    
+                    
+                    
+                case _:
+                    raise Exception(
+                        f"Inference for access operation '{self.operation}' is not supported. If you are seeing this error, it means something went wrong somewhere. "
+                        f"new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}",
+                        self)
+
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+            
+          
