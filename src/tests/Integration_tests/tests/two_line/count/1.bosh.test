@@ -1,0 +1,13 @@
+count from 1 to 10:
+    say "Hello, World!"
+===
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!
+Hello, World!

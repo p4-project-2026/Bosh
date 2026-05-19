@@ -143,7 +143,7 @@ NEW : "new"
 _BLOCKSTART: "{"
 _BLOCKEND: "}" 
 _SEP: "." _WS* _NL* | _NL+
-COMMENT: /#[^\n]*\n/
+COMMENT: /#[^\n]*\n?/
 BOOLEAN: "true" | "false"
 IDENT: /[A-Z][a-zA-Z0-9]*/(" "*/[A-Z][a-zA-Z0-9]*/)*
 %import common.WS_INLINE -> _WS
