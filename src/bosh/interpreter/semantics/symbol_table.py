@@ -16,7 +16,7 @@ class Symbol_Table(Table[set[str]]):
         current_type = self.table[name]
         vvvprint(f"SymbolTable: Variable '{name}' already bound to type '{current_type}' in current scope.")
 
-        if current_type == {"UNKNOWN"} or current_type == {"any"}:
+        if current_type == {"UNKNOWN"} or current_type == {"any"} or current_type == {"null"}:
 
             vvvprint(f"SymbolTable: Variable '{name}' is currently bound to '{current_type}', allowing re-binding to any type '{type_value}'...")
             self.table[name] = type_value.copy()
