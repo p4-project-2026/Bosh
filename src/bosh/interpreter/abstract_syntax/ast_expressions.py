@@ -222,12 +222,13 @@ class Identifier(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
+            vvvprint(f"Identifier: check: Checking identifier '{self.name}'...")
+
             self.child_return_types.clear()
-            vvvprint(f"Identifier: check: Looking up variable '{self.name}' in variable table...")
             var_type = v_table.lookup(self.name)
-            vvvprint(f"Identifier: check: Variable '{self.name}' found with type '{var_type}'")
             self.child_return_types["self"] = (var_type.copy(), self)
-            vvvprint(f"Identifier: check: Remembered type for variable '{self.name}' returned set to '{var_type}' for inference.")
+
+            vvvprint(f"Identifier: check: Identifier '{self.name}' has type '{var_type}'. Remembered type for identifier '{self.name}' set to '{var_type}' for inference.")
             return var_type
         except Exception as e:
             raise TraceError(node = self, cause=e)
@@ -253,45 +254,33 @@ class Identifier(ASTNode):
         new_inference_value: set[str],
     ) -> None:
         try:
-            vvvprint(f"Identifier: inference: Starting inference for variable '{self.name}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'...")
+            vvvprint(f"Identifier: inference: Inferring type for identifier '{self.name}'. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'...")
+
             if "self" not in self.child_return_types:
                 raise Exception(f"Identifier: inference: No type information available for variable '{self.name}' during type inference. {self} has not been checked.", self)
-            vvvprint(f"Identifier: inference: Current child return types for variable '{self.name}': {self.child_return_types}")
 
-            vvvprint(f"Identifier: inference: Checking if old inference value '{old_inference_value}' matches remembered type for variable '{self.name}'...")
             remembered_type = self.child_return_types["self"][0].copy()
-            vvvprint(f"Identifier: inference: Remembered return type for variable '{self.name}': {remembered_type}")
 
-            vvvprint(f"Identifier: inference: Comparing old inference value '{old_inference_value}' with remembered type '{remembered_type}' for variable '{self.name}'...")
             if remembered_type != old_inference_value:
                 raise Exception(f"Identifier: inference: Old inference value '{old_inference_value}' does not match remembered type '{remembered_type}' for variable '{self.name}'. something went wrong in type inference pathing.", self)
-            vvvprint(f"Identifier: inference: Old inference value '{old_inference_value}' matches remembered type for variable '{self.name}'.")
 
-
-            vvvprint(f"Identifier: inference: retrieving current type for variable '{self.name}' from variable table for inference...")
             current_type = v_table.lookup(self.name).copy()
-            vvvprint(f"Identifier: inference: Current type for variable '{self.name}' from variable table: {current_type}")
-
-            vvvprint(f"Identifier: inference: Checking compatibility of new inference value '{new_inference_value}' with current type '{current_type}' for variable '{self.name}'...")
             if not t_h.is_compatible(current_type, new_inference_value):
                 raise Exception(f"Identifier: inference: New inference value '{new_inference_value}' is incompatible with current type '{current_type}' for variable '{self.name}'. something went wrong in type inference.", self)
-            vvvprint(f"Identifier: inference: New inference value '{new_inference_value}' is compatible with current type '{current_type}' for variable '{self.name}'.")
 
-            vvvprint(f"Identifier: inference: Checking if new inference value '{new_inference_value}' narrows the current type '{current_type}' for variable '{self.name}'...")
             narrowed = t_h.narrow(current_type, new_inference_value)
             if narrowed == current_type:
                 raise Exception(
-                                f"Identifier: inference path reached this node, but no narrowing occurred. "
-                                f"current={current_type}, new={new_inference_value}. "
-                                f"This probably means the parent passed a non-narrowing inference request.",
-                                self
-                                )
+                    f"Identifier: inference path reached this node, but no narrowing occurred. "
+                    f"current={current_type}, new={new_inference_value}. "
+                    f"This probably means the parent passed a non-narrowing inference request.",
+                    self
+                )
 
-            vvvprint(f"Identifier: inference: New inference value '{new_inference_value}' narrows the current type for variable '{self.name}'. Updating variable table and remembered type...")
             v_table.bind(self.name, narrowed.copy())
             self.child_return_types["self"] = (narrowed.copy(), self)
             inference_context.mark_infered()
-            vvvprint(f"Identifier: inference: Updated variable '{self.name}' in variable table to new inferred type '{narrowed}'. Remembered type for variable '{self.name}' updated to '{narrowed}' for inference. Inference marked as updated in inference context.")
+            vvvprint(f"Identifier: inference: Variable '{self.name}' type updated to '{narrowed}' for inference.")
             return
             "DONE"
         except Exception as e:
@@ -308,6 +297,7 @@ class TaskCall(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
             self.child_return_types.clear()
+            vvvprint(f"Task Call: Checking task call '{self.name}' with arguments '{self.arguments}'...")
 
             signature = f_table.lookup(self.name)
             arguments = self.arguments or []
@@ -348,7 +338,7 @@ class TaskCall(ASTNode):
                 self.child_return_types[f"arg_{i}"] = (arg_type.copy(), arg)
                 vvvprint(f"Task Call: check: Argument {i+1} for task '{self.name}' checked with type '{arg_type}'. Remembered type for argument '{argument_name}' set to '{arg_type}' for inference.")
 
-                    
+            vvvprint(f"Task Call: check: All arguments for task '{self.name}' checked successfully. Checking return type...")
             if signature.return_type is not None:
                 self.child_return_types["self"] = (signature.return_type.copy(), self)
                 return signature.return_type.copy()
