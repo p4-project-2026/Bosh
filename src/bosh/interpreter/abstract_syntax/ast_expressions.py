@@ -603,28 +603,71 @@ class Unit(ASTNode):
 class TypeCast(ASTNode):
     target: ASTNode
     target_type: str
+    def __post_init__(self):
+        super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
-            original_type = self.target.check(v_table, f_table)
-            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
-                raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
-            if original_type == self.target_type:
-                return original_type
-            # Weak casting: number -> float -> string, boolean -> string, date -> string
-            if self.target_type == "text":
-                if original_type in ["number", "decimal", "boolean", "date"]:
-                    return "text"
-            if self.target_type in ["number", "decimal"]:
-                if original_type in ["number", "decimal"]:
-                    return self.target_type
+            self.child_return_types.clear()
+            original_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
 
-            # Strong casting: float -> number, string -> number/decimal/boolean/date (if possible)
-            if original_type == "text":
-                if self.target_type in ["number", "decimal", "boolean", "date"]:
-                    return self.target_type
+            if original_type is None:
+                raise Exception("TypeCast: Target of type cast cannot be of type 'None'", self)
             
-            raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
+            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
+                raise Exception(f"Unsupported target type for type cast: '{self.target_type}'", self)
+            
+            match self.target_type:
+                case "text":
+                    valid_target_types = {"number", "decimal", "boolean", "date", "text"}
+                    return_type = {"text"}
+            
+                case "number":
+                    valid_target_types = {"number", "decimal", "text"}
+                    return_type = {"number"}
+                
+                case "decimal":
+                    valid_target_types = {"number", "decimal", "text"}
+                    return_type = {"decimal"}
+
+                case "boolean":
+                    valid_target_types = {"boolean", "text"}
+                    return_type = {"boolean"}
+
+                case "date":
+                    valid_target_types = {"date", "text"}
+                    return_type = {"date"}
+
+                case _:
+                    raise Exception(f"Unsupported target type for type cast: '{self.target_type}'")
+                
+            narrowed_type = t_h.narrow(original_type, valid_target_types)
+            if narrowed_type == set():
+                raise Exception(f"Cannot cast from '{original_type}' to '{self.target_type}'", self)
+            
+            if narrowed_type != original_type:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=original_type.copy(),
+                    new_inference_value=narrowed_type.copy()
+                    )
+                original_type = narrowed_type.copy()
+            
+            self.child_return_types["target"] = (original_type.copy(), self.target)
+            self.child_return_types["self"] = (return_type.copy(), self)
+
+            return return_type
+                    
+
+
+            
+            
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -652,57 +695,7 @@ class TypeCast(ASTNode):
             raise TraceError(node = self, cause = e)
 
 
-@dataclass  
-class TypeCast(ASTNode):
-    target: ASTNode
-    target_type: str
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        try:
-            original_type = self.target.check(v_table, f_table)
-            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
-                raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
-            if original_type == self.target_type:
-                return original_type
-            # Weak casting: number -> float -> string, boolean -> string, date -> string
-            if self.target_type == "text":
-                if original_type in ["number", "decimal", "boolean", "date"]:
-                    return "text"
-            if self.target_type in ["number", "decimal"]:
-                if original_type in ["number", "decimal"]:
-                    return self.target_type
-
-            # Strong casting: float -> number, string -> number/decimal/boolean/date (if possible)
-            if original_type == "text":
-                if self.target_type in ["number", "decimal", "boolean", "date"]:
-                    return self.target_type
-            
-            raise TraceError(node = self, cause = f"Cannot cast from '{original_type}' to '{self.target_type}'")
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
-
-    def execute(self, env: Environment) -> Any:
-        try:
-            value = self.target.execute(env)
-            match self.target_type:
-                case "number":
-                    return int(value)
-                case "decimal":
-                    return float(value)
-                case "text":
-                    if isinstance(value, bool):
-                        return "true" if value else "false"
-                    return str(value)
-                case "boolean":
-                    return bool(value)
-                case "date":
-                    if isinstance(value, (datetime.datetime, str)):
-                        return datetime.datetime.fromisoformat(str(value))
-                    raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
-                case _:
-                    raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
 
 @dataclass
 class BinaryOp(ASTNode):
@@ -833,9 +826,7 @@ class BinaryOp(ASTNode):
                     return return_types
 
                     
-
-
-                case "eq" | "neq" | "lt" | "gt" | "loet" | "goet":
+                case "eq" | "neq":
                     if left_type == right_type:
                         self.child_return_types["left"] = (left_type.copy(), self.left)
                         self.child_return_types["right"] = (right_type.copy(), self.right)
@@ -870,7 +861,54 @@ class BinaryOp(ASTNode):
                         new_right_type = narrowed.copy()
                         if t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES):
                             new_right_type.add(t_h.narrow(right_type, t_h.NUMERIC_TYPES))
-                            
+
+                        self.right.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=right_type.copy(),
+                        new_inference_value=new_right_type.copy(),
+                        )
+                        
+                        right_type = new_right_type.copy()
+
+                    self.child_return_types["right"] = (right_type.copy(), self.right)
+                    self.child_return_types["self"] = ({"boolean"}, self)
+                    return {"boolean"}
+
+                case "lt" | "gt" | "loet" | "goet":
+                    if left_type == right_type:
+                        self.child_return_types["left"] = (left_type.copy(), self.left)
+                        self.child_return_types["right"] = (right_type.copy(), self.right)
+                        self.child_return_types["self"] = ({"boolean"}, self)
+                        return {"boolean"}
+                    if not t_h.is_compatible(left_type, right_type):
+                        raise Exception(
+                                        f"Binary operator '{op}' only supports operands of compatible types. "
+                                        f"Got left type '{left_type}' and right type '{right_type}'.",
+                                        self
+                                        )
+                    
+                    narrowed = t_h.narrow(left_type, right_type)
+                    if narrowed != left_type:
+                        new_left_type = narrowed.copy()
+                        
+                        self.left.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=left_type.copy(),
+                        new_inference_value=new_left_type.copy(),
+                        )
+
+                        left_type = new_left_type.copy()
+
+                    self.child_return_types["left"] = (left_type.copy(), self.left)
+
+                    if narrowed != right_type:
+                        new_right_type = narrowed.copy()
+                        
+
                         self.right.inference(
                         v_table=v_table,
                         f_table=f_table,
