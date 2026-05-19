@@ -14,12 +14,13 @@ class Assign(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
+            vvvprint(f"Assign: Checking assignment of value '{self.value}' to variable '{self.target.name}'...")
+
             value_type = self.value.check(
                 v_table=v_table,
                 f_table=f_table, 
                 inference_context=inference_context
                 )
-            
             if value_type is None:
                 raise Exception(f"Value assigned to '{self.target.name}' is undefined.", self)
             
@@ -47,6 +48,7 @@ class Assign(ASTNode):
             else:
                 v_table.bind(self.target.name, value_type.copy())
                 self.child_return_types["value"] = (value_type.copy(), self.value)
+                vvvprint(f"Assign: Variable '{self.target.name}' was not previously defined. Binding it to type '{value_type}' in variable table.")
                 return
                 
         except Exception as e:
@@ -62,12 +64,6 @@ class Assign(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def inference(
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception("Assign does not return a value and cannot be used in inference.")
 
 
 @dataclass
@@ -149,13 +145,6 @@ class AssignType(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
                 
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception(f"AssignType does not return a value and cannot be used in inference.", self)
 
 
 @dataclass
@@ -233,10 +222,3 @@ class TaskDecl(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception(f"TaskDecl: does not return a value and cannot be used in inference. something went wrong in inference pathing.", self)
