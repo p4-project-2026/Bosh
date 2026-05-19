@@ -68,10 +68,14 @@ class ASTNode():
                 inference_context: InferenceContext,
                 old_inference_value: set[str],
                 new_inference_value: set[str]) -> None:
-        try:
-            raise NotImplementedError(self.__class__.__name__ + " has not just implemented inference(), but it is needed for inference. This error is raised to indicate that this node needs to implement inference() in order to be used in inference, and to provide a clear error message if it is not implemented.")
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
+        
+        raise Exception(
+            self.__class__.__name__ + f"does not implement inference() but was called during inference. " 
+            f"This means there is likely a bug in the inference pathing logic, or the node is missing a proper inference implementation." 
+            f"Node: {self}, old_inference_value: {old_inference_value}, new_inference_value: {new_inference_value}",
+            self
+        )
+
         
             
 
@@ -105,13 +109,7 @@ class Block(ASTNode):
                 vvvprint(f"Block: Statement {stmt} returned value: {return_val}, exiting block execution.")
                 return return_val
             
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        vvvprint(f"Block: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
+
         
 
 @dataclass
@@ -153,10 +151,3 @@ class Program(ASTNode):
         vvvprint("Program: Starting execution of program...")
         return self.block.execute(env)
     
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-         raise Exception(f"Program: does not implement inference, but checking if any child nodes need to be updated with new inference value '{new_inference_value}'...")
