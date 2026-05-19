@@ -713,14 +713,17 @@ class BinaryOp(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
-            left_type = self.left.check(v_table=v_table,
-                                        f_table=f_table,
-                                        inference_context=inference_context
-                                        )
-            right_type = self.right.check(v_table=v_table, 
-                                          f_table=f_table, 
-                                          inference_context=inference_context
-                                          )
+            left_type = self.left.check(
+                v_table=v_table,
+                f_table=f_table,
+                inference_context=inference_context
+            )
+
+            right_type = self.right.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
             
             if left_type is None or right_type is None:
                 raise Exception(
@@ -733,62 +736,100 @@ class BinaryOp(ASTNode):
 
             match op:
                     
-                case  "plus" | "minus" | "mult" | "div":
-                    valid_input_types = {"number", "decimal"}
+                case  "plus" | "minus" | "mult" | "div" | "pow":
+                    valid_input_types = {"number", "decimal", "date", "time"}
+                    if left_type is None:
+                        raise Exception(
+                            f"Binary operator '{op}' check failed: left operand has no type.",
+                            self
+                        )
+                    
+                    if right_type is None:
+                        raise Exception(
+                            f"Binary operator '{op}' check failed: right operand has no type.",
+                            self
+                        )
+                    
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
-                                        f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                                        f"Expected number or decimal.",
-                                        self
-                                        )
+                            f"Binary operator '{op}' not supported for left type '{left_type}'. "
+                            f"Expected number or decimal.",
+                            self
+                        )
 
                     if not t_h.is_compatible(right_type, valid_input_types):
                         raise Exception(
-                                        f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                                        f"Expected number or decimal.",
-                                        self
-                                        )
-
+                            f"Binary operator '{op}' not supported for right type '{right_type}'. "
+                            f"Expected number or decimal.",
+                            self
+                        )
+                    
                     left_narrowed = t_h.narrow(left_type, valid_input_types)
                     right_narrowed = t_h.narrow(right_type, valid_input_types)
 
                     if left_narrowed != left_type:
                         self.left.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=left_type.copy(),
-                        new_inference_value=left_narrowed.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=left_type.copy(),
+                            new_inference_value=left_narrowed.copy(),
                         )
+                        left_type = left_narrowed.copy()
 
                     if right_narrowed != right_type:
                         self.right.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=right_type.copy(),
-                        new_inference_value=right_narrowed.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=right_type.copy(),
+                            new_inference_value=right_narrowed.copy(),
                         )
+                        right_type = right_narrowed.copy()
 
-                    self.child_return_types["left"] = (left_narrowed.copy(), self.left)
-                    self.child_return_types["right"] = (right_narrowed.copy(), self.right)
+                    self.child_return_types["left"] = (left_type.copy(), self.left)
+                    self.child_return_types["right"] = (right_type.copy(), self.right)
                     return_types = set()
 
-                    if "number" in left_narrowed and "number" in right_narrowed:
+                    
+
+                    if t_h.contains(right_type, "number") and t_h.contains(left_type, "number"):
+
                         return_types.add("number")
-                    if "decimal" in left_narrowed or "decimal" in right_narrowed:
+                    
+                    if t_h.contains(right_type, "decimal") and t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) \
+                        or (t_h.contains(left_type, "decimal") and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES)):
+
                         return_types.add("decimal")
                     
-                    if not return_types:
-                        #Sanity check.
-                        raise Exception(
-                        f"Internal type error: numeric operator '{op}' produced no return type "
-                        f"from left={left_narrowed}, right={right_narrowed}",
-                        self
-                        )
+                    if t_h.contains(right_type, "time") and t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) \
+                        or (t_h.contains(left_type, "time") and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES)):
 
+                        return_types.add("time")
+
+                    if op in ["plus", "minus"] and t_h.contains(right_type, "time") and t_h.contains(left_type, "time"):
+
+                        return_types.add("time")
+
+                    if op in ["plus", "minus"] and((t_h.contains(right_type, "date") and t_h.contains(left_type, "time")) \
+                        or (t_h.contains(left_type, "date") and t_h.contains(right_type, "time"))):
+
+                        return_types.add("date")
+
+                    if op is "minus" and t_h.contains(right_type, "date") and t_h.contains(left_type, "date"):
+
+                        return_types.add("time")
+                    
+                    if return_types == set():
+                        raise Exception(
+                                        f"Binary operator '{op}' does not support the combination of left type '{left_type}' and right type '{right_type}'.",
+                                        self
+                                        )
+                    
                     self.child_return_types["self"] = (return_types.copy(), self)
+
                     return return_types
+
                     
                 case  "mod":
                     valid_input_types = {"number"}
@@ -827,7 +868,7 @@ class BinaryOp(ASTNode):
                     self.child_return_types["self"] = ({"number"}, self)
                     return {"number"}
 
-                case "eq" | "neq" | "lt" | "gt" | "lte" | "gte":
+                case "eq" | "neq" | "lt" | "gt" | "loet" | "goet":
                     if left_type == right_type:
                         self.child_return_types["left"] = (left_type.copy(), self.left)
                         self.child_return_types["right"] = (right_type.copy(), self.right)
@@ -849,8 +890,10 @@ class BinaryOp(ASTNode):
                         old_inference_value=left_type.copy(),
                         new_inference_value=narrowed.copy(),
                         )
+                        left_type = narrowed.copy()
 
-                    self.child_return_types["left"] = (narrowed.copy(), self.left)
+                    self.child_return_types["left"] = (left_type.copy(), self.left)
+
                     if narrowed != right_type:
                         self.right.inference(
                         v_table=v_table,
@@ -859,8 +902,15 @@ class BinaryOp(ASTNode):
                         old_inference_value=right_type.copy(),
                         new_inference_value=narrowed.copy(),
                         )
+                        right_type = narrowed.copy()
 
-                    self.child_return_types["right"] = (narrowed.copy(), self.right)
+                    self.child_return_types["right"] = (right_type.copy(), self.right)
+                    self.child_return_types["self"] = ({"boolean"}, self)
+                    return {"boolean"}
+                
+                case "eq_type" | "neq_type":
+                    self.child_return_types["left"] = (left_type.copy(), self.left)
+                    self.child_return_types["right"] = (right_type.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
                     return {"boolean"}
 
@@ -868,41 +918,41 @@ class BinaryOp(ASTNode):
                     valid_input_types = {"boolean"}
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
-                                        f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                                        f"Expected boolean.",
-                                        self
-                                        )
+                            f"Binary operator '{op}' not supported for left type '{left_type}'. "
+                            f"Expected boolean.",
+                            self
+                        )
                     
                     if not t_h.is_compatible(right_type, valid_input_types):
                         raise Exception(
-                                        f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                                        f"Expected boolean.",
-                                        self
-                                        )
+                            f"Binary operator '{op}' not supported for right type '{right_type}'. "
+                            f"Expected boolean.",
+                            self
+                        )
                     
                     if left_type != {"boolean"}:
                         self.left.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=left_type.copy(),
-                        new_inference_value={"boolean"},
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=left_type.copy(),
+                            new_inference_value={"boolean"},
                         )
 
                     if right_type != {"boolean"}:
                         self.right.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=right_type.copy(),
-                        new_inference_value={"boolean"},
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=right_type.copy(),
+                            new_inference_value={"boolean"},
                         )
 
                     self.child_return_types["left"] = ({"boolean"}, self.left)
                     self.child_return_types["right"] = ({"boolean"}, self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
                     return {"boolean"}
-               
+
                 case _:
                     raise Exception(f"Binary operator '{op}' is not supported", self)
 
@@ -1004,99 +1054,103 @@ class BinaryOp(ASTNode):
                 raise Exception(f"BinaryOp inference: Old inference value '{old_inference_value}' does not match remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
             if not t_h.is_compatible(new_inference_value, self.child_return_types["self"][0]):
                 raise Exception(f"BinaryOp inference: New inference value '{new_inference_value}' is not compatible with remembered return type '{self.child_return_types['self'][0]}' for binary operator. Something went wrong in the inference pathing. Node: {self}", self)
-            
+            self.child_return_types["self"] = (new_inference_value.copy(), self)
+
             match self.operator:
-                case  "plus" | "minus" | "mult" | "div":
-                    if new_inference_value == {"number"}:
-                        new_left_inference = {"number"}
-                        new_right_inference = {"number"}
-                        if self.child_return_types["left"][0] != new_left_inference:
-                            self.left.inference(
-                                v_table=v_table,
-                                f_table=f_table,
-                                inference_context=inference_context,
-                                old_inference_value=self.child_return_types["left"][0].copy(),
-                                new_inference_value=new_left_inference.copy(),
-                            )
-    
-                            self.child_return_types["left"] = (new_left_inference.copy(), self.left)
-    
-                        if self.child_return_types["right"][0] != new_right_inference:
-                            self.right.inference(
-                                v_table=v_table,
-                                f_table=f_table,
-                                inference_context=inference_context,
-                                old_inference_value=self.child_return_types["right"][0].copy(),
-                                new_inference_value=new_right_inference.copy(),
-                            )
-    
-                            self.child_return_types["right"] = (new_right_inference.copy(), self.right)
-    
-                        self.child_return_types["self"] = ({"number"}, self)
-                        return
+                case "plus" | "minus" | "mult" | "div" | "pow":
                     
-                    else:
-                        left_values = self.child_return_types["left"][0]
-                        right_values = self.child_return_types["right"][0]
-                        if not "decimal" in left_values:
-                            # left cannot explain decimal result,
-                            # so right must be decimal
-                            new_right_values = {"decimal"}
-                            self.right.inference(
-                                v_table=v_table,
-                                f_table=f_table,
-                                inference_context=inference_context,
-                                old_inference_value=right_values.copy(),
-                                new_inference_value=new_right_values.copy(),
-                            )
-                            right_values = new_right_values.copy()
-    
+                    if t_h.is_only(new_inference_value, "date"):
+                        if not self.operator in ["plus", "minus"]:
+                            raise Exception(f"Binary operator '{self.operator}' cannot take 'date' and 'time' type. Only 'plus' and 'minus' can take 'date' and 'time'. ", self)
                         
-                        elif not "decimal" in right_values:
-                            # right cannot explain decimal result,
-                            # so left must be decimal
-                            new_left_values = {"decimal"}
-                            self.left.inference(
-                                v_table=v_table,
-                                f_table=f_table,
-                                inference_context=inference_context,
-                                old_inference_value=left_values.copy(),
-                                new_inference_value=new_left_values.copy(),
-                            )
-                            left_values = new_left_values.copy()
-    
-                        self.child_return_types["left"] = (left_values.copy(), self.left)
-                        self.child_return_types["right"] = (right_values.copy(), self.right)
-                        self.child_return_types["self"] = (new_inference_value, self)
-            
-                        return
-                
+                    
+
+                    valid_input_types = set()
+                    if t_h.contains(new_inference_value, "number"):
+                        valid_input_types.add("number")
+
+                    if t_h.contains(new_inference_value, "decimal"):
+                        valid_input_types.add("decimal")
+                    
+                    if t_h.contains(new_inference_value, "date"):
+                        valid_input_types.add("date")
+                        valid_input_types.add("time") # because date can be returned from date +/- time.
+                    
+                    if t_h.contains(new_inference_value, "time"):
+                        valid_input_types.add("time")
+                        valid_input_types.add("date")
+                        valid_input_types.add("number")
+                        valid_input_types.add("decimal")
+
+                    new_left_types = t_h.narrow(self.child_return_types["left"][0], valid_input_types)
+                    new_right_types = t_h.narrow(self.child_return_types["right"][0], valid_input_types)
+
+                    if not self.operator in ["plus", "minus"]:
+                        if (t_h.is_only(new_left_types, "time") and t_h.is_only(new_right_types, "time")):
+                            raise Exception(f"Binary operator '{self.operator}' cannot take 'time' and 'time' type. Only 'plus' and 'minus' can take 'time' and 'time'. ", self)
+                        
+                        if (t_h.is_only(new_left_types, "date") and t_h.is_only(new_right_types, "time")) or (t_h.is_only(new_left_types, "time") and t_h.is_only(new_right_types, "date")):
+                            raise Exception(f"Binary operator '{self.operator}' cannot take 'date' and 'time' type. Only 'plus' and 'minus' can take 'date' and 'time'. ", self)
+                    
+                        if self.operator != "minus" and (t_h.is_only(new_left_types, "date") and t_h.is_only(new_right_types, "date")):
+                            raise Exception(f"Binary operator '{self.operator}' cannot take 'date' and 'date' type. Only 'minus' can take 'date' and 'date'. ", self)
+                    
+                    if new_left_types != self.child_return_types["left"][0]:
+                        self.left.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=self.child_return_types["left"][0].copy(),
+                            new_inference_value=new_left_types.copy(),
+                        )
+                        self.child_return_types["left"] = (new_left_types.copy(), self.left)
+                    if new_right_types != self.child_return_types["right"][0]:
+                        self.right.inference(
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=self.child_return_types["right"][0].copy(),
+                            new_inference_value=new_right_types.copy(),
+                        )
+
+                        self.child_return_types["right"] = (new_right_types.copy(), self.right)
+                    
+                    
                 case "mod":
                     raise Exception(
-                                    f"Inference for 'mod' is not supported because 'mod' always returns 'number'. "
-                                    f"If you are seeing this, something went wrong in inference pathing. "
-                                    f"new_inference_value: {new_inference_value}, "
-                                    f"old_inference_value: {old_inference_value}",
-                                    self
-                                    )
+                        f"Inference for 'mod' is not supported because 'mod' always returns 'number'. "
+                        f"If you are seeing this, something went wrong in inference pathing. "
+                        f"new_inference_value: {new_inference_value}, "
+                        f"old_inference_value: {old_inference_value}",
+                        self
+                    )
                 
-                case "eq" | "neq" | "lt" | "gt" | "lte" | "gte":
+                case "eq" | "neq" | "lt" | "gt" | "loet" | "goet":
                     raise Exception(
-                                    f"Inference for comparison operator '{self.operator}' is not supported because "
-                                    f"comparisons always return 'boolean'. If you are seeing this, something went "
-                                    f"wrong in inference pathing. new_inference_value: {new_inference_value}, "
-                                    f"old_inference_value: {old_inference_value}",
-                                    self
-                                    )
+                        f"Inference for comparison operator '{self.operator}' is not supported because "
+                        f"comparisons always return 'boolean'. If you are seeing this, something went "
+                        f"wrong in inference pathing. new_inference_value: {new_inference_value}, "
+                        f"old_inference_value: {old_inference_value}",
+                        self
+                    )
+                
+                case "eq_type" | "neq_type":
+                    raise Exception(
+                        f"Inference for type comparison operator '{self.operator}' is not supported because "
+                        f"type comparisons always return 'boolean'. If you are seeing this, something went "
+                        f"wrong in inference pathing. new_inference_value: {new_inference_value}, "
+                        f"old_inference_value: {old_inference_value}",
+                        self
+                     )
                 
                 case "or" | "and":
                     raise Exception(
-                                    f"Inference for logical operator '{self.operator}' is not supported because "
-                                    f"logical operators always return 'boolean'. If you are seeing this, something "
-                                    f"went wrong in inference pathing. new_inference_value: {new_inference_value}, "
-                                    f"old_inference_value: {old_inference_value}",
-                                    self
-                                    )
+                        f"Inference for logical operator '{self.operator}' is not supported because "
+                        f"logical operators always return 'boolean'. If you are seeing this, something "
+                        f"went wrong in inference pathing. new_inference_value: {new_inference_value}, "
+                        f"old_inference_value: {old_inference_value}",
+                        self
+                    )
     
                 case _:
                     raise Exception(f"Unsupported operator '{self.operator}' for inference in BinaryOp. Node: {self}", self)
@@ -1115,10 +1169,11 @@ class UnaryOp(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
-            operand_type = self.operand.check(v_table=v_table,
-                                              f_table=f_table,
-                                              inference_context=inference_context
-                                              )
+            operand_type = self.operand.check(
+                v_table=v_table,
+                f_table=f_table,
+                inference_context=inference_context
+            )
             
             op = self.operator
             match op:
@@ -1126,19 +1181,19 @@ class UnaryOp(ASTNode):
                     valid_input_types = {"number", "decimal"}
                     if not t_h.is_compatible(operand_type, valid_input_types):
                         raise Exception(
-                                        f"Unary operator '{op}' not supported for type '{operand_type}'. "
-                                        f"Expected number or decimal.",
-                                        self
-                                        )
+                            f"Unary operator '{op}' not supported for type '{operand_type}'. "
+                            f"Expected number or decimal.",
+                            self
+                        )
                     
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=narrowed.copy()
                         )
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
@@ -1156,11 +1211,11 @@ class UnaryOp(ASTNode):
                     
                     if operand_type != {"boolean"}:
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value={"boolean"},
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value={"boolean"},
                         )
 
                     self.child_return_types["operand"] = ({"boolean"}, self.operand)
@@ -1179,11 +1234,11 @@ class UnaryOp(ASTNode):
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=narrowed.copy(),
                         )
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
@@ -1202,11 +1257,11 @@ class UnaryOp(ASTNode):
                     narrowed = t_h.narrow(operand_type, valid_input_types)
                     if narrowed != operand_type:
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=narrowed.copy(),
                         )
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
@@ -1224,11 +1279,11 @@ class UnaryOp(ASTNode):
                     if t_h.has_non_list_type(operand_type):
                         new_operand_type = t_h.get_all_list_types(operand_type)
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value=new_operand_type.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=new_operand_type.copy(),
                         )
 
                         operand_type = new_operand_type.copy()
@@ -1248,11 +1303,11 @@ class UnaryOp(ASTNode):
                     if t_h.has_non_list_type(operand_type):
                         new_operand_type = t_h.get_all_list_types(operand_type)
                         self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=operand_type.copy(),
-                        new_inference_value=new_operand_type.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=operand_type.copy(),
+                            new_inference_value=new_operand_type.copy(),
                         )
 
                         operand_type = new_operand_type.copy()
@@ -1294,11 +1349,11 @@ class UnaryOp(ASTNode):
             raise TraceError(node = self, cause = e)
         
     def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]
+                    v_table: ScopeStack,
+                    f_table: FuncTable,
+                    inference_context: InferenceContext,
+                    old_inference_value: set[str],
+                    new_inference_value: set[str]
                 ) -> None:
         
         if "self" not in self.child_return_types:
@@ -1320,11 +1375,11 @@ class UnaryOp(ASTNode):
                 
                 new_operand_inference = new_inference_value.copy()
                 self.operand.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=self.child_return_types["operand"][0].copy(),
-                        new_inference_value=new_operand_inference.copy(),
+                            v_table=v_table,
+                            f_table=f_table,
+                            inference_context=inference_context,
+                            old_inference_value=self.child_return_types["operand"][0].copy(),
+                            new_inference_value=new_operand_inference.copy(),
                         )
                     
                 self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
@@ -1346,11 +1401,11 @@ class UnaryOp(ASTNode):
                 self.child_return_types["self"] = (new_inference_value.copy(), self)
                 new_list_inference = t_h.make_set_list_types(new_inference_value)
                 self.operand.inference(
-                    v_table=v_table,
-                    f_table=f_table,
-                    inference_context=inference_context,
-                    old_inference_value=self.child_return_types["operand"][0].copy(),
-                    new_inference_value=new_list_inference.copy(),
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=self.child_return_types["operand"][0].copy(),
+                        new_inference_value=new_list_inference.copy(),
                     )
                 
                 self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
