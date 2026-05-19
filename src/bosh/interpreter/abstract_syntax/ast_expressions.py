@@ -738,7 +738,7 @@ class BinaryOp(ASTNode):
 
             match op:
                     
-                case  "plus" | "minus" | "mult" | "div" | "pow":
+                case  "plus" | "minus" | "mult" | "div" | "pow" | "mod":
                     valid_input_types = {"number", "decimal", "date", "time"}
                     if left_type is None:
                         raise Exception(
@@ -833,42 +833,7 @@ class BinaryOp(ASTNode):
                     return return_types
 
                     
-                case  "mod":
-                    valid_input_types = {"number"}
-                    if not t_h.is_compatible(left_type, valid_input_types):
-                        raise Exception(
-                                        f"Binary operator 'mod' only supports 'number' types. Got left type '{left_type}'.",
-                                        self
-                                        )
 
-                    if not t_h.is_compatible(right_type, valid_input_types):
-                        raise Exception(
-                                        f"Binary operator 'mod' only supports 'number' types. Got right type '{right_type}'.",
-                                        self
-                                        )
-
-                    if left_type != {"number"}:
-                        self.left.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=left_type.copy(),
-                        new_inference_value={"number"},
-                        )
-
-                    if right_type != {"number"}:
-                        self.right.inference(
-                        v_table=v_table,
-                        f_table=f_table,
-                        inference_context=inference_context,
-                        old_inference_value=right_type.copy(),
-                        new_inference_value={"number"},
-                        )
-
-                    self.child_return_types["left"] = ({"number"}, self.left)
-                    self.child_return_types["right"] = ({"number"}, self.right)
-                    self.child_return_types["self"] = ({"number"}, self)
-                    return {"number"}
 
                 case "eq" | "neq" | "lt" | "gt" | "loet" | "goet":
                     if left_type == right_type:
@@ -885,26 +850,36 @@ class BinaryOp(ASTNode):
                     
                     narrowed = t_h.narrow(left_type, right_type)
                     if narrowed != left_type:
+                        new_left_type = narrowed.copy()
+                        if t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES):
+                            new_left_type.add(t_h.narrow(left_type, t_h.NUMERIC_TYPES))
+
                         self.left.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=left_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                        new_inference_value=new_left_type.copy(),
                         )
-                        left_type = narrowed.copy()
+
+                        left_type = new_left_type.copy()
 
                     self.child_return_types["left"] = (left_type.copy(), self.left)
 
                     if narrowed != right_type:
+                        new_right_type = narrowed.copy()
+                        if t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES):
+                            new_right_type.add(t_h.narrow(right_type, t_h.NUMERIC_TYPES))
+                            
                         self.right.inference(
                         v_table=v_table,
                         f_table=f_table,
                         inference_context=inference_context,
                         old_inference_value=right_type.copy(),
-                        new_inference_value=narrowed.copy(),
+                        new_inference_value=new_right_type.copy(),
                         )
-                        right_type = narrowed.copy()
+                        
+                        right_type = new_right_type.copy()
 
                     self.child_return_types["right"] = (right_type.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
@@ -1059,7 +1034,7 @@ class BinaryOp(ASTNode):
             self.child_return_types["self"] = (new_inference_value.copy(), self)
 
             match self.operator:
-                case "plus" | "minus" | "mult" | "div" | "pow":
+                case "plus" | "minus" | "mult" | "div" | "pow" | "mod" :
                     
                     if t_h.is_only(new_inference_value, "date"):
                         if not self.operator in ["plus", "minus"]:
@@ -1118,14 +1093,7 @@ class BinaryOp(ASTNode):
                         self.child_return_types["right"] = (new_right_types.copy(), self.right)
                     
                     
-                case "mod":
-                    raise Exception(
-                        f"Inference for 'mod' is not supported because 'mod' always returns 'number'. "
-                        f"If you are seeing this, something went wrong in inference pathing. "
-                        f"new_inference_value: {new_inference_value}, "
-                        f"old_inference_value: {old_inference_value}",
-                        self
-                    )
+
                 
                 case "eq" | "neq" | "lt" | "gt" | "loet" | "goet":
                     raise Exception(
