@@ -1,10 +1,12 @@
 from lark import Lark, Transformer, v_args
 from lark.exceptions import UnexpectedInput, UnexpectedToken, UnexpectedCharacters
+
+from bosh.helper_functions.paths import PathsHelper
 from ..abstract_syntax import *
 from colorama import Fore, Style
 
 def parseBosh(processed_code):
-    with open("src/bosh/interpreter/lexparser/bosh_lang.lark", "r") as f:
+    with open(PathsHelper().get_src_path().joinpath("bosh/interpreter/lexparser/bosh_lang.lark"), "r") as f:
         grammar = f.read()
 
     parser = Lark(grammar, start="program", parser="lalr", propagate_positions=True)
@@ -85,6 +87,16 @@ class BoshTransformer(Transformer):
 
     def return_(self, meta, args):
         node = Return(expression=args[0])
+        node.set_meta(meta, self._filename)
+        return node
+
+    def continue_(self, meta, args):
+        node = Continue()
+        node.set_meta(meta, self._filename)
+        return node
+
+    def break_(self, meta, args):
+        node = Break()
         node.set_meta(meta, self._filename)
         return node
 

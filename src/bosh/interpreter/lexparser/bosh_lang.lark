@@ -19,6 +19,8 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
                 | ("return") expr                                               -> return_
+                | "continue"                                                    -> continue_
+                | "break"                                                       -> break_
                 | INSERT expr "to" term ("at" "index"? expr)?                   -> add_to_list
                 | "remove" "element"? expr "from" expr                          -> remove_from_list
                 | ( "run" | "call" ) IDENT ("using" "(" expr ("," expr)* ")")?  -> call_func
