@@ -5,13 +5,24 @@ import datetime
 import re
 
 @dataclass
+class Type(ASTNode):
+    name: str
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        return self.name
+    
+    def execute(self, env: Environment) -> str:
+        return self.name
+    
+
+@dataclass
 class NumberLiteral(ASTNode):
-    value: float
+    value: int
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         return "number"
     
-    def execute(self, env: Environment) -> float:
+    def execute(self, env: Environment) -> int:
         return self.value
 
 
@@ -216,21 +227,21 @@ class ListLookup(ASTNode):
 
 @dataclass
 class Unit(ASTNode):
-    target: ASTNode
+    value: ASTNode
     unit_type: str
 
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
-            target_type = self.target.check(v_table, f_table)
-            if target_type not in ["number", "decimal"]:
-                raise TraceError(node = self, cause = f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.")
+            value_type = self.value.check(v_table, f_table)
+            if value_type not in ["number", "decimal"]:
+                raise TraceError(node = self, cause = f"Cannot apply unit '{self.unit_type}' to type '{value_type}'. Expected number or decimal.")
             return "time"
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> Any:
         try:
-            target_value = self.target.execute(env)
+            target_value = self.value.execute(env)
             match self.unit_type:
                 case "second":
                     return target_value * 1000  # Convert seconds to milliseconds
@@ -312,8 +323,8 @@ class BinaryOp(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
         try:
-            left_type = self.left.check(v_table, f_table) if isinstance(self.left, ASTNode) else self.left
-            right_type = self.right.check(v_table, f_table) if isinstance(self.right, ASTNode) else self.right
+            left_type = self.left.check(v_table, f_table)
+            right_type = self.right.check(v_table, f_table)
             op = self.operator
 
             if left_type == "any" or right_type == "any":
@@ -381,8 +392,8 @@ class BinaryOp(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
-            left_val = self.left.execute(env) if isinstance(self.left, ASTNode) else self.left
-            right_val = self.right.execute(env) if isinstance(self.right, ASTNode) else self.right
+            left_val = self.left.execute(env)
+            right_val = self.right.execute(env)
             match self.operator:
                 case "plus":
                     # datetime + milliseconds

@@ -115,7 +115,7 @@ class BoshTransformer(Transformer):
 
     def assign_type(self, meta, args):
         target_node = Identifier(name=str(args[0]))
-        var_type = str(args[1])
+        var_type = args[1]
         value = args[2] if len(args) > 2 else None
         
         if var_type == "list" and value is None:
@@ -362,9 +362,19 @@ class BoshTransformer(Transformer):
         node = AccessOp(target=args[0], operation="ends_with", argument=args[1])
         node.set_meta(meta, self._filename)
         return node
+    
+    def contains(self, meta, args):
+        node = AccessOp(target=args[0], operation="contains", argument=args[1])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def text_look(self, meta, args):
+        node = AccessOp(target=args[0], operation="text_look", argument=args[1])
+        node.set_meta(meta, self._filename)
+        return node
 
     def unit(self, meta, args):
-        node = Unit(target=args[0], unit_type=str(args[1]).lower())
+        node = Unit(value=args[0], unit_type=str(args[1]).lower())
         node.set_meta(meta, self._filename)
         return node
     
@@ -478,12 +488,17 @@ class BoshTransformer(Transformer):
         return "year"
     
     def TYPE(self, token):
-        if token.value == "int":
-            token.value = "number"
-        if token.value == "float":
-            token.value = "decimal"
-        if token.value == "string":
-            token.value = "text"
-        if token.value == "bool":
-            token.value = "boolean"
-        return token.value
+        type_str = str(token.value).lower()
+        match(type_str):
+            case "int":
+                type_str = "number"
+            case "float":
+                type_str = "decimal"
+            case "string":
+                type_str = "text"
+            case "bool":
+                type_str = "boolean"
+
+        node = Type(name=type_str)
+        node.set_meta(None, self._filename)
+        return node

@@ -38,20 +38,21 @@ class Assign(ASTNode):
 @dataclass
 class AssignType(ASTNode):
     target: ASTNode
-    var_type: str
+    var_type: ASTNode
     value: Optional[ASTNode]
     
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
         try:
             vvvprint(f"AssignType: Checking assignment of value '{self.value}' to variable '{self.target}' with declared type '{self.var_type}'...")
             value_type = self.value.check(v_table, f_table) if self.value else None
+            var_type = self.var_type.check(v_table, f_table)
             vvvprint(f"AssignType: Value '{self.value}' has type '{value_type}'")
-            if value_type and value_type != self.var_type:
-                raise BoshTypeError(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{self.var_type}'", self)
-            vvvprint(f"AssignType: Attempting to bind variable '{self.target.name}' to type '{self.var_type}'...")
-            vvvprint(f"AssignType: Successfully bound variable '{self.target.name}' to type '{self.var_type}'.")
-            v_table.bind(self.target.name, self.var_type)
-            vvvprint(f"AssignType: Variable '{self.target.name}' bound to type '{self.var_type}' successfully.")
+            if value_type and value_type != var_type:
+                raise BoshTypeError(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{var_type}'", self)
+            vvvprint(f"AssignType: Attempting to bind variable '{self.target.name}' to type '{var_type}'...")
+            vvvprint(f"AssignType: Successfully bound variable '{self.target.name}' to type '{var_type}'.")
+            v_table.bind(self.target.name, var_type)
+            vvvprint(f"AssignType: Variable '{self.target.name}' bound to type '{var_type}' successfully.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
             
