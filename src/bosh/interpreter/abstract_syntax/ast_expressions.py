@@ -254,7 +254,7 @@ class Identifier(ASTNode):
             vvvprint(f"Identifier: check: Identifier '{self.name}' has type '{var_type}'. Remembered type for identifier '{self.name}' set to '{var_type}' for inference.")
             return var_type
         except Exception as e:
-            raise Exception(f"Identifier: check: Variable '{self.name}' is not defined.", self) from e
+            raise TraceError(node = self, cause = e)
 
 
     def execute(self, env: Environment) -> Any:
@@ -265,7 +265,7 @@ class Identifier(ASTNode):
             vvvprint(f"Identifier: execute: Value of variable '{self.name}': {value}")
             return value
         except Exception as e:
-            raise Exception(f"Identifier: execute: Error occurred while executing identifier '{self.name}'.", self) from e
+            raise TraceError(node = self, cause = e)
 
 
     def inference(
@@ -307,7 +307,7 @@ class Identifier(ASTNode):
             return
             "DONE"
         except Exception as e:
-            raise Exception(f"Identifier: inference: Error occurred while inferring type for identifier '{self.name}'.", self) from e
+            raise TraceError(node = self, cause = e)
 
 
 @dataclass
@@ -368,7 +368,7 @@ class TaskCall(ASTNode):
             
             return None
         except Exception as e:
-            raise Exception(f"Task Call: check: Error occurred while checking task call '{self.name}'.", self) from e
+            raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> Any:
         try:
@@ -397,8 +397,7 @@ class TaskCall(ASTNode):
         except TraceError as e:
             raise TraceError(node = self,cause = e)
 
-    def inference(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, old_inference_value: set[str], new_inference_value: set[str]) -> None:
-        vvvprint(f"Task Call: does not implement inference, but can end up on the inference path.")
+
 
 @dataclass
 class ListLookup(ASTNode):
@@ -505,7 +504,7 @@ class ListLookup(ASTNode):
             if remembered_types != old_inference_value:
                 raise Exception(f"ListLookup: inference: Old inference value '{old_inference_value}' does not match remembered type '{remembered_types}' for list lookup. something went wrong in type inference pathing.", self)
             if not t_h.is_compatible(remembered_types, new_inference_value):
-                raise Exception(f"ListLookup: inference: New inference value '{new_inference_value}' is incompatible with remembered type '{remembered_types}' for list lookup. something went wrong.", self)
+                raise Exception(f"list lookup inference: New inference value '{new_inference_value}' is incompatible with current type '{remembered_types}' for list lookup. something went wrong in type inference.", self)
 
             narrowed = t_h.narrow(remembered_types, new_inference_value)
 
@@ -533,7 +532,7 @@ class ListLookup(ASTNode):
             self.child_return_types["target"] = (list_types.copy(), self.target)
 
         except Exception as e:
-            raise Exception(f"ListLookup: inference: Error occurred while inferring type for list lookup.", self) from e
+            raise TraceError(node = self, cause = e)
 
 @dataclass
 class Unit(ASTNode):
@@ -765,15 +764,13 @@ class BinaryOp(ASTNode):
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
                             f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                            f"Expected number or decimal.",
-                            self
+                            f"Expected number or decimal."
                         )
 
                     if not t_h.is_compatible(right_type, valid_input_types):
                         raise Exception(
                             f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                            f"Expected number or decimal.",
-                            self
+                            f"Expected number or decimal."
                         )
                     
                     left_narrowed = t_h.narrow(left_type, valid_input_types)
@@ -834,8 +831,7 @@ class BinaryOp(ASTNode):
                     
                     if return_types == set():
                         raise Exception(
-                                        f"Binary operator '{op}' does not support the combination of left type '{left_type}' and right type '{right_type}'.",
-                                        self
+                                        f"Binary operator '{op}' does not support the combination of left type '{left_type}' and right type '{right_type}'."
                                         )
                     
                     self.child_return_types["self"] = (return_types.copy(), self)
@@ -850,17 +846,18 @@ class BinaryOp(ASTNode):
                         self.child_return_types["self"] = ({"boolean"}, self)
                         return {"boolean"}
                     if not t_h.is_compatible(left_type, right_type):
-                        raise Exception(
-                                        f"Binary operator '{op}' only supports operands of compatible types. "
-                                        f"Got left type '{left_type}' and right type '{right_type}'.",
-                                        self
-                                        )
-                    
-                    narrowed = t_h.narrow(left_type, right_type)
-                    if narrowed != left_type:
-                        new_left_type = narrowed.copy()
-                        if t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES):
-                            new_left_type.add(t_h.narrow(left_type, t_h.NUMERIC_TYPES))
+                        if not (t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES)):
+                            raise Exception(
+                                f"Binary operator '{op}' only supports operands of compatible types. "
+                                f"Got left type '{left_type}' and right type '{right_type}'."
+                                )
+                        narrowed_left = t_h.narrow(left_type, t_h.NUMERIC_TYPES)
+                        narrowed_right = t_h.narrow(right_type, t_h.NUMERIC_TYPES)
+                    else:
+                        narrowed_right = narrowed_left = t_h.narrow(left_type, right_type)
+                    if narrowed_left != left_type:
+                        new_left_type = narrowed_left.copy()
+                        
 
                         self.left.inference(
                         v_table=v_table,
@@ -874,10 +871,9 @@ class BinaryOp(ASTNode):
 
                     self.child_return_types["left"] = (left_type.copy(), self.left)
 
-                    if narrowed != right_type:
-                        new_right_type = narrowed.copy()
-                        if t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES):
-                            new_right_type.add(t_h.narrow(right_type, t_h.NUMERIC_TYPES))
+                    if narrowed_right != right_type:
+                        new_right_type = narrowed_right.copy()
+
 
                         self.right.inference(
                         v_table=v_table,
@@ -903,7 +899,6 @@ class BinaryOp(ASTNode):
                         raise Exception(
                                         f"Binary operator '{op}' only supports operands of compatible types. "
                                         f"Got left type '{left_type}' and right type '{right_type}'.",
-                                        self
                                         )
                     
                     narrowed = t_h.narrow(left_type, right_type)
@@ -951,15 +946,13 @@ class BinaryOp(ASTNode):
                     if not t_h.is_compatible(left_type, valid_input_types):
                         raise Exception(
                             f"Binary operator '{op}' not supported for left type '{left_type}'. "
-                            f"Expected boolean.",
-                            self
+                            f"Expected boolean."
                         )
                     
                     if not t_h.is_compatible(right_type, valid_input_types):
                         raise Exception(
                             f"Binary operator '{op}' not supported for right type '{right_type}'. "
-                            f"Expected boolean.",
-                            self
+                            f"Expected boolean."
                         )
                     
                     if left_type != {"boolean"}:
