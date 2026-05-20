@@ -25,11 +25,8 @@ class SymbolTableScopeStacker(ScopeStack):
         self.stack[-1].bind(name, type_value)  # Bind in the current scope if not found in any outer scope
     
     def bind_local(self, name: str, type_value: set[str]):
-        vvvprint(f"SymbolTableScopeStacker: Binding variable '{name}' to type '{type_value}' in current scope...")
         try:
-            vvvprint(f"SymbolTableScopeStacker: Attempting to bind variable '{name}' to type '{type_value}' in current scope...")
             self.stack[-1].bind(name, type_value)
-            vvvprint(f"SymbolTableScopeStacker: Successfully bound variable '{name}' to type '{type_value}' in current scope.")
         except Exception as e:
             raise Exception(f"Error binding variable '{name}' in local scope: {e}")
         
