@@ -1,0 +1,23 @@
+N is 0
+
+function Is Prime:
+    # Return True if N is prime, otherwise False.
+    if N < 2:
+        return false
+
+    # Check divisibility from 2 up to sqrt(n)
+    count I from 2 to ((sqrt N + 1) as int):
+        if N % I == 0:
+            return false
+
+    return true
+
+Input is input "Enter a number: "
+Max is Input as int
+
+print "All primes between 1 and {Max}:"
+
+count Num from 2 to Max:
+    N is Num
+    if Is Prime result:
+        print N
