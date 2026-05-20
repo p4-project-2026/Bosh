@@ -1,0 +1,5 @@
+A is (1, 2, 4)
+insert 3 to A at index 2
+say A
+===
+(1, 2, 3, 4)
