@@ -657,6 +657,7 @@ class TypeCast(ASTNode):
                     old_inference_value=original_type.copy(),
                     new_inference_value=narrowed_type.copy()
                     )
+                    
                 original_type = narrowed_type.copy()
             
             self.child_return_types["target"] = (original_type.copy(), self.target)
@@ -669,6 +670,7 @@ class TypeCast(ASTNode):
             
             
         except Exception as e:
+
             raise TraceError(node = self, cause = e)
 
     def execute(self, env: Environment) -> Any:
@@ -707,6 +709,7 @@ class BinaryOp(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
+
             self.child_return_types.clear()
             left_type = self.left.check(
                 v_table=v_table,
@@ -714,11 +717,14 @@ class BinaryOp(ASTNode):
                 inference_context=inference_context
             )
 
+            
             right_type = self.right.check(
                 v_table=v_table, 
                 f_table=f_table, 
                 inference_context=inference_context
             )
+
+
             
             if left_type is None or right_type is None:
                 raise Exception(
