@@ -1,0 +1,21 @@
+if1
+    if1
+        blablabla
+    else
+        blablabla
+else
+    if1
+        blablabla
+    else
+        blablabla
+===
+if1 {
+    if1 {
+        blablabla}~
+    else {
+        blablabla}}~
+else {
+    if1 {
+        blablabla}~
+    else {
+        blablabla}}
