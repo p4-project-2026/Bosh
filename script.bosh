@@ -1,8 +1,4 @@
-task X uses (B)
-    return B at index 1
-
-A is X result using ((7, 3 , 4, 2))
-B is A
-T is B
+A is 3
 B is 2
-say T
+F is 2
+say A + B * F
