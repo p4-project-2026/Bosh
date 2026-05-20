@@ -86,7 +86,8 @@ class BoshTransformer(Transformer):
         return node
 
     def return_(self, meta, args):
-        node = Return(expression=args[0])
+        value = args[0] if args else NullLiteral()
+        node = Return(expression=value)
         node.set_meta(meta, self._filename)
         return node
 

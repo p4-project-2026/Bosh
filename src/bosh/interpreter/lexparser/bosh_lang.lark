@@ -18,7 +18,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | "count" IDENT? "from" expr "to" expr ":"? in_code_block       -> count
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
-                | ("return") expr                                               -> return_
+                | "return" expr?                                                -> return_
                 | "continue"                                                    -> continue_
                 | "break"                                                       -> break_
                 | INSERT expr "to" term ("at" "index"? expr)?                   -> add_to_list

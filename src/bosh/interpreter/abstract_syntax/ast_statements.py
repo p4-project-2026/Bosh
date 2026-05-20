@@ -129,7 +129,7 @@ class ForAll(ASTNode):
                 try:
                     env.assign_variable(self.iterator_name, element)
                     value = self.body.execute(env)
-                    if value is "continue":
+                    if value == "continue":
                         continue
                     if value is not None:
                         break
@@ -158,11 +158,11 @@ class RepeatUntil(ASTNode):
             env.new_scope()
             while True:
                 value = self.body.execute(env)
-                if value is "continue":
+                condition_value = self.condition.execute(env)
+                if value == "continue":
                     continue
                 if value is not None:
                     break
-                condition_value = self.condition.execute(env)
                 if condition_value:
                     break
             env.exit_scope()
@@ -203,7 +203,7 @@ class Count(ASTNode):
                     try:
                         env.assign_variable(self.iterator_name, i)
                         value = self.body.execute(env)
-                        if value is "continue":
+                        if value == "continue":
                             continue
                         if value is not None:
                             break
