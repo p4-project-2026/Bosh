@@ -35,7 +35,6 @@ class GoTo(ASTNode):
                 path_type = narrowed_path_type
             
             self.child_return_types[self.path] = (path_type, self.path)
-            vvvprint(f"Go to statement checked successfully with path type '{narrowed_path_type}'")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -48,15 +47,6 @@ class GoTo(ASTNode):
             raise TraceError(node = self, cause = e)
         return
         
-    def inference(
-            self, 
-            v_table, 
-            f_table, 
-            inference_context, 
-            old_inference_value, 
-            new_inference_value
-            ) -> None:
-        raise Exception("Inference should not be called on 'go to' statements since they do not produce a value.")
 
 
 @dataclass
@@ -88,7 +78,19 @@ class Make(ASTNode):
             
             if not t_h.contains(name_type, "text"):
                 raise Exception(f"Name in make statement must be of type 'text', got '{name_type}'")
-            
+            if name_type != {"text"}:
+                self.name.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=name_type, 
+                    new_inference_value={"text"}
+                )
+                
+                name_type = {"text"}
+                
+            self.child_return_types[self.name] = (name_type, self.name)
+
             location_type = self.location.check(
                 v_table, 
                 f_table, 
@@ -98,16 +100,23 @@ class Make(ASTNode):
             if not t_h.contains(location_type, "text"):
                 raise Exception(f"Location in make statement must be of type 'text', got '{location_type}'")
             
+            if location_type != {"text"}:
+                self.location.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=location_type, 
+                    new_inference_value={"text"}
+                )
 
+                location_type = {"text"}
+
+            self.child_return_types[self.location] = (location_type, self.location)
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-            name_type = self.name.check(v_table, f_table, inference_context)
-            if name_type is not None and name_type != "text":
-                raise TraceError(node = self, cause = f"Cannot use type '{name_type}' as a new name. Expected 'text'.")
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
+
 
     def execute(self, env: Environment) -> None:
         try:
@@ -130,15 +139,7 @@ class Make(ASTNode):
             raise TraceError(node = self, cause = e)
         
 
-    def inference(
-            self, 
-            v_table, 
-            f_table, 
-            inference_context, 
-            old_inference_value, 
-            new_inference_value
-            ) -> None:
-        raise Exception("Inference should not be called on 'make' statements since they do not produce a value.")   
+  
 
 @dataclass
 class Delete(ASTNode):
@@ -149,11 +150,34 @@ class Delete(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
+
             if self.target is None:
                 raise Exception("Delete statement requires a target.")
-            target_type = self.target.check(v_table, f_table, inference_context)
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Cannot delete type '{target_type}'. Expected 'text'.")
+            
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in delete statement must be of type 'text', got '{target_type}'")
+            
+            
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=target_type, 
+                    new_inference_value={"text"}
+                )
+
+                target_type = {"text"}
+
+            self.child_return_types[self.target] = (target_type, self.target)
+
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -172,15 +196,55 @@ class Delete(ASTNode):
 class Rename(ASTNode):
     target: ASTNode
     new_name: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table, inference_context)
-            new_name_type = self.new_name.check(v_table, f_table, inference_context)
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Cannot rename type '{target_type}'. Expected 'text'.")
-            if new_name_type != "text":
-                raise TraceError(node = self, cause = f"New name must be of type 'text', got '{new_name_type}'")
+            self.child_return_types.clear()
+
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in rename statement must be of type 'text', got '{target_type}'")
+
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=target_type, 
+                    new_inference_value={"text"}
+                )
+
+                target_type = {"text"}
+
+            self.child_return_types[self.target] = (target_type, self.target)
+
+
+            new_name_type = self.new_name.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if not t_h.contains(new_name_type, "text"):
+                raise Exception(f"New name in rename statement must be of type 'text', got '{new_name_type}'")
+            
+            if new_name_type != {"text"}:
+                self.new_name.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=new_name_type, 
+                    new_inference_value={"text"}
+                )
+
+                new_name_type = {"text"}
+
+            self.child_return_types[self.new_name] = (new_name_type, self.new_name)
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
@@ -197,15 +261,58 @@ class Rename(ASTNode):
 class Copy(ASTNode):
     source: ASTNode
     target: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table, inference_context)
-            target_type = self.target.check(v_table, f_table, inference_context)
-            if source_type != "text":
-                raise TraceError(node = self, cause = f"Cannot copy type '{source_type}'. Expected 'text'.")
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Target location in copy statement must be of type 'text', got '{target_type}'")
+            self.child_return_types.clear()
+
+            source_type = self.source.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if not t_h.contains(source_type, "text"):
+                raise Exception(f"Source in copy statement must be of type 'text', got '{source_type}'")
+            
+
+            if  source_type !=  {"text"}:
+                self.source.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=source_type, 
+                    new_inference_value={"text"}
+                )
+
+                source_type = {"text"}
+
+            self.child_return_types[self.source] = (source_type, self.source)
+
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in copy statement must be of type 'text', got '{target_type}'")
+            
+            narrowed_target_type = t_h.narrow(target_type, {"text"})
+            if narrowed_target_type != target_type:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context,
+                    old_inference_value=target_type, 
+                    new_inference_value=narrowed_target_type
+                )
+
+                target_type = narrowed_target_type
+
+            self.child_return_types[self.target] = (target_type, self.target)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -228,14 +335,58 @@ class Move(ASTNode):
     source: ASTNode
     target: ASTNode
     
+    def __post_init__(self):
+        super().__init__()
+
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table, inference_context)
-            target_type = self.target.check(v_table, f_table, inference_context)
-            if source_type != "text":
-                raise TraceError(node = self, cause = f"Cannot move type '{source_type}'. Expected 'text'.")
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Target location in move statement must be of type 'text', got '{target_type}'")
+            self.child_return_types.clear()
+
+            source_type = self.source.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if not t_h.contains(source_type, "text"):
+                raise Exception(f"Source in move statement must be of type 'text', got '{source_type}'")
+            
+            
+            if source_type != {"text"}:
+                self.source.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=source_type, 
+                    new_inference_value={"text"}
+                )
+
+                source_type = {"text"}
+
+            self.child_return_types[self.source] = (source_type, self.source)
+            
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in move statement must be of type 'text', got '{target_type}'")
+            
+            
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=target_type, 
+                    new_inference_value={"text"}
+                )
+
+                target_type = {"text"}
+
+            self.child_return_types[self.target] = (target_type, self.target)
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -251,12 +402,36 @@ class Move(ASTNode):
 @dataclass
 class Read(ASTNode):
     source: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            source_type = self.source.check(v_table, f_table, inference_context)
-            if source_type != "text":
-                raise TraceError(node = self, cause = f"Cannot read type '{source_type}'. Expected 'text'.")
+            self.child_return_types.clear()
+
+            source_type = self.source.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if not t_h.contains(source_type, "text"):
+                raise Exception(f"Source in read statement must be of type 'text', got '{source_type}'")
+            
+            if source_type != {"text"}:
+                self.source.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=source_type, 
+                    new_inference_value={"text"}
+                )
+
+                source_type = {"text"}
+
+                self.child_return_types[self.source] = (source_type, self.source)
+
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
@@ -277,14 +452,52 @@ class Write(ASTNode):
     target: ASTNode
     data: ASTNode
     
+    def __post_init__(self):
+        super().__init__()
+
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None: 
         try:
-            target_type = self.target.check(v_table, f_table, inference_context)
-            data_type = self.data.check(v_table, f_table, inference_context)
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Cannot write to type '{target_type}'. Expected 'text'.")
-            if data_type != "text":
-                raise TraceError(node = self, cause = f"Data in write statement must be of type 'text', got '{data_type}'")
+            self.child_return_types.clear()
+
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in write statement must be of type 'text', got '{target_type}'")
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=target_type, 
+                    new_inference_value={"text"}
+                )
+
+                target_type = {"text"}
+
+            self.child_return_types[self.target] = (target_type, self.target)
+
+            data_type = self.data.check(
+                v_table=v_table,
+                f_table=f_table,
+                inference_context=inference_context
+            )
+            if not t_h.contains(data_type, "text"):
+                raise Exception(f"Data in write statement must be of type 'text', got '{data_type}'")
+            if data_type != {"text"}:
+                self.data.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=data_type, 
+                    new_inference_value={"text"}
+                )
+
+                data_type = {"text"}
+            self.child_return_types[self.data] = (data_type, self.data)
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -300,6 +513,8 @@ class Write(ASTNode):
 
 @dataclass
 class GoUp(ASTNode):
+    
+
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         return
 
@@ -313,12 +528,36 @@ class GoUp(ASTNode):
 @dataclass
 class Execute(ASTNode):
     target: ASTNode
+
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table, inference_context)
-            if target_type != "text":
-                raise TraceError(node = self, cause = f"Cannot execute type '{target_type}'. Expected 'text'.")
+            self.child_return_types.clear()
+
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+
+            if not t_h.contains(target_type, "text"):
+                raise Exception(f"Target in execute statement must be of type 'text', got '{target_type}'")
+            
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=target_type, 
+                    new_inference_value={"text"}
+                )
+
+                target_type = {"text"}
+
+            self.child_return_types[self.target] = (target_type, self.target)
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
@@ -332,6 +571,9 @@ class Execute(ASTNode):
 
 @dataclass
 class Pause(ASTNode):
+    
+
+
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         return
     
@@ -346,12 +588,34 @@ class Pause(ASTNode):
 @dataclass
 class Wait(ASTNode):
     time: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            duration_type = self.time.check(v_table, f_table, inference_context)
-            if duration_type not in ["number", "decimal", "time"]:
-                raise TraceError(node = self, cause = f"Duration in 'wait' must be of type 'number', 'decimal' or 'time', got '{duration_type}'")
+            self.child_return_types.clear()
+            duration_type = self.time.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+
+            if not t_h.contains(duration_type, {"number", "decimal", "time"}):
+                raise Exception(f"Duration in 'wait' statement must be of type 'number', 'decimal' or 'time', got '{duration_type}'")
+            narrowed_duration_type = t_h.narrow(duration_type, {"number", "decimal", "time"})
+            if narrowed_duration_type != duration_type:
+                self.time.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=duration_type, 
+                    new_inference_value=narrowed_duration_type
+                )
+
+                duration_type = narrowed_duration_type
+            
+            self.child_return_types[self.time] = (duration_type, self.time)
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -366,13 +630,40 @@ class Wait(ASTNode):
 @dataclass
 class Input(ASTNode):
     prompt: Optional[ASTNode]
+
+    def __post_init__(self):
+        super().__init__()
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[str]:
         try:
-            prompt_type = self.prompt.check(v_table, f_table) if self.prompt else None
-            if prompt_type != "text":
-                raise TraceError(node = self, cause = f"Prompt in input statement must be of type 'text', got '{prompt_type}'")
-            return "text"
+            self.child_return_types.clear()
+            if self.prompt is None:
+                return
+
+
+            prompt_type = self.prompt.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+            )
+            
+            if not t_h.contains(prompt_type, "text"):
+                raise Exception(f"Prompt in input statement must be of type 'text', got '{prompt_type}'")
+            
+            if prompt_type != {"text"}:
+                self.prompt.inference(
+                    v_table=v_table,
+                    f_table=f_table, 
+                    inference_context=inference_context, 
+                    old_inference_value=prompt_type, 
+                    new_inference_value={"text"}
+                )
+
+                prompt_type = {"text"}
+
+            self.child_return_types[self.prompt] = (prompt_type, self.prompt)
+
+            return {"text"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
