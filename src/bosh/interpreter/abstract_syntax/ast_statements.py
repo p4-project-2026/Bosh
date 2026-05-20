@@ -128,7 +128,11 @@ class ForAll(ASTNode):
                 env.new_scope()
                 try:
                     env.assign_variable(self.iterator_name, element)
-                    self.body.execute(env)
+                    value = self.body.execute(env)
+                    if value == "continue":
+                        continue
+                    if value is not None:
+                        break
                 finally:
                     env.exit_scope()                
         except Exception as e:
@@ -154,9 +158,11 @@ class RepeatUntil(ASTNode):
             env.new_scope()
             while True:
                 value = self.body.execute(env)
+                condition_value = self.condition.execute(env)
+                if value == "continue":
+                    continue
                 if value is not None:
                     break
-                condition_value = self.condition.execute(env)
                 if condition_value:
                     break
             env.exit_scope()
@@ -197,6 +203,8 @@ class Count(ASTNode):
                     try:
                         env.assign_variable(self.iterator_name, i)
                         value = self.body.execute(env)
+                        if value == "continue":
+                            continue
                         if value is not None:
                             break
                     finally:
@@ -326,3 +334,17 @@ class Return(ASTNode):
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+class Continue(ASTNode):
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+        return None
+
+    def execute(self, env: Environment) -> None:
+        return "continue"
+
+class Break(ASTNode):
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+        return None
+
+    def execute(self, env: Environment) -> None:
+        return "break"

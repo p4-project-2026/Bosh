@@ -1,0 +1,110 @@
+CurrentPlayer is "X"
+if now as text regex "[02468]$":
+    CurrentPlayer is "O" 
+
+Board is a list
+count from 1 to 9:
+    append " " to Board
+
+function PrintBoard:
+    print ""
+    count I from 0 to 2:
+        Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
+        print " " + Row
+        if I < 2:
+            print "---+---+---"
+    print ""
+
+repeat until false:
+    # run PrintBoard
+    #### QUICK FIX ####
+    print ""
+    count I from 0 to 2:
+        Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
+        print " " + Row
+        if I < 2:
+            print "---+---+---"
+    print ""
+    ###################
+    
+    Error is ""
+
+    MoveInput is input "Player {CurrentPlayer}, choose position (1-9): "
+
+    MoveLocation is MoveInput as int - 1 else Error is "Please enter a number between 1 and 9."
+
+    if MoveLocation < 0 or MoveLocation > 8:
+        print("Invalid position. Choose 1-9.")
+        continue
+
+    if Board at MoveLocation != " ":
+        print("Position already taken.")
+        continue
+    
+    Board at MoveLocation is CurrentPlayer
+
+    if CurrentPlayer == "X"
+        CurrentPlayer is "O"
+    else:
+        CurrentPlayer is "X"
+
+
+    
+
+
+
+
+#def check_winner(player):
+#    win_combinations = [
+#        [0, 1, 2],
+#        [3, 4, 5],
+#        [6, 7, 8],
+#        [0, 3, 6],
+#        [1, 4, 7],
+#        [2, 5, 8],
+#        [0, 4, 8],
+#        [2, 4, 6]
+#    ]
+#
+#    for combo in win_combinations:
+#        if all(board[pos] == player for pos in combo):
+#            return True
+#    return False
+#
+#
+#def is_draw():
+#    return " " not in board
+#
+#
+#current_player = "X"
+#
+#while True:
+#    print_board()
+#
+#    try:
+#        move = int(input(f"Player {current_player}, choose position (1-9): ")) - 1
+#
+#        if move < 0 or move > 8:
+#            print("Invalid position. Choose 1-9.")
+#            continue
+#
+#        if board[move] != " ":
+#            print("Position already taken.")
+#            continue
+#
+#        board[move] = current_player
+#
+#        if check_winner(current_player):
+#            print_board()
+#            print(f"Player {current_player} wins!")
+#            break
+#
+#        if is_draw():
+#            print_board()
+#            print("It's a draw!")
+#            break
+#
+#        current_player = "O" if current_player == "X" else "X"
+#
+#    except ValueError:
+#        print("Please enter a number between 1 and 9.")

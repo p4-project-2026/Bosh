@@ -32,7 +32,8 @@ class ScopeStack(Generic[T]):
 
     def enter_function_scope(self, function_def: FunctionBinding):
         vvvprint(f"{self.__class__.__name__}: Entering function scope for function with parameters {function_def.parameters}...")
-        function_scope = function_def.captured_scope.copy(function_scope=True)
+        function_scope = function_def.captured_scope.copy()
+        function_scope.function_scope = True
         self.stack.append(function_scope)
         vvvprint(f"{self.__class__.__name__}: Captured function scope from definition entered successfully.")
         self.new_scope()  # Create a new scope for the function body

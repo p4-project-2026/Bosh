@@ -1,0 +1,6 @@
+task Print uses (Message):
+    say Message
+
+run Print using ("Hello, World!")
+===
+Hello, World!

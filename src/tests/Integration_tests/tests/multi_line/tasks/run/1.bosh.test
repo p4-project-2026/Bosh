@@ -1,0 +1,6 @@
+task X:
+    say "Hello, World!"
+
+run X
+===
+Hello, World!

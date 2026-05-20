@@ -1,0 +1,5 @@
+A is ("Bai!", "Hi!", "Bai!")
+remove index 1 from A
+say A
+===
+("Bai!", "Bai!")
