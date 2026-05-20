@@ -1,0 +1,12 @@
+task Func3:
+    say "Hello, World!"
+
+task Func2:
+    run Func3
+
+task Func1:
+    run Func2
+
+call Func1
+===
+Hello, World!

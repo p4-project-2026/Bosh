@@ -1,0 +1,25 @@
+function Func:
+    return
+
+X is 0
+
+if true:
+    #run Func
+    print X
+    X is 1
+
+print X
+
+X is 0
+
+if true:
+    run Func
+    print X
+    X is 1
+
+print X
+===
+0
+1
+0
+1

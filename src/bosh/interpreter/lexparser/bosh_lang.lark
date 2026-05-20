@@ -18,9 +18,11 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | "count" IDENT? "from" expr "to" expr ":"? in_code_block       -> count
                 | ("stop" | "quit")                                             -> quit
                 | ("say" | "print" | "output") expr                             -> print
-                | ("return") expr                                               -> return_
+                | "return" expr?                                                -> return_
+                | "continue"                                                    -> continue_
+                | "break"                                                       -> break_
                 | INSERT expr "to" term ("at" "index"? expr)?                   -> add_to_list
-                | "remove" "element"? expr "from" expr                          -> remove_from_list
+                | "remove" "index"? expr "from" expr                            -> remove_from_list
                 | ( "run" | "call" ) IDENT ("using" "(" expr ("," expr)* ")")?  -> call_func
 INSERT : "append" | "prepend" | "insert"
 
@@ -65,6 +67,7 @@ INSERT : "append" | "prepend" | "insert"
             | access_expr "regex" access_expr                           -> regex
             | access_expr "starts with" access_expr                     -> starts_with
             | access_expr "ends with" access_expr                       -> ends_with
+            | access_expr "contains" access_expr                        -> contains
 
 ?plus_expr  : mult_expr
             | plus_expr ( "+" | "plus" ) mult_expr       -> plus
@@ -88,6 +91,7 @@ INSERT : "append" | "prepend" | "insert"
 
 ?access_expr    : term
                 | access_expr "at" "index"? term        -> list_look
+                | access_expr "letter" term "of" term   -> text_look
                 | "length of" term                      -> length
                 | "first" "element"? "of" term          -> first
                 | "last" "element"? "of"  term          -> last
@@ -109,6 +113,7 @@ INSERT : "append" | "prepend" | "insert"
         | "null"                        -> null
         | "now"                         -> now
         | "here"                        -> here
+        | "random from" expr "to" expr  -> random
         | "(" expr ")"                  -> paren
         | TYPE
 
@@ -143,7 +148,7 @@ NEW : "new"
 _BLOCKSTART: "{"
 _BLOCKEND: "}" 
 _SEP: "." _WS* _NL* | _NL+
-COMMENT: /#[^\n]*\n/
+COMMENT: /#[^\n]*\n?/
 BOOLEAN: "true" | "false"
 IDENT: /[A-Z][a-zA-Z0-9]*/(" "*/[A-Z][a-zA-Z0-9]*/)*
 %import common.WS_INLINE -> _WS

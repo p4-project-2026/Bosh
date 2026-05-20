@@ -292,7 +292,11 @@ class ForAll(ASTNode):
                 env.new_scope()
                 try:
                     env.assign_variable(self.iterator_name, element)
-                    self.body.execute(env)
+                    value = self.body.execute(env)
+                    if value == "continue":
+                        continue
+                    if value is not None:
+                        break
                 finally:
                     env.exit_scope()                
         except Exception as e:
@@ -373,9 +377,11 @@ class RepeatUntil(ASTNode):
             env.new_scope()
             while True:
                 value = self.body.execute(env)
+                condition_value = self.condition.execute(env)
+                if value == "continue":
+                    continue
                 if value is not None:
                     break
-                condition_value = self.condition.execute(env)
                 if condition_value:
                     break
             env.exit_scope()
@@ -424,6 +430,8 @@ class Count(ASTNode):
                     try:
                         env.assign_variable(self.iterator_name, i)
                         value = self.body.execute(env)
+                        if value == "continue":
+                            continue
                         if value is not None:
                             break
                     finally:
@@ -438,56 +446,6 @@ class Count(ASTNode):
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-@dataclass
-class Count(ASTNode):
-    iterator_name: Optional[str]
-    from_: ASTNode
-    to_: ASTNode
-    body: Block
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        try:
-            from_type = self.from_.check(v_table, f_table)
-            to_type = self.to_.check(v_table, f_table)
-            if from_type != "number" or to_type != "number":
-                raise TraceError(node = self, cause = f"'from' and 'to' expressions in count statement must be of type 'number', got '{from_type}' and '{to_type}'")
-            
-            v_table.new_scope()
-            if self.iterator_name:
-                v_table.bind(self.iterator_name, "number")
-            self.body.check(v_table, f_table)
-            v_table.exit_scope()
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
-
-    def execute(self, env: Environment) -> None:
-        try:
-            value = None
-            from_value = self.from_.execute(env)
-            to_value = self.to_.execute(env)
-            for i in range(from_value, to_value + 1):
-                env.new_scope()
-                if self.iterator_name:
-                    try:
-                        env.assign_variable(self.iterator_name, i)
-                        value = self.body.execute(env)
-                        if value is not None:
-                            break
-                    finally:
-                        env.exit_scope()
-                else:
-                    try:
-                        value = self.body.execute(env)
-                        if value is not None:
-                            break
-                    finally:
-                        env.exit_scope()
-            return value
-        except Exception as e:
-            raise TraceError(node = self, cause = e)
-        
-
 
 @dataclass
 class Quit(ASTNode):
@@ -823,11 +781,16 @@ class Return(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def inference(
-            self,
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("Return does not return a value and cannot be used in inference.")
+class Continue(ASTNode):
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+        return None
+
+    def execute(self, env: Environment) -> None:
+        return "continue"
+
+class Break(ASTNode):
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+        return None
+
+    def execute(self, env: Environment) -> None:
+        return "break"

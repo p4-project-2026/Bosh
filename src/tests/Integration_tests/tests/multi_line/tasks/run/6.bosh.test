@@ -1,0 +1,9 @@
+task Func:
+    task Inside Func:
+        say "Hello, World!"
+
+    run Inside Func
+
+call Func
+===
+Hello, World!

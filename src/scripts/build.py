@@ -17,6 +17,7 @@ def build():
         "--onedir", 
         "--console",
         "--add-data", "src/bosh/app/config/default_config.toml;bosh/app/config",
+        "--add-data", "src/bosh/interpreter/lexparser/bosh_lang.lark;bosh/interpreter/lexparser",
         str(source)
     ], check=True)
 

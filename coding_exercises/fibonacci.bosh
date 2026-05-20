@@ -1,0 +1,11 @@
+N is input "Enter a number: "
+Max is N as int
+
+A is 0
+B is 1
+
+repeat until A > Max:
+    print A
+    Old A is A
+    A is B
+    B is Old A + B

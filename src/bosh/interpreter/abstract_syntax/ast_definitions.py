@@ -69,7 +69,7 @@ class Assign(ASTNode):
 @dataclass
 class AssignType(ASTNode):
     target: ASTNode
-    var_type: str
+    var_type: ASTNode
     value: Optional[ASTNode]
     def __post_init__(self):
         super().__init__()

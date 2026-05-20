@@ -6,6 +6,17 @@ import datetime
 import re
 
 @dataclass
+class Type(ASTNode):
+    name: str
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+        return self.name
+    
+    def execute(self, env: Environment) -> str:
+        return self.name
+    
+
+@dataclass
 class NumberLiteral(ASTNode):
     value: int
     def  __post_init__(self):
@@ -20,7 +31,7 @@ class NumberLiteral(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> float:
+    def execute(self, env: Environment) -> int:
         return self.value
     
 
@@ -526,7 +537,7 @@ class ListLookup(ASTNode):
 
 @dataclass
 class Unit(ASTNode):
-    target: ASTNode
+    value: ASTNode
     unit_type: str
     def __post_init__(self):
         super().__init__()
@@ -563,7 +574,7 @@ class Unit(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
-            target_value = self.target.execute(env)
+            target_value = self.value.execute(env)
             match self.unit_type:
                 case "second":
                     return target_value * 1000  # Convert seconds to milliseconds
@@ -982,8 +993,8 @@ class BinaryOp(ASTNode):
 
     def execute(self, env: Environment) -> Any:
         try:
-            left_val = self.left.execute(env) if isinstance(self.left, ASTNode) else self.left
-            right_val = self.right.execute(env) if isinstance(self.right, ASTNode) else self.right
+            left_val = self.left.execute(env)
+            right_val = self.right.execute(env)
             match self.operator:
                 case "plus":
                     # datetime + milliseconds
