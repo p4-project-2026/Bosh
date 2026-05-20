@@ -4,4 +4,4 @@ Error when running Bosh:
     [ERROR]: at line 1
         say 1 and true
             ^^^^^^^^^^
-Logical operator 'and' requires boolean operands, got 'number' and 'boolean'
+Binary operator 'and' not supported for left type '{'number'}'. Expected boolean.
