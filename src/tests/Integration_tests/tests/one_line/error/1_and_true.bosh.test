@@ -3,5 +3,8 @@ say 1 and true
 Error when running Bosh:
     [ERROR]: at line 1
         say 1 and true
+        ^^^^^^^^^^^^^^
+    [ERROR]: at line 1
+        say 1 and true
             ^^^^^^^^^^
 Binary operator 'and' not supported for left type '{'number'}'. Expected boolean.
