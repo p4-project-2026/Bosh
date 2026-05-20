@@ -1,3 +1,10 @@
 say 0.0 == false
 ===
-false
+Error when running Bosh:
+    [ERROR]: at line 1
+        say 0.0 == false
+        ^^^^^^^^^^^^^^^^
+    [ERROR]: at line 1
+        say 0.0 == false
+            ^^^^^^^^^^^^
+Binary operator 'eq' only supports operands of compatible types. Got left type '{'decimal'}' and right type '{'boolean'}'.
