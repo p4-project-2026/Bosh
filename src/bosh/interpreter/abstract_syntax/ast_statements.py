@@ -403,18 +403,68 @@ class Count(ASTNode):
     from_: ASTNode
     to_: ASTNode
     body: Block
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            from_type = self.from_.check(v_table, f_table)
-            to_type = self.to_.check(v_table, f_table)
-            if from_type != "number" or to_type != "number":
-                raise TraceError(node = self, cause = f"'from' and 'to' expressions in count statement must be of type 'number', got '{from_type}' and '{to_type}'")
+            from_type = self.from_.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            to_type = self.to_.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if from_type is None:
+                raise Exception(f"'From' expression in count statement cannot be of type 'None'", self)
+            if to_type is None:
+                raise Exception(f"'To' expression in count statement cannot be of type 'None'", self)
+            valid_count_types = {"number"}
+            if not t_h.contains(from_type, "number"):
+                raise Exception(f"'From' expression in count statement must be of type 'number', got '{from_type}'")
+            if not t_h.contains(to_type, "number"):
+                raise Exception(f"'To' expression in count statement must be of type 'number', got '{to_type}'")
+            if from_type != valid_count_types:
+                self.from_.inference(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context,
+                    old_inference_value=from_type.copy(),
+                    new_inference_value=valid_count_types.copy()
+                )
+                from_type = valid_count_types
+            
+            self.child_return_types["from"] = (from_type.copy(), self.from_)
+
+            if to_type != valid_count_types:
+                self.to_.inference(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context,
+                    old_inference_value=to_type.copy(),
+                    new_inference_value=valid_count_types.copy()
+                )
+                to_type = valid_count_types
+
+            self.child_return_types["to"] = (to_type.copy(), self.to_)
+
+
+                
             
             v_table.new_scope()
+
             if self.iterator_name:
-                v_table.bind(self.iterator_name, "number")
-            self.body.check(v_table, f_table)
+                v_table.bind_local(self.iterator_name, {"number"})
+            self.body.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+            )
             v_table.exit_scope()
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -428,7 +478,7 @@ class Count(ASTNode):
                 env.new_scope()
                 if self.iterator_name:
                     try:
-                        env.assign_variable(self.iterator_name, i)
+                        env.bind_local_variable(self.iterator_name, i)
                         value = self.body.execute(env)
                         if value == "continue":
                             continue
