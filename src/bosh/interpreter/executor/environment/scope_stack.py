@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from .table import Table
 from .function_binding import FunctionBinding
 from typing import TypeVar, Generic, Type, Dict
@@ -11,23 +13,27 @@ class ScopeStack(Generic[T]):
         self.stack: list[Table[T]] = [self.table_class()]  # Start with global scope
 
     def new_scope(self):
-        vvvprint(f"{self.__class__.__name__}: Entering new scope...")
-        self.stack.append(self.table_class())
-        vvvprint(f"{self.__class__.__name__}: New scope entered successfully.")
+        with self.step(f"Entering new scope...", f"New scope entered successfully."):
+
+            self.stack.append(self.table_class())
+        
+ 
 
     def exit_scope(self):
-        if len(self.stack) == 1:
-            raise Exception("Cannot exit global scope.")
+        with self.step(f"Exiting current scope...", f"Current scope exited successfully."):
+            if len(self.stack) == 1:
+                raise Exception("Cannot exit global scope.")
             
-        if self.stack[-2].function_scope:
-            vvvprint(f"{self.__class__.__name__}: Exiting function scope...")
-            self.stack.pop()  # pop function body scope
-            self.stack.pop()  # pop captured function boundary scope
-            vvvprint(f"{self.__class__.__name__}: Function scope exited successfully.")
-            return
-        vvvprint(f"{self.__class__.__name__}: Exiting current scope...")
-        self.stack.pop()
-        vvvprint(f"{self.__class__.__name__}: Current scope exited successfully.")
+            if self.stack[-2].function_scope:
+
+                self.stack.pop()  # pop function body scope
+                self.stack.pop()  # pop captured function boundary scope
+
+                
+                return
+
+            self.stack.pop()
+
 
 
     def enter_function_scope(self, function_def: FunctionBinding):
@@ -100,3 +106,16 @@ class ScopeStack(Generic[T]):
         for scope in reversed(self.stack):
             vvvprint(f"{self.__class__.__name__}: Adding variables from scope to domain: {scope.domain()}")
             domain.update({name: None for name in scope.domain()})
+
+    def log(self, message: str) -> None:
+        vvvprint(f"{self.__class__.__name__}: {message}")
+
+    @contextmanager
+    def step(self, start: str, success: str):
+        self.log(start)
+        try:
+            yield
+        except Exception as e:
+            self.log(f"Failed: {e}")
+            raise
+        self.log(success)
