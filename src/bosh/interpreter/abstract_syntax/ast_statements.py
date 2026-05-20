@@ -11,13 +11,12 @@ class Print(ASTNode):
         try:
             self.child_return_types.clear()
             vvvprint("Print: Checking print statement...")
-
             expression_type = self.expression.check(
                 v_table, 
                 f_table, 
                 inference_context
             )
-
+            
             vvvprint(f"Print: Expression type is '{expression_type}'.")
             self.child_return_types["expression"] = (expression_type.copy(), self.expression)
             
