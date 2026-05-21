@@ -6,6 +6,7 @@ UNKNOWN_LIST_TYPE = "list<UNKNOWN>"
 SPECIAL_LIST_TYPES = {EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE}
 UNKNOWN_TYPE = "UNKNOWN"
 ANY_TYPE = "any"
+
 SPECIAL_TYPES = {UNKNOWN_TYPE, ANY_TYPE}
 NUMERIC_TYPES = {"number", "decimal"}
 
@@ -56,9 +57,12 @@ def has_only_concrete_list_types(types: set[str]) -> bool:
 
 # list types
 
-def is_list_type(type_name: str) -> bool:
+def can_be_list_type(types: set[str]) -> bool:
     if type_name == UNKNOWN_TYPE:
         return True
+    return type_name.startswith("list<") and type_name.endswith(">")
+
+def is_list_type(type_name: str) -> bool:
     vvvprint(f"Type Helper: Checking if type '{type_name}' is a list type...")
     return type_name.startswith("list<") and type_name.endswith(">")
 
@@ -114,6 +118,8 @@ def get_all_list_types(types: set[str]) -> set[str]:
 
 def get_all_non_list_types(types: set[str]) -> set[str]:
     vvvprint(f"Type Helper: Getting all non-list types from set '{types}'...")
+    if is_unknown_type(types):
+        return {UNKNOWN_TYPE}
     return {t for t in types if not is_list_type(t)}
 
 def get_list_element_types(list_type: set[str]) -> set[str]:
