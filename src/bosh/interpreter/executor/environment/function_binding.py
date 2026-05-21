@@ -2,7 +2,7 @@ from .var_table import VarTable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from abstract_syntax.ast_base import Block
+    from ...abstract_syntax.ast_base import Block
 
 
 class FunctionBinding:

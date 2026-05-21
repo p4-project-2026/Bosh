@@ -1,3 +1,10 @@
 say 0 == t1970-01-01 00:00:00.000000
 ===
-false
+Error when running Bosh:
+    [ERROR]: at line 1
+        say 0 == t1970-01-01 00:00:00.000000
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    [ERROR]: at line 1
+        say 0 == t1970-01-01 00:00:00.000000
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Binary operator 'eq' only supports operands of compatible types. Got left type '{'number'}' and right type '{'date'}'.

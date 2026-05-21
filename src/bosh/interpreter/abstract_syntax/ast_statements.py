@@ -4,44 +4,115 @@ import os
 @dataclass
 class Print(ASTNode):
     expression: ASTNode
+    def __post_init__(self):
+        super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            self.expression.check(v_table, f_table)
+            self.child_return_types.clear()
+            vvvprint("Print: Checking print statement...")
+            expression_type = self.expression.check(
+                v_table, 
+                f_table, 
+                inference_context
+            )
+            vvvprint(f"Print: Expression type is '{expression_type}'.")
+            self.child_return_types["expression"] = (expression_type.copy(), self.expression)
+            
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
     def execute(self, env: Environment) -> None:
         try:
             value = self.expression.execute(env)
-            if isinstance(value, list):
-                print("(" + ", ".join(str(v) for v in value) + ")")
-            elif isinstance(value, bool):
-                print("true" if value else "false")
+            if t_h.has_only_list_types(self.child_return_types["expression"][0]):
+                if t_h.is_only(self.child_return_types["expression"][0], "list<text>"):
+                    print(f_h.string_format_list_if_strings(value))
+                elif t_h.is_only(self.child_return_types["expression"][0], "list<boolean>"):
+                    print(f_h.string_format_list_if_bools(value))
+                else:
+                    print(f_h.string_format_list(value))
+
+            elif self.child_return_types["expression"][0] == {"boolean"}:
+                print(f_h.string_format_bool(value))
             else:
                 print(value)
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
+    def inference(
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception("Print does not return a value and cannot be used in inference.")
 
 @dataclass
 class IfElse(ASTNode):
     condition: ASTNode
     then_branch: Block
     else_branch: Optional[Block]
+    def __post_init__(self):
+        super().__init__()     
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            condition_type = self.condition.check(v_table, f_table)
-            if condition_type != "boolean":
-                raise TraceError(node = self, cause = f"Condition in if statement must be of type 'boolean', got '{condition_type}'")
+            self.child_return_types.clear()
+            vvvprint("IfElse: Checking if-else statement...")
+            condition_type = self.condition.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            valid_condition_types = {"boolean"}
+            if condition_type != valid_condition_types:
+                if not t_h.is_compatible(condition_type, valid_condition_types):
+                    raise Exception(f"Condition in if statement must be of type 'boolean', got '{condition_type}'")
+                
+                self.condition.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=condition_type.copy(),
+                    new_inference_value=valid_condition_types.copy()
+                )
+                
+                condition_type = valid_condition_types
+
+            self.child_return_types["condition"] = (condition_type.copy(), self.condition)
+            saved_inference_state = inference_context.save_state()
             v_table.new_scope()
-            self.then_branch.check(v_table, f_table)
-            v_table.exit_scope()            
+            while True:
+                inference_context.reset()
+                self.then_branch.check(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context
+                )
+
+                if not inference_context.has_changed():
+                    break
+
+            v_table.exit_scope()
             if self.else_branch:
                 v_table.new_scope()
-                self.else_branch.check(v_table, f_table)
+                while True:
+                    inference_context.reset()
+                    self.else_branch.check(
+                        v_table=v_table, 
+                        f_table=f_table, 
+                        inference_context=inference_context
+                    )
+
+                    if not inference_context.has_changed():
+                        break
+
                 v_table.exit_scope()
+
+            inference_context.load_state(saved_inference_state)
+            vvvprint("IfElse: If-else statement check successful.")
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
@@ -60,17 +131,30 @@ class IfElse(ASTNode):
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
+        
+    def inference(
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception("IfElse does not return a value and cannot be used in inference.")
 
 
 @dataclass
 class Fallback(ASTNode):
     primary_stmt: ASTNode
     fallback_stmt: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            self.primary_stmt.check(v_table, f_table)
-            self.fallback_stmt.check(v_table, f_table)
+            self.child_return_types.clear()
+            vvvprint("Fallback: Checking fallback statement...")
+            self.primary_stmt.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            self.fallback_stmt.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            vvvprint("Fallback: Fallback statement check successful.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -82,25 +166,110 @@ class Fallback(ASTNode):
                 self.fallback_stmt.execute(env)
             except Exception as e:
                 raise TraceError(node = self, cause = e)
+            
+    def inference(
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str]) -> None:
+        raise Exception("Fallback does not return a value and cannot be used in inference.")
 
 @dataclass
 class ForAll(ASTNode):
     iterator_name: str
     iterable: ASTNode
     body: Block
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            iterable_type = self.iterable.check(v_table, f_table)
+            self.child_return_types.clear()
+            vvvprint("ForAll: Checking for all statement...")
+
+            iterable_type = self.iterable.check(v_table=v_table,
+                                                f_table=f_table, 
+                                                inference_context=inference_context
+                                                )
             if iterable_type is None:
-                return
-            if iterable_type != "text" and not (iterable_type.startswith("list<") and iterable_type.endswith(">")):
-                raise TraceError(node = self, cause = f"Iterable in for all statement must be of type 'list' or 'text', got '{iterable_type}'")
-            element_type = iterable_type[5:-1] if iterable_type.startswith("list<") else "text"
+                raise Exception(f"Iterable in for all statement cannot be of type 'None'", self)
+
+            valid_iterable_type = t_h.get_all_list_types(iterable_type)
+
+            if t_h.contains(iterable_type, "text"):
+                valid_iterable_type.add("text")
+
+            if not valid_iterable_type:
+                raise Exception(f"Iterable in for all statement must be a list or text type, got '{iterable_type}'")
+
+            if valid_iterable_type != iterable_type:
+                self.iterable.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=iterable_type.copy(),
+                    new_inference_value=valid_iterable_type.copy(),
+                )
+                
+                iterable_type = valid_iterable_type
+
+            self.child_return_types["iterable"] = (iterable_type.copy(), self.iterable)
+
+            element_type = t_h.get_list_element_types(iterable_type)
+            if t_h.contains(iterable_type, "text"):
+                element_type.add("text")
+            
+            saved_inference_state = inference_context.save_state() 
             v_table.new_scope()
             v_table.bind(self.iterator_name, element_type)
-            self.body.check(v_table, f_table)
+            while True:
+                inference_context.reset()
+                self.body.check(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context
+                )
+                
+                if not inference_context.has_changed():
+                    break
+            returned_element_type = v_table.lookup(self.iterator_name)
             v_table.exit_scope()
+            inference_context.load_state(saved_inference_state)
+            if returned_element_type != element_type:
+                new_iterable_type = set()
+                possible_list_types = set()
+                if t_h.has_list_type(iterable_type):
+                    possible_list_types.update(t_h.make_set_list_types(returned_element_type))
+
+                # Only keep list types that were possible from the original iterable.
+                if UNKNOWN_LIST_TYPE in iterable_type or EMPTY_LIST_TYPE in iterable_type:
+                    new_iterable_type.update(possible_list_types)
+
+                else:
+                    for list_type in possible_list_types:
+                        if list_type in iterable_type:
+                            new_iterable_type.add(list_type)
+                
+
+                if t_h.contains(iterable_type, "text") and t_h.contains(returned_element_type, "text"):
+                    new_iterable_type.add("text")
+
+                if not new_iterable_type:
+                    raise Exception(
+                                    f"ForAll: iterator type narrowed to '{returned_element_type}', "
+                                    f"but iterable type '{iterable_type}' cannot support that."
+                                    )
+               
+                self.iterable.inference(v_table=v_table,
+                                        f_table=f_table,
+                                        inference_context=inference_context,
+                                        old_inference_value=iterable_type.copy(),
+                                        new_inference_value=new_iterable_type.copy()
+                                        )
+                self.child_return_types["iterable"] = (new_iterable_type.copy(), self.iterable)
+                vvvprint(f"ForAll: Inference successful, iterable type updated to '{new_iterable_type}' based on returned element type '{returned_element_type}'.")
+                        
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -137,18 +306,73 @@ class ForAll(ASTNode):
                     env.exit_scope()                
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
+        
+    def inference(
+            v_table: ScopeStack,
+            f_table: FuncTable,
+            inference_context: InferenceContext,
+            old_inference_value: set[str],
+            new_inference_value: set[str]) -> None:
+        raise Exception("ForAll does not return a value and cannot be used in inference.")
 
 @dataclass
 class RepeatUntil(ASTNode):
     condition: ASTNode
     body: Block
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
-        try:        
-            condition_type = self.condition.check(v_table, f_table)
-            if condition_type != "boolean":
-                raise TraceError(node = self, cause = f"Condition in repeat until statement must be of type 'boolean', got '{condition_type}'")
-            self.body.check(v_table, f_table)
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+        try:
+            self.child_return_types.clear()
+            vvvprint("RepeatUntil: Checking repeat until statement...")
+
+            condition_type = self.condition.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+            )
+            vvvprint(f"RepeatUntil: Condition type is '{condition_type}'.")
+            
+            valid_condition_type = {"boolean"}
+            
+
+            if not t_h.contains(condition_type, "boolean"):
+                raise Exception(f"Condition in repeat until statement must be of type 'boolean', got '{condition_type}'")
+            
+            if condition_type != valid_condition_type:
+                self.condition.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=condition_type.copy(),
+                    new_inference_value=valid_condition_type.copy()
+                )
+                condition_type = valid_condition_type
+            self.child_return_types["condition"] = (condition_type.copy(), self.condition)
+            
+            saved_inference_state = inference_context.save_state()
+            
+            v_table.new_scope()
+
+            while True:
+                vvvprint("RepeatUntil: Checking body of repeat until statement...")
+
+                inference_context.reset()
+                self.body.check(
+                    v_table=v_table, 
+                    f_table=f_table,
+                    inference_context=inference_context
+                )
+                if not inference_context.has_changed():
+                    vvvprint("RepeatUntil: Inference for body of repeat until statement has stabilized.")
+                    break
+
+                vvvprint("RepeatUntil: Inference for body of repeat until statement has changed, re-checking...")
+
+            v_table.exit_scope()
+            inference_context.load_state(saved_inference_state)
+            vvvprint("RepeatUntil: Repeat until statement check successful.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -170,24 +394,82 @@ class RepeatUntil(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
+    def inference(self,
+        v_table: ScopeStack,
+        f_table: FuncTable,
+        inference_context: InferenceContext,
+        old_inference_value: set[str],
+        new_inference_value: set[str]) -> None:
+        raise Exception("RepeatUntil does not return a value and cannot be used in inference.")
+        
 @dataclass
 class Count(ASTNode):
     iterator_name: Optional[str]
     from_: ASTNode
     to_: ASTNode
     body: Block
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            from_type = self.from_.check(v_table, f_table)
-            to_type = self.to_.check(v_table, f_table)
-            if from_type != "number" or to_type != "number":
-                raise TraceError(node = self, cause = f"'from' and 'to' expressions in count statement must be of type 'number', got '{from_type}' and '{to_type}'")
+            from_type = self.from_.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            to_type = self.to_.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            
+            if from_type is None:
+                raise Exception(f"'From' expression in count statement cannot be of type 'None'", self)
+            if to_type is None:
+                raise Exception(f"'To' expression in count statement cannot be of type 'None'", self)
+            valid_count_types = {"number"}
+            if not t_h.contains(from_type, "number"):
+                raise Exception(f"'From' expression in count statement must be of type 'number', got '{from_type}'")
+            if not t_h.contains(to_type, "number"):
+                raise Exception(f"'To' expression in count statement must be of type 'number', got '{to_type}'")
+            if from_type != valid_count_types:
+                self.from_.inference(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context,
+                    old_inference_value=from_type.copy(),
+                    new_inference_value=valid_count_types.copy()
+                )
+                from_type = valid_count_types
+            
+            self.child_return_types["from"] = (from_type.copy(), self.from_)
+
+            if to_type != valid_count_types:
+                self.to_.inference(
+                    v_table=v_table, 
+                    f_table=f_table, 
+                    inference_context=inference_context,
+                    old_inference_value=to_type.copy(),
+                    new_inference_value=valid_count_types.copy()
+                )
+                to_type = valid_count_types
+
+            self.child_return_types["to"] = (to_type.copy(), self.to_)
+
+
+                
             
             v_table.new_scope()
+
             if self.iterator_name:
-                v_table.bind(self.iterator_name, "number")
-            self.body.check(v_table, f_table)
+                v_table.bind_local(self.iterator_name, {"number"})
+            self.body.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+            )
             v_table.exit_scope()
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -201,7 +483,7 @@ class Count(ASTNode):
                 env.new_scope()
                 if self.iterator_name:
                     try:
-                        env.assign_variable(self.iterator_name, i)
+                        env.bind_local_variable(self.iterator_name, i)
                         value = self.body.execute(env)
                         if value == "continue":
                             continue
@@ -222,11 +504,23 @@ class Count(ASTNode):
 
 @dataclass
 class Quit(ASTNode):
+    def __post_init__(self):
+        super().__init__()
     def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+        self.child_return_types.clear()
+        vvvprint("Quit: Checking quit statement...")
         return
     
     def execute(self, env: Environment) -> None:
         raise SystemExit()
+    
+    def inference(
+            v_table: ScopeStack,
+            f_table: FuncTable,
+            inference_context: InferenceContext,
+            old_inference_value: set[str],
+            new_inference_value: set[str]) -> None:
+        raise Exception("Quit does not return a value and cannot be used in inference.")
 
 
 @dataclass
@@ -235,18 +529,75 @@ class ListAdd(ASTNode):
     item: ASTNode
     target: ASTNode
     index: Optional[ASTNode] = None
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
-            self.item.check(v_table, f_table)
+            self.child_return_types.clear()
+            vvvprint("ListAdd: Checking add list statement...")
 
-            if not target_type.startswith("list<") or not target_type.endswith(">"):
-                raise TraceError(node = self, cause = f"Cannot add to type '{target_type}'. Can only add to lists.")
+            target_type = self.target.check(
+                v_table,
+                f_table, 
+                inference_context
+                )
+
+            item_type = self.item.check(
+                v_table, 
+                f_table, 
+                inference_context
+                )
+            if target_type is None:
+                raise Exception(f"Target of add to list statement cannot be of type 'None'", self)
+            if item_type is None:
+                raise Exception(f"Item to add in add to list statement cannot be of type 'None'", self)
+            if not t_h.has_list_type(target_type):
+                raise Exception(f"Target of /'add to list/' statement must be a list type, got '{target_type}'", self)
+            if item_type is None:
+                raise Exception(f"Item to add in add to list statement cannot be of type 'None'", self)
+            vvvprint(f"ListAdd: Target type is '{target_type}', item type is '{item_type}'.")
             
-            if target_type == "list<any>":
-                item_type = self.item.check(v_table, f_table)
-                v_table.bind(self.target.name, f"list<{item_type}>")
+            
+
+            list_element_types = t_h.get_list_element_types(target_type)
+            if not t_h.is_compatible(item_type, list_element_types):
+                raise Exception(
+                    f"Item type '{item_type}' is not compatible with list element types '{list_element_types}' for target type '{target_type}' in list add statement.",
+                    self
+                    )
+            
+            narrowed_item_type = t_h.narrow(item_type, list_element_types)
+            if narrowed_item_type != item_type:
+                self.item.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=item_type.copy(),
+                    new_inference_value=narrowed_item_type.copy()
+                    )
+                
+                item_type = narrowed_item_type
+                
+            self.child_return_types["item"] = (item_type.copy(), self.item)
+
+            new_target_type = t_h.make_set_list_types(item_type)
+
+            if new_target_type != target_type:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=target_type.copy(),
+                    new_inference_value=new_target_type.copy()
+                    )
+                
+                target_type = new_target_type
+
+            self.child_return_types["target"] = (target_type.copy(), self.target)
+            vvvprint(f"ListAdd: List add statement check successful with target type '{target_type}' and item type '{item_type}'.")
+            
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -263,19 +614,88 @@ class ListAdd(ASTNode):
                 target_value.insert(0, item_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+    def inference(self,
+            v_table: ScopeStack,
+            f_table: FuncTable,
+            inference_context: InferenceContext,
+            old_inference_value: set[str],
+            new_inference_value: set[str]) -> None:
+        raise Exception("ListAdd does not return a value and cannot be used in inference.")
 
 
 @dataclass
 class ListRemove(ASTNode):
     target: ASTNode
     item: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
-            self.item.check(v_table, f_table)
-            if not target_type.startswith("list<") or not target_type.endswith(">"):
-                raise TraceError(node = self, cause = f"Cannot remove from type '{target_type}'. Can only remove from lists.")
+            self.child_return_types.clear()
+            vvvprint("ListRemove: Checking add list statement...")
+
+            target_type = self.target.check(
+                v_table,
+                f_table, 
+                inference_context
+                )
+
+            item_type = self.item.check(
+                v_table, 
+                f_table, 
+                inference_context
+                )
+            if target_type is None:
+                raise Exception(f"Target of statement cannot be of type 'None'", self)
+            if item_type is None:
+                raise Exception(f"Item to remove from list statement cannot be of type 'None'", self)
+            if not t_h.has_list_type(target_type):
+                raise Exception(f"Target of remove from list statement must be a list type, got '{target_type}'", self)
+            if item_type is None:
+                raise Exception(f"Item to remove from list statement cannot be of type 'None'", self)
+            vvvprint(f"ListRemove: Target type is '{target_type}', item type is '{item_type}'.")
+            
+            
+
+            list_element_types = t_h.get_list_element_types(target_type)
+            if not t_h.is_compatible(item_type, list_element_types):
+                raise Exception(
+                    f"Item type '{item_type}' is not compatible with list element types '{list_element_types}' for target type '{target_type}' in remove from list statement.",
+                    self
+                    )
+            
+            narrowed_item_type = t_h.narrow(item_type, list_element_types)
+            if narrowed_item_type != item_type:
+                self.item.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=item_type.copy(),
+                    new_inference_value=narrowed_item_type.copy()
+                    )
+                
+                item_type = narrowed_item_type
+                
+            self.child_return_types["item"] = (item_type.copy(), self.item)
+
+            new_target_type = t_h.make_set_list_types(item_type)
+
+            if new_target_type != target_type:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=target_type.copy(),
+                    new_inference_value=new_target_type.copy()
+                    )
+                
+                target_type = new_target_type
+
+            self.child_return_types["target"] = (target_type.copy(), self.target)
+            vvvprint(f"ListRemove: remove from list statement check successful with target type '{target_type}' and item type '{item_type}'.")
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -283,27 +703,84 @@ class ListRemove(ASTNode):
         try:
             target_value = self.target.execute(env)
             item_value = self.item.execute(env)
-            try:
-                target_value.remove(item_value)
-            except ValueError:
-                raise TraceError(node = self, cause = f"Item '{item_value}' not found in list.")
+            while item_value in target_value:
+                    target_value.remove(item_value)
+            
         except Exception as e:
             raise TraceError(node = self, cause = e)
             
+    def inference(
+            self,
+            v_table: ScopeStack,
+            f_table: FuncTable,
+            inference_context: InferenceContext,
+            old_inference_value: set[str],
+            new_inference_value: set[str]) -> None:
+        raise Exception("ListRemove does not return a value and cannot be used in inference.")
         
 @dataclass
 class ListRemoveAt(ASTNode):
     target: ASTNode
     index: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
-            target_type = self.target.check(v_table, f_table)
-            index_type = self.index.check(v_table, f_table)
-            if not target_type.startswith("list<") or not target_type.endswith(">"):
-                raise TraceError(node = self, cause = f"Cannot remove from type '{target_type}'. Can only remove from lists.")
-            if index_type != "int":
-                raise TraceError(node = self, cause = f"Index in list remove at statement must be of type 'int', got '{index_type}'")
+            self.child_return_types.clear()
+            vvvprint("ListRemoveAt: Checking remove from list at statement...")
+            
+            target_type = self.target.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+                )
+            
+            index_type = self.index.check(
+                v_table=v_table, 
+                f_table=f_table,
+                inference_context=inference_context
+                )
+            vvvprint(f"ListRemoveAt: Target type is '{target_type}', index type is '{index_type}'.")
+            
+            if target_type is None:
+                raise Exception(f"Target of statement cannot be of type 'None'", self)
+            if index_type is None:
+                raise Exception(f"Index in remove from list at statement cannot be of type 'None'", self)
+            if not t_h.has_list_type(target_type):
+                raise Exception(f"Target of remove from list at statement must be a list type, got '{target_type}'")
+            if not t_h.contains(index_type, "number"):
+                raise Exception(f"Index in remove from list at statement must be of type 'number', got '{index_type}'")
+            
+            if index_type != {"number"}:
+                self.index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=index_type.copy(),
+                    new_inference_value={"number"}
+                )
+
+                index_type = {"number"}
+
+            self.child_return_types["index"] = (index_type.copy(), self.index)
+            if t_h.has_non_list_type(target_type):
+                valid_target_type = t_h.get_all_list_types(target_type)
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=target_type.copy(),
+                    new_inference_value=valid_target_type.copy()
+                )
+
+                target_type = valid_target_type
+
+            vvvprint(f"ListRemoveAt: remove from list at statement check successful with target type '{target_type}' and index type '{index_type}'.")
+            self.child_return_types["target"] = (target_type.copy(), self.target)
+            
+            return None
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -317,14 +794,37 @@ class ListRemoveAt(ASTNode):
                 raise TraceError(node = self, cause = f"Index '{index_value}' out of range for list.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
+        
+    def inference(
+            self,
+            v_table: ScopeStack,
+            f_table: FuncTable,
+            inference_context: InferenceContext,
+            old_inference_value: set[str],
+            new_inference_value: set[str]) -> None:
+        raise Exception("ListRemoveAt does not return a value and cannot be used in inference.")
 
 @dataclass
 class Return(ASTNode):
     expression: ASTNode
+    def __post_init__(self):
+        super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
         try:
-            return self.expression.check(v_table, f_table)
+            self.child_return_types.clear()
+            vvvprint("Return: Checking return statement...")
+
+            return_type = self.expression.check(
+                v_table=v_table,
+                f_table=f_table,
+                inference_context=inference_context
+            )
+            
+            self.child_return_types["expression"] = (return_type.copy(), self.expression)
+            self.child_return_types["self"] = (return_type, self)
+            vvvprint(f"Return: Return statement check successful with return type '{return_type}'.")
+            return return_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 

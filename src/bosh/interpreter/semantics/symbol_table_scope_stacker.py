@@ -1,11 +1,11 @@
 from bosh.interpreter.executor.environment.scope_stack import ScopeStack
-from .symbol_table import symbol_table
+from .symbol_table import Symbol_Table
 
 class SymbolTableScopeStacker(ScopeStack):
     def __init__(self):
-        super().__init__(table_class=symbol_table)
+        super().__init__(table_class=Symbol_Table)
 
-    def bind(self, name: str, type_value: str):
+    def bind(self, name: str, type_value: set[str]):
         for scope in reversed(self.stack):
             vvvprint(f"SymbolTableScopeStacker: Attempting to bind variable '{name}' to type '{type_value}' in scope: {scope}")
             if scope.contains(name):
@@ -24,12 +24,9 @@ class SymbolTableScopeStacker(ScopeStack):
         vvvprint(f"SymbolTableScopeStacker: Variable '{name}' not found in any outer scope, binding to type '{type_value}' in current scope...")
         self.stack[-1].bind(name, type_value)  # Bind in the current scope if not found in any outer scope
     
-    def bind_local(self, name: str, type_value: str):
-        vvvprint(f"SymbolTableScopeStacker: Binding variable '{name}' to type '{type_value}' in current scope...")
+    def bind_local(self, name: str, type_value: set[str]):
         try:
-            vvvprint(f"SymbolTableScopeStacker: Attempting to bind variable '{name}' to type '{type_value}' in current scope...")
             self.stack[-1].bind(name, type_value)
-            vvvprint(f"SymbolTableScopeStacker: Successfully bound variable '{name}' to type '{type_value}' in current scope.")
         except Exception as e:
             raise Exception(f"Error binding variable '{name}' in local scope: {e}")
         
@@ -45,3 +42,26 @@ class SymbolTableScopeStacker(ScopeStack):
         vvvprint(f"SymbolTableScopeStacker: Domain converted to list successfully. Domain list: {domain_list}")
         return domain_list
     
+    def snapshot(self) -> Symbol_Table:
+        return super().snapshot()
+    
+    def update_snapshot(self, snapshot: Symbol_Table):
+        try:
+            vvvprint(f"SymbolTableScopeStacker: Updating snapshot...")
+            domain = snapshot.domain()
+
+            for name in domain:
+                if self.contains(name):
+                    snapshot.bind(name, self.lookup(name))
+        
+            vvvprint(f"SymbolTableScopeStacker: Snapshot's visible variables updated successfully: {domain}")
+        except Exception as e:
+            raise Exception(f"Error updating snapshot: {e}")
+
+    def enter_function_scope(self, function_scope: Symbol_Table):
+        in_function_scope = function_scope.copy()
+        in_function_scope.function_scope = True
+        self.stack.append(in_function_scope)
+        self.new_scope()  # Create a new scope for the function body
+
+        

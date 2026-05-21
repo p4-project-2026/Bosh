@@ -1,47 +1,60 @@
 from bosh.interpreter.executor.environment.table import Table
+import bosh.helper_functions.type_helper as t_h 
+from bosh.helper_functions.type_helper import EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
+        
+class Symbol_Table(Table[set[str]]):
 
-class symbol_table(Table[str]):
+    def bind(self, name: str, type_value: set[str]):
+        while self.step(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...", f"SymbolTable: Variable '{name}' bound to type '{type_value}' in current scope successfully."):
+            if not type_value:
+                raise Exception(f"SymbolTable: Cannot bind variable '{name}' to empty type set.")
+        
+            if name not in self.table:
+      
+                self.table[name] = type_value.copy()
+                return
+            current_type = self.table[name]
+            self.log(f"Variable '{name}' already bound to type '{current_type}' in current scope.")
 
-    def bind(self, name: str, type_value: str):
-        vvvprint(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...")
-        if name in self.table:
-            vvvprint(f"SymbolTable: Variable '{name}' already bound to type '{self.table[name]}' in current scope.")
-            if self.table[name] == type_value:
-                vvvprint(f"SymbolTable: Variable '{name}' already bound to the same type '{type_value}', allowing re-binding.")
+            if current_type == {"UNKNOWN"} or current_type == {"any"} or current_type == {"null"}:
+
+                self.table[name] = type_value.copy()
+                return # Allow unknown and any to be treated as any other type
+        
+            if type_value == {"UNKNOWN"} or type_value == {"any"}:
+                return # Allow unknown and any to be treated as any other type
+
+            if current_type == type_value:
+                self.log(f"Variable '{name}' already bound to the same type '{type_value}', allowing re-binding.")
                 return # Allow re-binding to the same type
-            vvvprint(f"SymbolTable: Variable '{name}' already bound to a different type '{self.table[name]}', checking for compatible types...")
-            match self.table[name]:
-                case "number":
-                    vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'number', checking if new type '{type_value}' is compatible...")
-                    if type_value is "decimal":
-                        vvvprint(f"SymbolTable: Variable '{name}' can be treated as 'number' since new type '{type_value}' is 'decimal', allowing re-binding.")
-                        self.table[name] = type_value
-                        return # Allow number to be treated as decimal
-                case "decimal":
-                    vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'decimal', checking if new type '{type_value}' is compatible...")   
-                    if type_value is "number":
-                        vvvprint(f"SymbolTable: Variable '{name}' can be treated as 'decimal' since new type '{type_value}' is 'number', allowing re-binding.")
-                        self.table[name] = type_value
-                        return # Allow decimal to be treated as number
-                case "any":
-                    vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'any', allowing re-binding to any type.")
-                    self.table[name] = type_value
-                    return # Allow any to be treated as any other type
-                case "list<any>":
-                    vvvprint(f"SymbolTable: Variable '{name}' is currently bound to 'list<any>', checking if new type '{type_value}' is compatible...") 
-                    if type_value.startswith("list<") or not type_value.endswith(">"):
-                        vvvprint(f"SymbolTable: Variable '{name}' can be treated as 'list<any>' since new type '{type_value}' is a list type, allowing re-binding.")
-                        self.table[name] = type_value
-                        return # Allow list<any> to be treated as any other list type
-                case _:
-                    vvvprint(f"SymbolTable: Variable '{name}' is currently bound to an incompatible type '{self.table[name]}', raising exception.")
-
+        
+            overlap = current_type & type_value
+            if overlap:
+                self.log(f"Variable '{name}' has overlapping types '{overlap}' with current type '{current_type}' and new type '{type_value}', allowing re-binding to the overlap.")
+                self.table[name] = overlap
+                return
+            
+        
+            if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and t_h.has_concrete_list_type(type_value):
+                self.log(f"Variable '{name}' is currently bound to 'list<any>' or 'list<UNKNOWN>', allowing re-binding to specific list type '{type_value}'.")
+                self.table[name] = type_value.copy() # Allow list to overwrite list<any> and list<UNKNOWN> with specific list type
+                return
+        
+        
+            if (type_value in ({UNKNOWN_LIST_TYPE}, {EMPTY_LIST_TYPE}) 
+            and t_h.has_concrete_list_type(current_type)):
+                return # Allow list<any> and list<UNKNOWN> to be treated as specific list type
+        
+            if type_value == {UNKNOWN_LIST_TYPE} and current_type == {EMPTY_LIST_TYPE}:
+                self.table[name] = {UNKNOWN_LIST_TYPE} # Allow list<UNKNOWN> to overwrite as list<any>
+                return
+        
             raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
-        vvvprint(f"SymbolTable:  variable '{name}' is not yet bound in current scope, binding to type '{type_value}'...")
-        self.table[name] = type_value
     
-    def lookup(self, name: str) -> str:
-        if name in self.table:
-            return self.table[name]
+    def lookup(self, name: str) -> set[str]:
+        with self.step(f"SymbolTable: Looking up variable '{name}' in current scope...", f"SymbolTable: Variable '{name}' found in current scope with type '{self.table[name]}'." if name in self.table else f"SymbolTable: Variable '{name}' not found in current scope."):
+            if name in self.table:
+                return self.table[name].copy()
         raise Exception(f"Variable '{name}' not found in scope.")
+    
     

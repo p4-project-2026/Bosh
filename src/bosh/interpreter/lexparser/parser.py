@@ -111,6 +111,11 @@ class BoshTransformer(Transformer):
         node = ListRemove(target=args[1], item=args[0])
         node.set_meta(meta, self._filename)
         return node
+    
+    def remove_from_list_at(self, meta, args):
+        node = ListRemoveAt(target=args[1], index=args[0])
+        node.set_meta(meta, self._filename)
+        return node
 
     def call_func(self, meta, args):
         name = str(args[0])
@@ -392,7 +397,7 @@ class BoshTransformer(Transformer):
         return node
     
     def type_cast(self, meta, args):
-        node = TypeCast(target=args[0], target_type=str(args[1]).lower())
+        node = TypeCast(target=args[0], target_type=(args[1]))
         node.set_meta(meta, self._filename)
         return node
 

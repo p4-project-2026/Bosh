@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 from .table import Table
 from .function_binding import FunctionBinding
 from typing import TypeVar, Generic, Type, Dict
@@ -10,32 +12,39 @@ class ScopeStack(Generic[T]):
         self.table_class = table_class
         self.stack: list[Table[T]] = [self.table_class()]  # Start with global scope
 
+    def copy(self):
+        #deep copy the stack to ensure that modifications to the copy do not affect the original
+        new_stack = ScopeStack(self.table_class)
+        new_stack.stack = [scope.copy() for scope in self.stack]
+        return new_stack
+
     def new_scope(self):
-        vvvprint(f"{self.__class__.__name__}: Entering new scope...")
-        self.stack.append(self.table_class())
-        vvvprint(f"{self.__class__.__name__}: New scope entered successfully.")
+        with self.step(f"Entering new scope...", f"New scope entered successfully."):
+
+            self.stack.append(self.table_class())
+        
+ 
 
     def exit_scope(self):
-        if len(self.stack) == 1:
-            raise Exception("Cannot exit global scope.")
+        with self.step(f"Exiting current scope...", f"Current scope exited successfully."):
+            if len(self.stack) == 1:
+                raise Exception("Cannot exit global scope.")
             
-        if self.stack[-2].function_scope:
-            vvvprint(f"{self.__class__.__name__}: Exiting function scope...")
-            self.stack.pop()  # pop function body scope
-            self.stack.pop()  # pop captured function boundary scope
-            vvvprint(f"{self.__class__.__name__}: Function scope exited successfully.")
-            return
-        vvvprint(f"{self.__class__.__name__}: Exiting current scope...")
-        self.stack.pop()
-        vvvprint(f"{self.__class__.__name__}: Current scope exited successfully.")
+            if self.stack[-2].function_scope:
+                self.stack.pop()  # pop function body scope
+                self.stack.pop()  # pop captured function boundary scope
+
+                
+                return
+            self.stack.pop()
+
 
 
     def enter_function_scope(self, function_def: FunctionBinding):
         vvvprint(f"{self.__class__.__name__}: Entering function scope for function with parameters {function_def.parameters}...")
         function_scope = function_def.captured_scope.copy()
-        function_scope.function_scope = True
+        function_scope.function_scope = True  # Mark the function scope
         self.stack.append(function_scope)
-        vvvprint(f"{self.__class__.__name__}: Captured function scope from definition entered successfully.")
         self.new_scope()  # Create a new scope for the function body
         vvvprint(f"{self.__class__.__name__}: Function body scope entered successfully.")
 
@@ -52,8 +61,7 @@ class ScopeStack(Generic[T]):
         vvvprint(f"{self.__class__.__name__}: Merging visible scopes into snapshot...")
         for scope in reversed(visible_scopes):
             snapshot.update(scope.get_snapshot())
-        vvvprint(f"{self.__class__.__name__}: Visible scopes merged into snapshot successfully.")
-        vvvprint(f"{self.__class__.__name__}: Snapshot content: {snapshot}")
+
         snapshot_table= self.table_class(table=snapshot)
         vvvprint(f"{self.__class__.__name__}: Snapshot table created successfully.")
         return snapshot_table
@@ -79,6 +87,14 @@ class ScopeStack(Generic[T]):
                 vvvprint(f"{self.__class__.__name__}: Variable '{name}' found in scope for assignment. Value: {scope.lookup(name)}")
                 return scope.lookup(name)
         raise Exception(f"Variable '{name}' not found in scope.")
+    
+    def contains(self, name: str) -> bool:
+        for scope in reversed(self.stack):
+            if scope.contains(name):
+                return True
+            if scope.function_scope:  # If we reach a function scope or global scope, stop searching
+                break
+        return False
 
     def bind(self, name: str, value: T):
         vvvprint(f"{self.__class__.__name__}: Binding variable '{name}' to value {value} in current scope...")
@@ -93,3 +109,17 @@ class ScopeStack(Generic[T]):
         for scope in reversed(self.stack):
             vvvprint(f"{self.__class__.__name__}: Adding variables from scope to domain: {scope.domain()}")
             domain.update({name: None for name in scope.domain()})
+        return list(domain.keys())
+
+    def log(self, message: str) -> None:
+        vvvprint(f"{self.__class__.__name__}: {message}")
+
+    @contextmanager
+    def step(self, start: str, success: str):
+        self.log(start)
+        try:
+            yield
+        except Exception as e:
+            self.log(f"Failed: {e}")
+            raise
+        self.log(success)
