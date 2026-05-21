@@ -31,13 +31,11 @@ class ScopeStack(Generic[T]):
                 raise Exception("Cannot exit global scope.")
             
             if self.stack[-2].function_scope:
-
                 self.stack.pop()  # pop function body scope
                 self.stack.pop()  # pop captured function boundary scope
 
                 
                 return
-
             self.stack.pop()
 
 
@@ -47,7 +45,6 @@ class ScopeStack(Generic[T]):
         function_scope = function_def.captured_scope.copy()
         function_scope.function_scope = True  # Mark the function scope
         self.stack.append(function_scope)
-
         self.new_scope()  # Create a new scope for the function body
         vvvprint(f"{self.__class__.__name__}: Function body scope entered successfully.")
 

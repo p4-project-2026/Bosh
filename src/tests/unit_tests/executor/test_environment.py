@@ -99,3 +99,60 @@ def test_update_variable_different_type():
     assert env.lookup_variable("value") == 42
     env.assign_variable("value", "now a string")
     assert env.lookup_variable("value") == "now a string"
+
+def test_nested_scopes_variable_lookup():
+    env = Environment()
+    env.new_scope()
+    env.assign_variable("outer", "I am outside")
+    assert env.lookup_variable("outer") == "I am outside"
+    env.new_scope()
+    assert env.lookup_variable("outer") == "I am outside"
+    env.assign_variable("inner", "I am inside")
+    assert env.lookup_variable("inner") == "I am inside"
+    env.exit_scope()
+    try:
+        env.lookup_variable("inner")
+        assert False, "Expected exception for variable not found in outer scope"
+    except Exception as e:
+        assert str(e) == "Error looking up variable 'inner': Undefined variable 'inner'"
+
+def test_variable_shadowing():
+    env = Environment()
+    env.new_scope()
+    env.assign_variable("var", "outer value")
+    assert env.lookup_variable("var") == "outer value"
+    env.new_scope()
+    assert env.lookup_variable("var") == "outer value"
+    env.bind_local_variable("var", "inner value")
+    assert env.lookup_variable("var") == "inner value"
+    env.exit_scope()
+    assert env.lookup_variable("var") == "outer value"
+
+def test_function_scope_variable_lookup():
+    env = Environment()
+    env.new_scope()
+    env.assign_variable("x", 10)
+    captured_scope = env.snapshot()
+    func_def = environment_module.FunctionBinding(parameters=[], captured_scope=captured_scope, body=None)
+    env.bind_function("x", func_def)
+    env.enter_function_scope("x")
+    assert env.lookup_variable("x") == 10
+    env.assign_variable("x", 20)
+    assert env.lookup_variable("x") == 20
+    env.exit_scope()
+    assert env.lookup_variable("x") == 10
+
+
+def test_function_scope_variable_shadowing():
+    env = Environment()
+    env.new_scope()
+    env.assign_variable("x", 10)
+    captured_scope = env.snapshot()
+    func_def = environment_module.FunctionBinding(parameters=[], captured_scope=captured_scope, body=None)
+    env.bind_function("x", func_def)
+    env.enter_function_scope("x")
+    assert env.lookup_variable("x") == 10
+    env.assign_variable("x", 20)
+    assert env.lookup_variable("x") == 20
+    env.exit_scope()
+    assert env.lookup_variable("x") == 10

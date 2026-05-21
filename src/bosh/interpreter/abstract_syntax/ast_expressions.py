@@ -394,9 +394,9 @@ class TaskCall(ASTNode):
                 env.assign_variable(param_name, param_value)
                 vvvprint(f"Task Call: Parameter '{param_name}' bound to value '{param_value}' in function scope for task '{self.name}'.")
             
-            vvvprint(f"Task Call: Executing body of task '{self.name}'...")
             result = task_func.body.execute(env)
-            vvvprint(f"Task Call: Body of task '{self.name}' executed successfully. Result: {result}")
+            env.exit_scope()
+
             return result
         except TraceError as e:
             raise TraceError(node = self,cause = e)
