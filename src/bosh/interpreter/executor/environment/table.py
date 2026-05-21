@@ -8,6 +8,7 @@ class Table(Generic[T]):
         self.table: Dict[str, T] = {} if table is None else table.copy()
         self.function_scope: bool = function_scope
 
+
     def log(self, message: str) -> None:
         vvvprint(f"{self.__class__.__name__}: {message}")
 
@@ -49,5 +50,5 @@ class Table(Generic[T]):
         with self.step(f"Creating copy of current table with function_scope={function_scope}...", f"Copy of current table created successfully with function_scope={function_scope}."):
             return self.__class__(
                 function_scope=self.function_scope if function_scope is None else function_scope,
-                table=self.get_snapshot()
+                table=self.table.copy()
             )
