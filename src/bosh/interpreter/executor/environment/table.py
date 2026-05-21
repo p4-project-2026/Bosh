@@ -31,7 +31,7 @@ class Table(Generic[T]):
         while self.step(f"Looking up name '{name}' in current scope...", f"Name '{name}' found in current scope with value {self.table[name]}." if name in self.table else f"Name '{name}' not found in current scope."):
             if name in self.table:
                 return self.table[name]
-        raise Exception(f"Name '{name}' not found in scope.")
+            raise Exception(f"Name '{name}' not found in scope.")
     
     def contains(self, name: str) -> bool:
         with self.step(f"Checking if name '{name}' exists in current scope...", f"Name '{name}' {'exists' if name in self.table else 'does not exist'} in current scope."):
