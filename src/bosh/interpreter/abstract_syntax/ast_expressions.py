@@ -1046,8 +1046,10 @@ class BinaryOp(ASTNode):
                             return True
                     return left_val != right_val
                 case "eq_type" | "neq_type":
+
+                    
                     if right_val in ["folder", "file"]:
-                        if isinstance(left_val, str):
+                        if t_h.contains(self.child_return_types["left"][0], "text"):
                             if right_val == "folder":
                                 return os.path.isdir(left_val)
                             else:
