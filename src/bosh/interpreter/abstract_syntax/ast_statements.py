@@ -16,7 +16,6 @@ class Print(ASTNode):
                 f_table, 
                 inference_context
             )
-            
             vvvprint(f"Print: Expression type is '{expression_type}'.")
             self.child_return_types["expression"] = (expression_type.copy(), self.expression)
             
@@ -26,10 +25,16 @@ class Print(ASTNode):
     def execute(self, env: Environment) -> None:
         try:
             value = self.expression.execute(env)
-            if isinstance(value, list):
-                print("(" + ", ".join(str(v) for v in value) + ")")
-            elif isinstance(value, bool):
-                print("true" if value else "false")
+            if t_h.has_only_list_types(self.child_return_types["expression"][0]):
+                if t_h.is_only(self.child_return_types["expression"][0], "list<text>"):
+                    print(f_h.string_format_list_if_strings(value))
+                elif t_h.is_only(self.child_return_types["expression"][0], "list<boolean>"):
+                    print(f_h.string_format_list_if_bools(value))
+                else:
+                    print(f_h.string_format_list(value))
+
+            elif self.child_return_types["expression"][0] == {"boolean"}:
+                print(f_h.string_format_bool(value))
             else:
                 print(value)
         except Exception as e:
@@ -698,10 +703,9 @@ class ListRemove(ASTNode):
         try:
             target_value = self.target.execute(env)
             item_value = self.item.execute(env)
-            try:
-                target_value.remove(item_value)
-            except ValueError:
-                raise TraceError(node = self, cause = f"Item '{item_value}' not found in list.")
+            while item_value in target_value:
+                    target_value.remove(item_value)
+            
         except Exception as e:
             raise TraceError(node = self, cause = e)
             
