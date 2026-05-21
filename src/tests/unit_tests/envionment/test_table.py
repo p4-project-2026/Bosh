@@ -15,12 +15,12 @@ def test_table_snapshot():
     table = Table[int]()
     table.bind("a", 1)
     table.bind("b", 2)
-    snapshot = table.snapshot()
-    assert snapshot.lookup("a") == 1
-    assert snapshot.lookup("b") == 2
-    assert snapshot.contains("a")
-    assert snapshot.contains("b")
-    assert not snapshot.contains("c")
+    snapshot = table.get_snapshot()
+    assert snapshot["a"] == 1
+    assert snapshot["b"] == 2
+    assert "a" in snapshot
+    assert "b" in snapshot
+    assert "c" not in snapshot
 
 def test_table_domain():
     table = Table[int]()
