@@ -1,5 +1,20 @@
-task Print uses (Message, Times):
-    count from 1 to Times:
-        say Message
+X is 0
 
-run Print using ("Hello, World!", 3)
+function Func:
+    return
+
+if true:
+    #run Func
+    print X
+    X is 1
+
+print X
+
+X is 0
+
+if true:
+    run Func
+    print X
+    X is 1
+
+print X
