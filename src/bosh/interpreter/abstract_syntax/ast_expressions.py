@@ -1006,28 +1006,22 @@ class BinaryOp(ASTNode):
             match self.operator:
                 case "plus":
                     # datetime + milliseconds
-                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                    if self.child_return_types["left"][0] == {"date"} and self.child_return_types["right"][0] == {"time"}:
                         return left_val + datetime.timedelta(milliseconds=right_val)
                     # milliseconds + datetime -> swap
-                    if isinstance(right_val, datetime.datetime) and isinstance(left_val, (int, float)):
+                    if self.child_return_types["left"][0] == {"time"} and self.child_return_types["right"][0] == {"date"}:
                         return right_val + datetime.timedelta(milliseconds=left_val)
                     # string concatenation
-                    if isinstance(left_val, str) or isinstance(right_val, str):
-                        if isinstance(left_val, bool):
-                            left_val = "true" if left_val else "false"
-                        return str(left_val) + str(right_val)
+#                    if isinstance(left_val, str) or isinstance(right_val, str):
+#                        if isinstance(left_val, bool):
+#                            left_val = "true" if left_val else "false"
+#                        return str(left_val) + str(right_val)
                     # fallback to python add (may raise)
                     return left_val + right_val
                 case "minus":
-                    # datetime - datetime -> timedelta
-                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, datetime.datetime):
-                        return left_val - right_val
-                    # datetime - milliseconds
-                    if isinstance(left_val, datetime.datetime) and isinstance(right_val, (int, float)):
+                    if self.child_return_types["left"][0] == {"date"} and self.child_return_types["right"][0] == {"time"}:
                         return left_val - datetime.timedelta(milliseconds=right_val)
                     # numeric subtraction
-                    if isinstance(left_val, (int, float)) and isinstance(right_val, (int, float)):
-                        return left_val - right_val
                     return left_val - right_val
                 case "mult":
                     return left_val * right_val
