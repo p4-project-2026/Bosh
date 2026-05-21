@@ -9,8 +9,9 @@ import re
 class Type(ASTNode):
     name: str
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[str]:
-        return self.name
+    
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+        return {self.name}
     
     def execute(self, env: Environment) -> str:
         return self.name
@@ -87,9 +88,10 @@ class InterpolatedString(ASTNode):
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
-            for part in self.parts:
+            for i, part in enumerate(self.parts):
                 if part.check(v_table, f_table, inference_context) is None:
                     raise TraceError(node = self, cause = "Undefined variable in interpolated string")
+                self.child_return_types[f"part_{i}"] = (part.child_return_types["self"][0].copy(), part) # remember the type of each part for inference
             self.child_return_types["self"] = ({"text"}, self) # remember the return type for inference
             return {"text"}
         except Exception as e:
@@ -97,8 +99,10 @@ class InterpolatedString(ASTNode):
 
     def execute(self, env: Environment) -> str:
         result = ""
-        for part in self.parts:
+        for i, part in enumerate(self.parts):
             value = part.execute(env)
+            if self.child_return_types[f"part_{i}"][0] == {"boolean"}:
+                value = f_h.string_format_bool(value)
             result += str(value)
         return result
     
@@ -544,28 +548,28 @@ class Unit(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable,  inference_context: InferenceContext) -> set[str]:
         try:
             self.child_return_types.clear()
-            target_type = self.target.check(v_table=v_table,
+            value_type = self.value.check(v_table=v_table,
                                              f_table=f_table,
                                              inference_context=inference_context
                                              )
             
             possible_types = {"number", "decimal"}
-            if not t_h.is_compatible(target_type, possible_types):
-                raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{target_type}'. Expected number or decimal.", self)
+            if not t_h.is_compatible(value_type, possible_types):
+                raise BoshTypeError(f"Cannot apply unit '{self.unit_type}' to type '{value_type}'. Expected number or decimal.", self)
             
-            narrowed = t_h.narrow(target_type, possible_types)
+            narrowed = t_h.narrow(value_type, possible_types)
             
-            if narrowed != target_type:
-                self.target.inference(v_table=v_table,
+            if narrowed != value_type:
+                self.value.inference(v_table=v_table,
                                       f_table=f_table,
                                       inference_context=inference_context,
-                                      old_inference_value=target_type.copy(),
+                                      old_inference_value=value_type.copy(),
                                       new_inference_value=narrowed.copy()
                                       )
                 
-                target_type = narrowed.copy()
+                value_type = narrowed.copy()
 
-            self.child_return_types["target"] = (target_type.copy(), self.target)
+            self.child_return_types["value"] = (value_type.copy(), self.value)
             self.child_return_types["self"] = ({"time"}, self) # the return type of a unit is always time, so we can just set it directly without needing to remember it for inference.
             return {"time"}
         except Exception as e:
@@ -612,12 +616,13 @@ class Unit(ASTNode):
 @dataclass  
 class TypeCast(ASTNode):
     target: ASTNode
-    target_type: str
+    target_type: Type
     def __post_init__(self):
         super().__init__()
 
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
+            
             self.child_return_types.clear()
             original_type = self.target.check(
                 v_table=v_table, 
@@ -627,11 +632,20 @@ class TypeCast(ASTNode):
 
             if original_type is None:
                 raise Exception("TypeCast: Target of type cast cannot be of type 'None'", self)
+            target_type_name = self.target_type.check(
+                v_table=v_table,
+                f_table=f_table,
+                inference_context=inference_context
+            )
+
             
-            if self.target_type not in ["number", "decimal", "text", "boolean", "date"]:
-                raise Exception(f"Unsupported target type for type cast: '{self.target_type}'", self)
-            
-            match self.target_type:
+            target_type = next(iter(target_type_name))
+
+
+
+            if target_type not in ["number", "decimal", "text", "boolean", "date"]:
+                raise Exception(f"Unsupported target type for type cast: '{target_type}'", self)
+            match target_type:
                 case "text":
                     valid_target_types = {"number", "decimal", "boolean", "date", "text"}
                     return_type = {"text"}
@@ -666,13 +680,12 @@ class TypeCast(ASTNode):
                     inference_context=inference_context,
                     old_inference_value=original_type.copy(),
                     new_inference_value=narrowed_type.copy()
-                    )
-                    
+                )
+
                 original_type = narrowed_type.copy()
             
             self.child_return_types["target"] = (original_type.copy(), self.target)
             self.child_return_types["self"] = (return_type.copy(), self)
-
             return return_type
                     
 
@@ -686,21 +699,23 @@ class TypeCast(ASTNode):
     def execute(self, env: Environment) -> Any:
         try:
             value = self.target.execute(env)
-            match self.target_type:
+            target_type = self.target_type.execute(env)
+            match target_type:
                 case "number":
                     return int(value)
                 case "decimal":
                     return float(value)
                 case "text":
-                    if isinstance(value, bool):
+                    if self.child_return_types["target"][0] == {"boolean"}:
                         return "true" if value else "false"
                     return str(value)
                 case "boolean":
                     return bool(value)
                 case "date":
-                    if isinstance(value, (datetime.datetime, str)):
-                        return datetime.datetime.fromisoformat(str(value))
-                    raise TraceError(node = self, cause = f"Cannot cast value of type '{type(value).__name__}' to 'date'")
+                    if self.child_return_types["target"][0] == {"text"}:
+                            return datetime.datetime.fromisoformat(value)
+                    return value  # if it's already a date, just return it
+                    raise Exception(f"Cannot cast value of type '{type(value)}' to 'date'. Expected a datetime object or an ISO format string.")
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
         except Exception as e:
@@ -825,7 +840,7 @@ class BinaryOp(ASTNode):
 
                         return_types.add("date")
 
-                    if op is "minus" and t_h.contains(right_type, "date") and t_h.contains(left_type, "date"):
+                    if op == "minus" and t_h.contains(right_type, "date") and t_h.contains(left_type, "date"):
 
                         return_types.add("time")
                     
