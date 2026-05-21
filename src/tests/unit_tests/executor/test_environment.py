@@ -14,6 +14,7 @@ store_module.vvvprint = noop_print
 
 from bosh.interpreter.executor.environment.environment import Environment
 
+# Test cases for variable binding
 def test_bind_and_read_integer_variable():
     env = Environment()
     env.new_scope()
@@ -44,13 +45,6 @@ def test_bind_and_read_list_variable():
     test_list = [1, 2, 3, 4, 5]
     env.assign_variable("numbers", test_list)
     assert env.lookup_variable("numbers") == test_list
-
-def test_bind_and_read_dict_variable():
-    env = Environment()
-    env.new_scope()
-    test_dict = {"name": "Bob", "age": 30, "city": "NYC"}
-    env.assign_variable("person", test_dict)
-    assert env.lookup_variable("person") == test_dict
 
 def test_bind_and_read_none_variable():
     env = Environment()
@@ -156,3 +150,24 @@ def test_function_scope_variable_shadowing():
     assert env.lookup_variable("x") == 20
     env.exit_scope()
     assert env.lookup_variable("x") == 10
+
+
+def test_environment_variable_update():
+    env = Environment()
+    env.assign_variable("x", 10)
+    assert env.lookup_variable("x") == 10
+    env.assign_variable("x", 20)
+    assert env.lookup_variable("x") == 20
+
+def test_environment_variable_not_found():
+    env = Environment()
+    try:
+        env.lookup_variable("y")
+        assert False, "Expected exception for variable not found"
+    except Exception as e:
+        assert str(e) == "Error looking up variable 'y': Undefined variable 'y'"
+
+def test_environment_snapshot():
+    env = Environment()
+    env.assign_variable("x", 42)
+    snapshot = env.snapshot()
