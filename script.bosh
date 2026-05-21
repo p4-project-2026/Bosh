@@ -1,1 +1,5 @@
-say 1 and true
+task Print uses (Message, Times):
+    count from 1 to Times:
+        say Message
+
+run Print using ("Hello, World!", 3)
