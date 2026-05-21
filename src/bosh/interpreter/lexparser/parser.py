@@ -397,7 +397,7 @@ class BoshTransformer(Transformer):
         return node
     
     def type_cast(self, meta, args):
-        node = TypeCast(target=args[0], target_type=str(args[1]).lower())
+        node = TypeCast(target=args[0], target_type=(args[1]))
         node.set_meta(meta, self._filename)
         return node
 
