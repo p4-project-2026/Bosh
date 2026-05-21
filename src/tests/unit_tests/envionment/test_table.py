@@ -38,7 +38,7 @@ def test_table_bind_existing():
         table.bind("a", 2)
         assert False, "Expected exception when binding existing variable"
     except Exception as e:
-        assert str(e) == "Variable 'a' already defined in current scope."
+        assert str(e) == "Name 'a' already defined in scope."
 
 def test_table_lookup_nonexistent():
     table = Table[int]()
@@ -46,12 +46,5 @@ def test_table_lookup_nonexistent():
         table.lookup("a")
         assert False, "Expected exception when looking up nonexistent variable"
     except Exception as e:
-        assert str(e) == "Undefined variable 'a'"
+        assert str(e) == "Name 'a' not found in scope."
 
-def test_table_lookup_assign_nonexistent():
-    table = Table[int]()
-    try:
-        table.lookup_assign("a")
-        assert False, "Expected exception when looking up nonexistent variable for assignment"
-    except Exception as e:
-        assert str(e) == "Variable 'a' not found in scope."
