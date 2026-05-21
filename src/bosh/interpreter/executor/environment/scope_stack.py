@@ -12,6 +12,12 @@ class ScopeStack(Generic[T]):
         self.table_class = table_class
         self.stack: list[Table[T]] = [self.table_class()]  # Start with global scope
 
+    def copy(self):
+        #deep copy the stack to ensure that modifications to the copy do not affect the original
+        new_stack = ScopeStack(self.table_class)
+        new_stack.stack = [scope.copy() for scope in self.stack]
+        return new_stack
+
     def new_scope(self):
         with self.step(f"Entering new scope...", f"New scope entered successfully."):
 
@@ -106,6 +112,7 @@ class ScopeStack(Generic[T]):
         for scope in reversed(self.stack):
             vvvprint(f"{self.__class__.__name__}: Adding variables from scope to domain: {scope.domain()}")
             domain.update({name: None for name in scope.domain()})
+        return list(domain.keys())
 
     def log(self, message: str) -> None:
         vvvprint(f"{self.__class__.__name__}: {message}")
