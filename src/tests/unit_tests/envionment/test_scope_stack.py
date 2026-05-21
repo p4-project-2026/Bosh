@@ -200,3 +200,82 @@ def test_snapshot_function_scope():
     snapshot = stack.snapshot()
     assert snapshot.lookup("a") == 1
     assert snapshot.lookup("b") == 2
+
+def test_double_scope():
+    stack = ScopeStack()
+    stack.bind("x", 1)
+    stack.new_scope()
+    stack.bind("y", 2)
+    stack.new_scope()
+    stack.bind("z", 3)
+    assert stack.lookup("x") == 1
+    assert stack.lookup("y") == 2
+    assert stack.lookup("z") == 3
+    stack.exit_scope()
+    try:
+        stack.lookup("z")
+        assert False, "Expected exception for variable not found after exiting scope"
+    except Exception as e:
+        assert str(e) == "Undefined variable 'z'"
+    assert stack.lookup("x") == 1
+    assert stack.lookup("y") == 2
+    stack.exit_scope()
+    try:
+        stack.lookup("y")
+        assert False, "Expected exception for variable not found after exiting scope"
+    except Exception as e:
+        assert str(e) == "Undefined variable 'y'"
+    assert stack.lookup("x") == 1
+
+def test_function_scope_from_nested_scope():
+    stack = ScopeStack()
+    stack.bind("a", 1)
+    stack.new_scope()
+
+    captured_scope = stack.snapshot()
+    stack.bind("b", 2)
+    func_def = FunctionBinding(parameters=[], captured_scope=captured_scope, body=None)
+    stack.enter_function_scope(func_def)
+    assert stack.lookup("a") == 1
+
+    
+    try:
+        stack.lookup("b")
+        assert False, "Expected exception for variable not found after exiting function scope"
+    except Exception as e:
+        assert str(e) == "Undefined variable 'b'"
+    stack.bind("c", 3)
+    assert stack.lookup("c") == 3
+    assert stack.lookup_assign("c") == 3
+    stack.exit_scope()
+    assert stack.lookup("a") == 1
+
+    assert stack.lookup("b") == 2
+    try:
+        stack.lookup("c")
+        assert False, "Expected exception for variable not found after exiting function scope"
+    except Exception as e:
+        assert str(e) == "Undefined variable 'c'"
+
+def test_lookup_assign_nested_scope():
+    stack = ScopeStack()
+    stack.bind("x", 1)
+    stack.new_scope()
+    stack.bind("y", 2)
+    assert stack.lookup("x") == 1
+    assert stack.lookup("y") == 2
+    snapshot = stack.snapshot()
+    func_def = FunctionBinding(parameters=[], captured_scope=snapshot, body=None)
+    stack.enter_function_scope(func_def)
+    assert stack.lookup("x") == 1
+    try:
+        stack.lookup_assign("x")
+        assert False, "Expected exception for variable not found in lookup_assign"
+    except Exception as e:
+        assert str(e) == "Variable 'x' not found in scope."
+    assert stack.lookup("y") == 2
+    try:
+        stack.lookup_assign("y")
+        assert False, "Expected exception for variable not found in lookup_assign"
+    except Exception as e:
+        assert str(e) == "Variable 'y' not found in scope."
