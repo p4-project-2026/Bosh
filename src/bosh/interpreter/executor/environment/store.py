@@ -29,7 +29,7 @@ class Store:
         loc = self.next_location
         self.memory[loc] = Cell(value)
         self.next_location += 1
-        log_case = LogCase("success", loc=loc)
+        log_case.set("success", loc=loc)
         return loc
     
     @logged(
@@ -62,4 +62,4 @@ class Store:
         if address not in self.memory:
             raise Exception(f"Address {address} not found in store.")
         self.memory[address].value = value
-        log_case.set("success", value=value)
+        log_case.set("success")
