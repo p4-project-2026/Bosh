@@ -2,6 +2,7 @@ from typing import Optional
 from .scope_stack import ScopeStack
 from .store import Store
 from .table import Table
+from .function_table import FunctionTable
 from .function_binding import FunctionBinding
 from .var_table import VarTable
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 class Environment:
     def __init__(self):
         self.v_table = ScopeStack[int](VarTable)
-        self.f_table = Table[FunctionBinding]()
+        self.f_table = FunctionTable()
         self.store = Store()
         self.CD: str = str(Path.cwd())  # Current Directory, used for resolving file paths in import statements
 
@@ -60,8 +61,7 @@ class Environment:
             vvvprint(f"Environment: New variable '{name}' allocated at location {loc} with value {value}. Binding to current scope...")
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
             vvvprint(f"Environment: Variable '{name}' bound to location {loc} in current scope successfully.")
-        if name == "CurrentPlayer":
-            print(f"Assign: CurrentPlayer value is {value}")
+
 
     def bind_local_variable(self, name: str, value: any):
         """Bind a variable to the current scope without checking outer scopes. This is used for binding function parameters and local variables."""
@@ -80,8 +80,6 @@ class Environment:
             vvvprint(f"Variable '{name}' found at location {loc}. Retrieving value from store...")
             value = self.store.get(loc)  # Retrieve the value from the store using the location
             vvvprint(f"Value of variable '{name}' retrieved successfully: {value}")
-            if name == "CurrentPlayer":
-                print(f"Lookup: CurrentPlayer value is {value}")
             return value
         except Exception as e:
             raise Exception(f"Error looking up variable '{name}': {e}")
