@@ -73,7 +73,7 @@ class SymbolTableScopeStacker(ScopeStack):
         log_case.set("success", domain=domain_list)
         return domain_list
     
-
+    # gets log of parent.
     def snapshot(self) -> Symbol_Table:
         return super().snapshot()
 
