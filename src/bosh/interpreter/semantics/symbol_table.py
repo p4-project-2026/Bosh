@@ -5,56 +5,48 @@ from bosh.helper_functions.type_helper import EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
 class Symbol_Table(Table[set[str]]):
 
     def bind(self, name: str, type_value: set[str]):
-        with self.step(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...", f"SymbolTable: Variable '{name}' bound to type '{type_value}' in current scope successfully."):
-            if not type_value:
-                raise Exception(f"SymbolTable: Cannot bind variable '{name}' to empty type set.")
+        if not type_value:
+            raise Exception(f"SymbolTable: Cannot bind variable '{name}' to empty type set.")
+    
+        if name not in self.table:
+  
+            self.table[name] = type_value.copy()
+            return
+        current_type = self.table[name]
+        if current_type == {"UNKNOWN"} or current_type == {"any"} or current_type == {"null"}:
+            self.table[name] = type_value.copy()
+            return # Allow unknown and any to be treated as any other type
+    
+        if type_value == {"UNKNOWN"} or type_value == {"any"}:
+            return # Allow unknown and any to be treated as any other type
+        if current_type == type_value:
+            return # Allow re-binding to the same type
+    
+        overlap = current_type & type_value
+        if overlap:
+            self.table[name] = overlap
+            return
         
-            if name not in self.table:
-      
-                self.table[name] = type_value.copy()
-                return
-            current_type = self.table[name]
-            self.log(f"Variable '{name}' already bound to type '{current_type}' in current scope.")
-
-            if current_type == {"UNKNOWN"} or current_type == {"any"} or current_type == {"null"}:
-
-                self.table[name] = type_value.copy()
-                return # Allow unknown and any to be treated as any other type
-        
-            if type_value == {"UNKNOWN"} or type_value == {"any"}:
-                return # Allow unknown and any to be treated as any other type
-
-            if current_type == type_value:
-                self.log(f"Variable '{name}' already bound to the same type '{type_value}', allowing re-binding.")
-                return # Allow re-binding to the same type
-        
-            overlap = current_type & type_value
-            if overlap:
-                self.log(f"Variable '{name}' has overlapping types '{overlap}' with current type '{current_type}' and new type '{type_value}', allowing re-binding to the overlap.")
-                self.table[name] = overlap
-                return
-            
-        
-            if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and t_h.has_concrete_list_type(type_value):
-                self.log(f"Variable '{name}' is currently bound to 'list<any>' or 'list<UNKNOWN>', allowing re-binding to specific list type '{type_value}'.")
-                self.table[name] = type_value.copy() # Allow list to overwrite list<any> and list<UNKNOWN> with specific list type
-                return
-        
-        
-            if (type_value in ({UNKNOWN_LIST_TYPE}, {EMPTY_LIST_TYPE}) 
-            and t_h.has_concrete_list_type(current_type)):
-                return # Allow list<any> and list<UNKNOWN> to be treated as specific list type
-        
-            if type_value == {UNKNOWN_LIST_TYPE} and current_type == {EMPTY_LIST_TYPE}:
-                self.table[name] = {UNKNOWN_LIST_TYPE} # Allow list<UNKNOWN> to overwrite as list<any>
-                return
-        
-            raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
+    
+        if current_type in ({EMPTY_LIST_TYPE}, {UNKNOWN_LIST_TYPE}) and t_h.has_concrete_list_type(type_value):
+            self.table[name] = type_value.copy() # Allow list to overwrite list<any> and list<UNKNOWN> with specific list type
+            return
+    
+    
+        if (type_value in ({UNKNOWN_LIST_TYPE}, {EMPTY_LIST_TYPE}) 
+        and t_h.has_concrete_list_type(current_type)):
+            return # Allow list<any> and list<UNKNOWN> to be treated as specific list type
+    
+        if type_value == {UNKNOWN_LIST_TYPE} and current_type == {EMPTY_LIST_TYPE}:
+            self.table[name] = {UNKNOWN_LIST_TYPE} # Allow list<UNKNOWN> to overwrite as list<any>
+            return
+    
+        raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
     
     def lookup(self, name: str) -> set[str]:
-        with self.step(f"SymbolTable: Looking up variable '{name}' in current scope...", f"SymbolTable: Variable '{name}' found in current scope with type '{self.table[name]}'." if name in self.table else f"SymbolTable: Variable '{name}' not found in current scope."):
-            if name in self.table:
-                return self.table[name].copy()
+       
+        if name in self.table:
+            return self.table[name].copy()
         raise Exception(f"Variable '{name}' not found in scope.")
     
     
