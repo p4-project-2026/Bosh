@@ -67,7 +67,8 @@ class Symbol_Table(Table[set[str]]):
             return
     
         raise Exception(f"Variable '{name}' already bound to a different type in current scope.")
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Attempting to look up variable '{name}' in current scope..."
