@@ -1,4 +1,5 @@
 from typing import Optional, Dict, List, TypeVar, TYPE_CHECKING
+from bosh.helper_functions.logged import logged, LogCase
 
 from bosh.interpreter.executor.environment.table import Table
 if TYPE_CHECKING:
@@ -25,20 +26,39 @@ class FunctionSignature:
 
 class FuncTable(Table[FunctionSignature]):
     
-    def bind(self, name: str, signature: FunctionSignature):
-        vvvprint(f"FuncTable: Attempting to bind function '{name}' with signature {signature} in current scope...")
+    @logged(
+        start=lambda self, name, signature: (
+            f"Attempting to bind function '{name}' with signature {signature} in current scope..."
+        ),
+        success={
+            "success": lambda self, name, signature: (
+                f"Function '{name}' bound to signature {signature} in current scope successfully."
+            )
+        }
+    )
+
+    def bind(self, name: str, signature: FunctionSignature, log_case: LogCase):
         if name in self.table:
             if self.table[name].function_def is not signature.function_def:
                 raise Exception(f"Function '{name}' already defined in scope with a different definition.")
-        vvvprint(f"FuncTable: Binding function '{name}' with signature {signature} in current scope...")
         self.table[name] = signature
-        vvvprint(f"FuncTable: Function '{name}' bound successfully.")
+        log_case.set("success")
 
-    def lookup(self, name: str) -> FunctionSignature:
-        vvvprint(f"FuncTable: Looking up function '{name}' in current scope...")
+    @logged(
+        start=lambda self, name: (
+            f"Attempting to look up function '{name}' in current scope..."
+        ),
+        success={
+            "success": lambda self, name, signature: (
+                f"Function '{name}' found in current scope with signature {signature}."
+            )
+        }
+    )
+    def lookup(self, name: str, log_case: LogCase) -> FunctionSignature:
         if name in self.table:
-            vvvprint(f"FuncTable: Function '{name}' found in current scope with signature {self.table[name]}.")
-            return self.table[name]
+            function_signature = self.table[name]
+            log_case.set("success", signature=function_signature)
+            return function_signature
         raise Exception(f"Function '{name}' not found in scope.")
     
     
