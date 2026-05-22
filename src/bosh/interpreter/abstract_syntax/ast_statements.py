@@ -7,22 +7,43 @@ class Print(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking print statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, expression_type: (
+                f"Print statement checked successfully with expression type: {expression_type}"
+             )
+         }  
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("Print: Checking print statement...")
             expression_type = self.expression.check(
                 v_table, 
                 f_table, 
                 inference_context
             )
-            vvvprint(f"Print: Expression type is '{expression_type}'.")
             self.child_return_types["expression"] = (expression_type.copy(), self.expression)
+            log_case.set("success", expression_type=expression_type)
             
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Attempting to execute print statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Print statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             value = self.expression.execute(env)
             if t_h.has_only_list_types(self.child_return_types["expression"][0]):
@@ -37,16 +58,11 @@ class Print(ASTNode):
                 print(f_h.string_format_bool(value))
             else:
                 print(value)
+            
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
-    def inference(
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception("Print does not return a value and cannot be used in inference.")
 
 @dataclass
 class IfElse(ASTNode):
@@ -55,11 +71,21 @@ class IfElse(ASTNode):
     else_branch: Optional[Block]
     def __post_init__(self):
         super().__init__()     
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking if-else statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"If-else statement checked successfully."
+                )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("IfElse: Checking if-else statement...")
             condition_type = self.condition.check(
                 v_table=v_table, 
                 f_table=f_table, 
@@ -112,11 +138,25 @@ class IfElse(ASTNode):
                 v_table.exit_scope()
 
             inference_context.load_state(saved_inference_state)
-            vvvprint("IfElse: If-else statement check successful.")
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Attempting to execute if-else statement..."
+        ),
+        success={
+            "if_branch": lambda self, env: (
+                f"If branch of if-else statement executed successfully."
+            ),
+            "else_branch": lambda self, env: (
+                f"Else branch of if-else statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             condition_value = self.condition.execute(env)
             value = None
@@ -124,22 +164,16 @@ class IfElse(ASTNode):
                 env.new_scope()
                 value = self.then_branch.execute(env)
                 env.exit_scope()
+                log_case.set("if_branch")
             elif self.else_branch:
                 env.new_scope()
                 value = self.else_branch.execute(env)
                 env.exit_scope()
+                log_case.set("else_branch")
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
         
-    def inference(
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception("IfElse does not return a value and cannot be used in inference.")
-
 
 @dataclass
 class Fallback(ASTNode):
@@ -148,32 +182,48 @@ class Fallback(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking fallback statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Fallback statement checked successfully."
+            )
+        }
+    )   
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("Fallback: Checking fallback statement...")
             self.primary_stmt.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
             self.fallback_stmt.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
-            vvvprint("Fallback: Fallback statement check successful.")
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Attempting to execute primary statement of fallback..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Primary statement of fallback executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             self.primary_stmt.execute(env)
+            log_case.set("success")
         except Exception:
             try:
                 self.fallback_stmt.execute(env)
+                log_case.set("success")
             except Exception as e:
                 raise TraceError(node = self, cause = e)
-            
-    def inference(
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        raise Exception("Fallback does not return a value and cannot be used in inference.")
+
 
 @dataclass
 class ForAll(ASTNode):
@@ -182,11 +232,22 @@ class ForAll(ASTNode):
     body: Block
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking for all statement..."
+        ),
+        success={
+            "succe": lambda self, v_table, f_table, inference_context: (
+                f"ForAll checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("ForAll: Checking for all statement...")
+            
 
             iterable_type = self.iterable.check(v_table=v_table,
                                                 f_table=f_table, 
@@ -233,6 +294,9 @@ class ForAll(ASTNode):
                 
                 if not inference_context.has_changed():
                     break
+
+                vvvprint("ForAll: Inference for body of for all statement has changed, re-checking...")
+
             returned_element_type = v_table.lookup(self.iterator_name)
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
@@ -267,18 +331,30 @@ class ForAll(ASTNode):
                                         old_inference_value=iterable_type.copy(),
                                         new_inference_value=new_iterable_type.copy()
                                         )
+                
                 self.child_return_types["iterable"] = (new_iterable_type.copy(), self.iterable)
-                vvvprint(f"ForAll: Inference successful, iterable type updated to '{new_iterable_type}' based on returned element type '{returned_element_type}'.")
-                        
+                log_case.set("success")
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing for all statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"ForAll executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             iterable_val = self.iterable.execute(env)
             
             elements_to_iterate = []
-            if isinstance(iterable_val, str):
+            if t_h.is_only(iterable_val, "text"):
                 if not os.path.exists(iterable_val):
                     raise ValueError(f"Directory path '{iterable_val}' does not exist.")
                 if not os.path.isdir(iterable_val):
@@ -288,10 +364,8 @@ class ForAll(ASTNode):
                     full_path = os.path.join(iterable_val, item)
                     elements_to_iterate.append(full_path.replace("\\", "/"))
                     
-            elif isinstance(iterable_val, list):
-                elements_to_iterate = iterable_val
             else:
-                raise ValueError(f"Iterable must evaluate to a list or a directory string, got {type(iterable_val).__name__}")
+                elements_to_iterate = iterable_val
 
             for element in elements_to_iterate:
                 env.new_scope()
@@ -300,20 +374,17 @@ class ForAll(ASTNode):
                     value = self.body.execute(env)
                     if value == "continue":
                         continue
+                    
                     if value is not None:
                         break
+
                 finally:
-                    env.exit_scope()                
+                    env.exit_scope()           
+
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
         
-    def inference(
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("ForAll does not return a value and cannot be used in inference.")
 
 @dataclass
 class RepeatUntil(ASTNode):
@@ -321,18 +392,27 @@ class RepeatUntil(ASTNode):
     body: Block
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking repeat until statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"RepeatUntil checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("RepeatUntil: Checking repeat until statement...")
 
             condition_type = self.condition.check(
                 v_table=v_table, 
                 f_table=f_table,
                 inference_context=inference_context
             )
-            vvvprint(f"RepeatUntil: Condition type is '{condition_type}'.")
             
             valid_condition_type = {"boolean"}
             
@@ -348,6 +428,7 @@ class RepeatUntil(ASTNode):
                     old_inference_value=condition_type.copy(),
                     new_inference_value=valid_condition_type.copy()
                 )
+
                 condition_type = valid_condition_type
             self.child_return_types["condition"] = (condition_type.copy(), self.condition)
             
@@ -356,7 +437,6 @@ class RepeatUntil(ASTNode):
             v_table.new_scope()
 
             while True:
-                vvvprint("RepeatUntil: Checking body of repeat until statement...")
 
                 inference_context.reset()
                 self.body.check(
@@ -365,18 +445,27 @@ class RepeatUntil(ASTNode):
                     inference_context=inference_context
                 )
                 if not inference_context.has_changed():
-                    vvvprint("RepeatUntil: Inference for body of repeat until statement has stabilized.")
                     break
 
                 vvvprint("RepeatUntil: Inference for body of repeat until statement has changed, re-checking...")
-
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
-            vvvprint("RepeatUntil: Repeat until statement check successful.")
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Executing repeat until statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"RepeatUntil executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             value = None
             env.new_scope()
@@ -390,17 +479,11 @@ class RepeatUntil(ASTNode):
                 if condition_value:
                     break
             env.exit_scope()
+            log_case.set("success")
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-    def inference(self,
-        v_table: ScopeStack,
-        f_table: FuncTable,
-        inference_context: InferenceContext,
-        old_inference_value: set[str],
-        new_inference_value: set[str]) -> None:
-        raise Exception("RepeatUntil does not return a value and cannot be used in inference.")
+
         
 @dataclass
 class Count(ASTNode):
@@ -410,8 +493,19 @@ class Count(ASTNode):
     body: Block
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking count statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Count statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             from_type = self.from_.check(
                 v_table=v_table, 
@@ -429,11 +523,14 @@ class Count(ASTNode):
                 raise Exception(f"'From' expression in count statement cannot be of type 'None'", self)
             if to_type is None:
                 raise Exception(f"'To' expression in count statement cannot be of type 'None'", self)
+            
             valid_count_types = {"number"}
+            
             if not t_h.contains(from_type, "number"):
                 raise Exception(f"'From' expression in count statement must be of type 'number', got '{from_type}'")
             if not t_h.contains(to_type, "number"):
                 raise Exception(f"'To' expression in count statement must be of type 'number', got '{to_type}'")
+            
             if from_type != valid_count_types:
                 self.from_.inference(
                     v_table=v_table, 
@@ -460,21 +557,42 @@ class Count(ASTNode):
 
 
                 
-            
+            saved_inference_state = inference_context.save_state()
+
             v_table.new_scope()
 
             if self.iterator_name:
                 v_table.bind_local(self.iterator_name, {"number"})
-            self.body.check(
-                v_table=v_table, 
-                f_table=f_table,
-                inference_context=inference_context
-            )
+            while True:
+                inference_context.reset()
+                self.body.check(
+                    v_table=v_table, 
+                    f_table=f_table,
+                    inference_context=inference_context
+                )
+                if not inference_context.has_changed():
+                    break
+                
+                vvvprint("Count: Inference for body of count statement has changed, re-checking...")
+
             v_table.exit_scope()
+            inference_context.load_state(saved_inference_state)
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing count statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Count statement executed successfully."
+            )   
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             value = None
             from_value = self.from_.execute(env)
@@ -498,29 +616,48 @@ class Count(ASTNode):
                             break
                     finally:
                         env.exit_scope()
+            
+            log_case.set("success")
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
+
 
 @dataclass
 class Quit(ASTNode):
     def __post_init__(self):
         super().__init__()
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+
+
+        logged(
+            start=lambda self, v_table, f_table, inference_context: (
+                f"Checking quit statement..."
+            ),
+            success={
+                "success": lambda self, v_table, f_table, inference_context: (
+                    f"Quit statement checked successfully."
+                )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         self.child_return_types.clear()
-        vvvprint("Quit: Checking quit statement...")
+        log_case.set("success")
         return
-    
-    def execute(self, env: Environment) -> None:
+
+
+    @logged(
+        start=lambda self, env: (
+            f"Attempting to execute quit statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Quit statement executed successfully, exiting program. Goodbye!"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
+        log_case.set("success")
         raise SystemExit()
-    
-    def inference(
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("Quit does not return a value and cannot be used in inference.")
 
 
 @dataclass
@@ -531,8 +668,19 @@ class ListAdd(ASTNode):
     index: Optional[ASTNode] = None
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking {self.op} to list statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"{self.op.capitalize()} to list statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
             vvvprint("ListAdd: Checking add list statement...")
@@ -548,6 +696,7 @@ class ListAdd(ASTNode):
                 f_table, 
                 inference_context
                 )
+            
             if target_type is None:
                 raise Exception(f"Target of add to list statement cannot be of type 'None'", self)
             if item_type is None:
@@ -556,7 +705,6 @@ class ListAdd(ASTNode):
                 raise Exception(f"Target of /'add to list/' statement must be a list type, got '{target_type}'", self)
             if item_type is None:
                 raise Exception(f"Item to add in add to list statement cannot be of type 'None'", self)
-            vvvprint(f"ListAdd: Target type is '{target_type}', item type is '{item_type}'.")
             
             
 
@@ -595,34 +743,69 @@ class ListAdd(ASTNode):
                 target_type = new_target_type
 
             self.child_return_types["target"] = (target_type.copy(), self.target)
-            vvvprint(f"ListAdd: List add statement check successful with target type '{target_type}' and item type '{item_type}'.")
-            
+
+            if self.op == "insert":
+                if self.index is None:
+                    raise Exception("Index must be provided for 'insert' operation in ListAdd statement.", self)
+                
+                index_type = self.index.check(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context
+                )
+                if index_type is None:
+                    raise Exception(f"Index in insert to list statement cannot be of type 'None'", self)
+                if not t_h.contains(index_type, "number"):
+                    raise Exception(f"Index in insert to list statement must be of type 'number', got '{index_type}'", self)
+                
+                valid_index_type = {"number"}
+                if index_type != valid_index_type:
+                    self.index.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=index_type.copy(),
+                        new_inference_value=valid_index_type.copy()
+                    )
+                    index_type = valid_index_type
+
+                self.child_return_types["index"] = (index_type.copy(), self.index)
+
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing {self.op} to list statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"{self.op.capitalize()} to list statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             item_value = self.item.execute(env)
             if self.op == "insert" and self.index is not None:
                 index_value = self.index.execute(env)
                 target_value.insert(index_value, item_value)
+            
             elif self.op == "append":
                 target_value.append(item_value)
+            
             elif self.op == "prepend":
                 target_value.insert(0, item_value)
+
+            log_case.set("success")
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def inference(self,
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("ListAdd does not return a value and cannot be used in inference.")
-
 
 @dataclass
 class ListRemove(ASTNode):
@@ -630,11 +813,21 @@ class ListRemove(ASTNode):
     item: ASTNode
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking remove from list statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Remove from list statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint("ListRemove: Checking add list statement...")
 
             target_type = self.target.check(
                 v_table,
@@ -655,7 +848,6 @@ class ListRemove(ASTNode):
                 raise Exception(f"Target of remove from list statement must be a list type, got '{target_type}'", self)
             if item_type is None:
                 raise Exception(f"Item to remove from list statement cannot be of type 'None'", self)
-            vvvprint(f"ListRemove: Target type is '{target_type}', item type is '{item_type}'.")
             
             
 
@@ -694,38 +886,54 @@ class ListRemove(ASTNode):
                 target_type = new_target_type
 
             self.child_return_types["target"] = (target_type.copy(), self.target)
-            vvvprint(f"ListRemove: remove from list statement check successful with target type '{target_type}' and item type '{item_type}'.")
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-    def execute(self, env: Environment) -> None:
+
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing remove from list statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Remove from list statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             item_value = self.item.execute(env)
             while item_value in target_value:
                     target_value.remove(item_value)
             
+            log_case.set("success")
+            
         except Exception as e:
             raise TraceError(node = self, cause = e)
-            
-    def inference(
-            self,
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("ListRemove does not return a value and cannot be used in inference.")
-        
+
+
 @dataclass
 class ListRemoveAt(ASTNode):
     target: ASTNode
     index: ASTNode
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking remove from list at statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Remove from list at statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
             vvvprint("ListRemoveAt: Checking remove from list at statement...")
@@ -741,6 +949,7 @@ class ListRemoveAt(ASTNode):
                 f_table=f_table,
                 inference_context=inference_context
                 )
+            
             vvvprint(f"ListRemoveAt: Target type is '{target_type}', index type is '{index_type}'.")
             
             if target_type is None:
@@ -779,38 +988,54 @@ class ListRemoveAt(ASTNode):
             vvvprint(f"ListRemoveAt: remove from list at statement check successful with target type '{target_type}' and index type '{index_type}'.")
             self.child_return_types["target"] = (target_type.copy(), self.target)
             
+            log_case.set("success")
             return None
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing remove from list at statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Remove from list at statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             index_value = self.index.execute(env)
             try:
                 del target_value[index_value]
+                log_case.set("success")
             except IndexError:
                 raise TraceError(node = self, cause = f"Index '{index_value}' out of range for list.")
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-    def inference(
-            self,
-            v_table: ScopeStack,
-            f_table: FuncTable,
-            inference_context: InferenceContext,
-            old_inference_value: set[str],
-            new_inference_value: set[str]) -> None:
-        raise Exception("ListRemoveAt does not return a value and cannot be used in inference.")
+
 
 @dataclass
 class Return(ASTNode):
     expression: ASTNode
     def __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking return statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"Return statement checked successfully with return type '{return_type}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> Optional[set[str]]:
         try:
             self.child_return_types.clear()
             vvvprint("Return: Checking return statement...")
@@ -824,27 +1049,90 @@ class Return(ASTNode):
             self.child_return_types["expression"] = (return_type.copy(), self.expression)
             self.child_return_types["self"] = (return_type, self)
             vvvprint(f"Return: Return statement check successful with return type '{return_type}'.")
+            log_case.set("success", return_type=return_type)
             return return_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> Any:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing return statement..."
+        ),
+        success={
+            "return_val": lambda self, env, return_val: (
+                f"Return statement executed successfully with return value: {return_val}"
+             )
+         }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
             value = self.expression.execute(env)
+            log_case.set("return_val", return_val=value)    
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
 class Continue(ASTNode):
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking continue statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Continue statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
+        log_case.set("success")
         return None
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing continue statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Continue statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
+        log_case.set("success")
         return "continue"
 
 class Break(ASTNode):
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> None:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking break statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Break statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
+        log_case.set("success")
         return None
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing break statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Break statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
+        log_case.set("success")
         return "break"

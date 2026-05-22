@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from .table import Table
 from .function_binding import FunctionBinding
 from typing import TypeVar, Generic, Type, Dict
+from bosh.helper_functions.logged import logged, LogCase
 
 T = TypeVar('T')
 
@@ -11,115 +12,216 @@ class ScopeStack(Generic[T]):
     def __init__(self, table_class: Type[Table[T]] = Table):
         self.table_class = table_class
         self.stack: list[Table[T]] = [self.table_class()]  # Start with global scope
-
-    def copy(self):
+    
+    @logged(
+        start=lambda self: (
+            f"Creating a copy of the current scope stack..."
+        ),
+        success={
+            "success": lambda self: (
+                f"Copy of current scope stack created successfully."
+            )
+        }
+    )
+    def copy(self, log_case: LogCase):
         #deep copy the stack to ensure that modifications to the copy do not affect the original
         new_stack = ScopeStack(self.table_class)
         new_stack.stack = [scope.copy() for scope in self.stack]
+        log_case.set("success")
         return new_stack
 
-    def new_scope(self):
-        with self.step(f"Entering new scope...", f"New scope entered successfully."):
 
-            self.stack.append(self.table_class())
+    @logged(
+        start=lambda self: (
+            f"Creating a new scope in the current scope stack..."
+        ),
+        success={
+            "success": lambda self: (
+                f"New scope created in current scope stack successfully."
+            )
+        }   
+    )
+    def new_scope(self, log_case: LogCase):
+
+        self.stack.append(self.table_class())
+        log_case.set("success")
         
  
+    @logged(
+        start=lambda self: (
+            f"Attempting to exit current scope in scope stack..."
+        ),        success={
+            "regular_exit": lambda self: (
+                f"Exited current regular scope in scope stack successfully."
+            ),
+            "function_scope_exit": lambda self: (
+                f"Exited current function scope in scope stack successfully."
+            )
+        }
+    )
+    def exit_scope(self, log_case: LogCase):
+        if len(self.stack) == 1:
+            raise Exception("Cannot exit global scope.")
 
-    def exit_scope(self):
-        with self.step(f"Exiting current scope...", f"Current scope exited successfully."):
-            if len(self.stack) == 1:
-                raise Exception("Cannot exit global scope.")
-            
-            if self.stack[-2].function_scope:
-                self.stack.pop()  # pop function body scope
-                self.stack.pop()  # pop captured function boundary scope
-
-                
-                return
-            self.stack.pop()
+        if self.stack[-2].function_scope:
+            self.stack.pop()  # pop function body scope
+            self.stack.pop()  # pop captured function boundary scope
+            log_case.set("function_scope_exit")
+            return
+        
+        self.stack.pop()
+        log_case.set("regular_exit")
 
 
+    @logged(
+        start=lambda self, function_def: (
+            f"Attempting to enter function scope for function with parameters {function_def.parameters}..."
+        ),        
+        success={
+            "success": lambda self, function_def: (
+                f"Function scope entered successfully for function with parameters {function_def.parameters}."
+            )
+        }
+    )
 
-    def enter_function_scope(self, function_def: FunctionBinding):
-        vvvprint(f"{self.__class__.__name__}: Entering function scope for function with parameters {function_def.parameters}...")
+    def enter_function_scope(self, function_def: FunctionBinding, log_case: LogCase):
         function_scope = function_def.captured_scope.copy()
         function_scope.function_scope = True  # Mark the function scope
         self.stack.append(function_scope)
         self.new_scope()  # Create a new scope for the function body
-        vvvprint(f"{self.__class__.__name__}: Function body scope entered successfully.")
+        log_case.set("success")
 
-    def snapshot(self) -> Table[T]:
+
+    @logged(
+        start=lambda self: (
+            f"Creating snapshot of current visible scopes in scope stack..."
+        ),
+        success={
+            "success": lambda self: (
+                f"Snapshot of current visible scopes in scope stack created successfully."
+            )
+        }
+    )
+
+
+    def snapshot(self, log_case: LogCase) -> Table[T]:
         visible_scopes: list[Table[T]] = []
-        vvvprint(f"{self.__class__.__name__}: Creating snapshot of current visible scopes...")
         for scope in reversed(self.stack):
             visible_scopes.append(scope)
             if scope.function_scope:
                 break  # Stop at the first function scope
-        vvvprint(f"{self.__class__.__name__}: Snapshot of visible scopes created successfully. Number of scopes in snapshot: {len(visible_scopes)}")
 
         snapshot: Dict[str, T] = {}
-        vvvprint(f"{self.__class__.__name__}: Merging visible scopes into snapshot...")
         for scope in reversed(visible_scopes):
             snapshot.update(scope.get_snapshot())
 
         snapshot_table= self.table_class(table=snapshot)
-        vvvprint(f"{self.__class__.__name__}: Snapshot table created successfully.")
+        log_case.set("success")
         return snapshot_table
 
-    def lookup(self, name: str) -> T:
-        vvvprint(f"{self.__class__.__name__}: Looking up variable '{name}' in visible scopes...")
+
+    @logged(
+        start=lambda self, name: (
+            f"Attempting to look up variable '{name}' in current scope stack..."
+        ),
+        success={
+            "success": lambda self, name, loc: (
+                f"Variable '{name}' found in current scope stack with Store location {loc}."
+            )
+        }
+    )
+    def lookup(self, name: str, log_case: LogCase) -> T:
         for scope in reversed(self.stack):
             if scope.contains(name):
-                vvvprint(f"{self.__class__.__name__}: Variable '{name}' found in scope. Value: {scope.lookup(name)}")
-                return scope.lookup(name)
+                loc = scope.lookup(name)
+                log_case.set("success", loc = loc)
+                return loc
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
-                vvvprint(f"{self.__class__.__name__}: Reached function scope while looking up variable '{name}'. Stopping search.")
                 break
         raise Exception(f"Undefined variable '{name}'")
-    
-    def lookup_assign(self, name: str) -> T:
-        vvvprint(f"{self.__class__.__name__}: Looking up variable '{name}' for assignment...")
+
+
+    @logged(
+        start=lambda self, name: (
+            f"Attempting to look up variable '{name}' for assignment in current scope stack..."
+        ),
+        success={
+            "success": lambda self, name, loc: (
+                f"Variable '{name}' found in current scope stack for assignment with Store location {loc}."
+            )
+        }
+    )            
+    def lookup_assign(self, name: str, log_case: LogCase) -> T:
         for scope in reversed(self.stack):
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
-                vvvprint(f"{self.__class__.__name__}: Reached function scope while looking up variable '{name}' for assignment. Stopping search.")
                 break    
             if scope.contains(name):
-                vvvprint(f"{self.__class__.__name__}: Variable '{name}' found in scope for assignment. Value: {scope.lookup(name)}")
-                return scope.lookup(name)
+                loc = scope.lookup(name)
+                log_case.set("success", loc = loc)
+                return loc
         raise Exception(f"Variable '{name}' not found in scope.")
-    
-    def contains(self, name: str) -> bool:
+
+
+    @logged(
+        start=lambda self, name: (
+            f"Checking if variable '{name}' is contained in current scope stack..."
+        ),
+        success={
+            "contains": lambda self, name: (
+                f"Variable '{name}' is contained in current scope stack."
+            ),
+            "not_contains": lambda self, name: (
+                f"Variable '{name}' is not contained in current scope stack."
+            )
+        }
+    )
+    def contains(self, name: str, log_case: LogCase) -> bool:
         for scope in reversed(self.stack):
             if scope.contains(name):
+                log_case.set("contains")
                 return True
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
                 break
+        log_case.set("not_contains")
         return False
 
-    def bind(self, name: str, value: T):
-        vvvprint(f"{self.__class__.__name__}: Binding variable '{name}' to value {value} in current scope...")
+
+    @logged(
+        start=lambda self, name, value: (
+            f"Attempting to bind variable '{name}' to value {value} in current scope stack..."
+        ),
+        success={
+            "success": lambda self, name, value: (
+                f"Variable '{name}' bound to value {value} in current scope stack successfully."
+            )
+        }
+    )
+    def bind(self, name: str, value: T, log_case: LogCase):
         if self.stack[-1].contains(name):
             raise Exception(f"Variable '{name}' already defined in current scope.")
-        vvvprint(f"{self.__class__.__name__}: Variable '{name}' bound to value {value} in current scope successfully.")
+        
+        log_case.set("success")
         self.stack[-1].bind(name, value)
 
-    def domain(self) -> list[str]:
+
+    @logged(
+        start=lambda self: (
+            f"Retrieving domain of all visible variables in current scope stack..."
+        ),
+        success={
+            "success": lambda self, domain: (
+                f"Domain of all visible variables in current scope stack retrieved successfully. Domain: {domain}"
+            )
+        }
+    )
+    def domain(self, log_case: LogCase) -> list[str]:
         domain = {}
         vvvprint(f"{self.__class__.__name__}: Computing domain of visible variables...")
         for scope in reversed(self.stack):
-            vvvprint(f"{self.__class__.__name__}: Adding variables from scope to domain: {scope.domain()}")
             domain.update({name: None for name in scope.domain()})
+
+        log_case.set("success", domain=domain)
         return list(domain.keys())
 
-    def log(self, message: str) -> None:
-        vvvprint(f"{self.__class__.__name__}: {message}")
 
-    @contextmanager
-    def step(self, start: str, success: str):
-        self.log(start)
-        try:
-            yield
-        except Exception as e:
-            self.log(f"Failed: {e}")
-            raise
-        self.log(success)
+

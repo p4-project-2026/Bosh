@@ -13,12 +13,10 @@ NUMERIC_TYPES = {"number", "decimal"}
 # 'make' functions for creating type sets
 
 def make_string_list_type(types: str) -> set[str]:
-    vvvprint(f"Type Helper: Making list type from string '{types}'...")
     return {f"list<{types}>"}
 
 
 def make_set_list_types(types: set[str]) -> set[str]:
-    vvvprint(f"Type Helper: Making list types from set '{types}'...")
     return {f"list<{t}>" for t in types}
 
 
@@ -57,8 +55,8 @@ def has_only_concrete_list_types(types: set[str]) -> bool:
 
 # list types
 
-def can_be_list_type(types: set[str]) -> bool:
-    if type_name == UNKNOWN_TYPE:
+def can_be_list_type(type_name: set[str]) -> bool:
+    if type_name == {UNKNOWN_TYPE}:
         return True
     return type_name.startswith("list<") and type_name.endswith(">")
 

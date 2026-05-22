@@ -7,6 +7,7 @@ from ..executor.environment.environment import Environment
 from bosh.helper_functions.type_helper import UNKNOWN_TYPE, ANY_TYPE, EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
 import bosh.helper_functions.type_helper as t_h
 import bosh.helper_functions.formating as f_h
+from bosh.helper_functions.logged import logged, LogCase
 
 @dataclass
 class Position():
@@ -85,30 +86,48 @@ class ASTNode():
 class Block(ASTNode):
     statements: List[ASTNode]
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
-        vvvprint(f"Block: Checking block with {len(self.statements)} statements...")
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking block with statements..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"Block checked successfully with return type: {return_type}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> Optional[set[str]]:
         return_type = None
         for stmt in self.statements:
-            vvvprint(f"Block: Checking statement {stmt}...")
             stmt_return_type = stmt.check(v_table, f_table, inference_context)
-            vvvprint(f"Block: Finished checking statement {stmt} with return type: {stmt_return_type}")
             if stmt_return_type is not None:
-                vvvprint(f"Block: Statement {stmt} has return type: {stmt_return_type}")
                 if return_type is not None and stmt_return_type != return_type:
                     raise TraceError(node = self, cause = f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'")
-                vvvprint(f"Block: Setting block return type to: {stmt_return_type}")
                 return_type = stmt_return_type
+        log_case.set("success", return_type=return_type)
         return return_type
 
-    def execute(self, env: Environment) -> Any:
-        vvvprint(f"Block: Executing block with {len(self.statements)} statements...")
+    @logged(
+        start=lambda self, env: (
+            f"Executing block with statements..."
+        ),
+        success={
+            "return_val": lambda self, env, return_val: (
+                f"Block executed successfully with return value: {return_val}"
+            ),
+            "no_return": lambda self, env: (
+                f"Block executed successfully with no return value."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         for stmt in self.statements:
-            vvvprint(f"Block: Executing statement {stmt}...")
             return_val = stmt.execute(env)
-            vvvprint(f"Block: Finished executing statement {stmt} with return value: {return_val}")
             if return_val is not None:
-                vvvprint(f"Block: Statement {stmt} returned value: {return_val}, exiting block execution.")
+                log_case.set("return_val", return_val=return_val)
                 return return_val
+        log_case.set("no_return")
+            
             
 
         
@@ -119,18 +138,24 @@ class Program(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable) -> Optional[set[str]]:
+    @logged(
+        start=lambda self, v_table, f_table: (
+            f"Starting type checking of the program..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, return_type: (
+                f"Program type checked successfully with return type: {return_type}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, log_case: LogCase) -> Optional[set[str]]:
         try:
             self.child_return_types.clear()
-            vvvprint("Program: Starting type checking of program...")
-
             inference_context = InferenceContext()
             return_value = None
             
             while True:
                 inference_context.reset()
-                vvvprint("Program: Starting a new inference iteration...")
-
                 return_value = self.block.check(
                     v_table=v_table,
                     f_table=f_table,
@@ -138,17 +163,28 @@ class Program(ASTNode):
                 )
 
                 if not inference_context.has_changed():
-                    vvvprint("Program: No changes in inference, finished type checking.")
                     break
 
-                vvvprint("Program: Changes detected in inference, starting another iteration...")
+                vvvprint("Program: Detected a change during inference, restarting type checking with updated types...")
 
+            log_case.set("success", return_type=return_value)
             return return_value
         
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> Any:
-        vvvprint("Program: Starting execution of program...")
-        return self.block.execute(env)
+    @logged(
+        start=lambda self, env: (
+            f"Starting execution of program..."
+        ),
+        success={
+            "return_val": lambda self, env, return_val: (
+                f"Program executed successfully with return value: {return_val}"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
+        return_val = self.block.execute(env)
+        log_case.set("return_val", return_val=return_val)
+        return return_val
     

@@ -9,11 +9,34 @@ import re
 class Type(ASTNode):
     name: str
     
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking type '{self.name}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type '{self.name}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
+        log_case.set("success")
         return {self.name}
     
-    def execute(self, env: Environment) -> str:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing type '{self.name}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Type '{self.name}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> str:
+        log_case.set("success")
         return self.name
     
 
@@ -22,21 +45,41 @@ class NumberLiteral(ASTNode):
     value: int
     def  __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking number literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Number literal '{self.value}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"number"}, self) # remember the return type for inference
-            vvvprint("NumberLiteral: check: Number literal has type 'number'. Remembered type for number literal set to 'number' for inference.")
+            log_case.set("success")
             return {"number"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> int:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing number literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Number literal '{self.value}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> int:
+        log_case.set("success")
         return self.value
-    
-
-
 
 
 @dataclass
@@ -44,19 +87,41 @@ class DecimalLiteral(ASTNode):
     value: float
     def  __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking decimal literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Decimal literal '{self.value}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"decimal"}, self) # remember the return type for inference
-            vvvprint("DecimalLiteral: check: Decimal literal has type 'decimal'. Remembered type for decimal literal set to 'decimal' for inference.")
+            log_case.set("success")
             return {"decimal"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> float:
-        return self.value
 
+    @logged(
+        start=lambda self, env: (
+            f"Executing decimal literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Decimal literal '{self.value}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> float:
+        log_case.set("success")
+        return self.value
 
         
 @dataclass
@@ -65,19 +130,40 @@ class StringLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking string literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"String literal '{self.value}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"text"}, self) # remember the return type for inference
-            vvvprint("StringLiteral: check: String literal has type 'text'. Remembered type for string literal set to 'text' for inference.")
+            log_case.set("success")
             return {"text"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> str:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing string literal '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"String literal '{self.value}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> str:
+        log_case.set("success")
         return self.value
-
-
         
 
 @dataclass
@@ -86,78 +172,136 @@ class InterpolatedString(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking interpolated string with parts '{self.parts}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Interpolated string checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             for i, part in enumerate(self.parts):
                 if part.check(v_table, f_table, inference_context) is None:
                     raise TraceError(node = self, cause = "Undefined variable in interpolated string")
                 self.child_return_types[f"part_{i}"] = (part.child_return_types["self"][0].copy(), part) # remember the type of each part for inference
             self.child_return_types["self"] = ({"text"}, self) # remember the return type for inference
+            log_case.set("success")
             return {"text"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> str:
+    @logged(
+        start=lambda self, env: (
+            f"Executing interpolated string with parts '{self.parts}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Interpolated string executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> str:
         result = ""
         for i, part in enumerate(self.parts):
             value = part.execute(env)
             if self.child_return_types[f"part_{i}"][0] == {"boolean"}:
                 value = f_h.string_format_bool(value)
             result += str(value)
+        log_case.set("success")
         return result
     
-
         
 @dataclass
 class DateLiteral(ASTNode):
     value: str
     def  __post_init__(self):
         super().__init__() 
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking date literal with value '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Date literal checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"date"}, self) # remember the return type for inference
-            vvvprint(f"DateLiteral: check: Checking date literal with value '{self.value}'...")
+            log_case.set("success") 
             return {"date"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> datetime.datetime:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing date literal with value '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Date literal executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> datetime.datetime:
         try:
-            return datetime.datetime.fromisoformat(self.value)
+            result = datetime.datetime.fromisoformat(self.value)
+            log_case.set("success")
+            return result
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-
 
 @dataclass
 class BooleanLiteral(ASTNode):
     value: bool
     def  __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking boolean literal with value '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Boolean literal checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"boolean"}, self) # remember the return type for inference
-            vvvprint("BooleanLiteral: check: Boolean literal has type 'boolean'. Remembered type for boolean literal set to 'boolean' for inference.")
+            log_case.set("success")
             return {"boolean"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> bool:
-        return self.value
 
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # Boolean literals are only compatible with "boolean" and "any" types, so if the new inference value is not compatible, raise an error.
-            raise Exception("BooleanLiteral: inference: Boolean literals only return a single type, it should not be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self)
+    @logged(
+        start=lambda self, env: (
+            f"Executing boolean literal with value '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Boolean literal executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> bool:
+        log_case.set("success")
+        return self.value
 
 
 @dataclass
@@ -165,27 +309,40 @@ class NullLiteral(ASTNode):
     def  __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking null literal..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Null literal checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             self.child_return_types["self"] = ({"null"}, self) # remember the return type for inference
-            vvvprint("NullLiteral: check: Null literal has type 'null'. Remembered type for null literal set to 'null' for inference.")
+            log_case.set("success")
             return {"null"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
-        return None
 
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # Null literals are compatible with all types, so they can be narrowed to any type without error.
-        raise TraceError(node = self, cause = Exception(f"NullLiteral: inference: Null literals only return a single type, it should not be called during type inference. " \
-        f"something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}", self))
+    @logged(
+        start=lambda self, env: (
+            f"Executing null literal..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Null literal executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
+        log_case.set("success")
+        return None
         
 
 @dataclass
@@ -193,19 +350,28 @@ class ListLiteral(ASTNode):
     elements: List[ASTNode]
     def  __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking list literal with elements '{self.elements}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"List literal checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
-            vvvprint(f"ListLiteral: check: Checking list literal with elements '{self.elements}'...")
 
             if len(self.elements) == 0:
                 list_type = {EMPTY_LIST_TYPE}
                 self.child_return_types["self"] = (list_type, self) # remember the return type for inference
                 return list_type
+            
             element_type = self.elements[0].check(v_table, f_table, inference_context)
-            vvvprint(f"ListLiteral: check: First element type is '{element_type}'.")
-
             for elem in self.elements[1:]:
                 elem_type = elem.check(v_table, f_table, inference_context)
                 if elem_type != element_type:
@@ -216,29 +382,28 @@ class ListLiteral(ASTNode):
 
             self.child_return_types["element"] = (element_type.copy(), self.elements[0])# all elements have the same type, so we can just use the first one to remember the type for inference. this node will not be infered itself, it's just for consistency and potential future use.
             self.child_return_types["self"] = (list_type.copy(), self) # remember the return type for inference
-
-            vvvprint(f"ListLiteral: check: List literal has type '{list_type}'. Remembered type for list literal set to '{list_type}' for inference.")
+            log_case.set("success")
             return list_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> List[Any]:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing list literal with elements '{self.elements}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"List literal executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> List[Any]:
         try:
+            log_case.set("success")
             return [elem.execute(env) for elem in self.elements]
         except Exception as e:
             raise TraceError(node = self, cause = e)
-
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]) -> None:
-        # List literals are only compatible with "list<elem_type>" and "any" types, so if the new inference value is not compatible, raise an error.
-        raise Exception(f"ListLiteral: inference: List literals only returns a single type, it should not be be called during type inference. " \
-        "something went wrong in the inference pathing. new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}")
-
-
 
 
 @dataclass
@@ -247,31 +412,55 @@ class Identifier(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking identifier '{self.name}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Identifier '{self.name}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
-            vvvprint(f"Identifier: check: Checking identifier '{self.name}'...")
-
             self.child_return_types.clear()
             var_type = v_table.lookup(self.name)
             self.child_return_types["self"] = (var_type.copy(), self)
 
-            vvvprint(f"Identifier: check: Identifier '{self.name}' has type '{var_type}'. Remembered type for identifier '{self.name}' set to '{var_type}' for inference.")
+            log_case.set("success")
             return var_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-
-    def execute(self, env: Environment) -> Any:
-        vvvprint(f"Identifier: execute: Looking up variable '{self.name}'...")
+    @logged(
+        start=lambda self, env: (
+            f"Executing identifier '{self.name}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Identifier '{self.name}' executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
-            vvvprint(f"Identifier: execute: Variable '{self.name}' found. Retrieving value...")
             value = env.lookup_variable(self.name)
-            vvvprint(f"Identifier: execute: Value of variable '{self.name}': {value}")
+            log_case.set("success", result=value)
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+            f"Attempting type inference for identifier '{self.name}'. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value, new_type: (
+                f"Type inference for identifier '{self.name}' completed successfully. Variable type updated to '{new_type}'."
+            )
+        }
+    )    
     def inference(
         self,
         v_table: ScopeStack,
@@ -279,6 +468,7 @@ class Identifier(ASTNode):
         inference_context: InferenceContext,
         old_inference_value: set[str],
         new_inference_value: set[str],
+        log_case: LogCase
     ) -> None:
         try:
             vvvprint(f"Identifier: inference: Inferring type for identifier '{self.name}'. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'...")
@@ -304,12 +494,12 @@ class Identifier(ASTNode):
                     self
                 )
 
+
             v_table.bind(self.name, narrowed.copy())
             self.child_return_types["self"] = (narrowed.copy(), self)
             inference_context.mark_infered()
-            vvvprint(f"Identifier: inference: Variable '{self.name}' type updated to '{narrowed}' for inference.")
+            log_case.set("success", new_type=narrowed.copy())
             return
-            "DONE"
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -320,18 +510,23 @@ class TaskCall(ASTNode):
     arguments: Optional[List[ASTNode]] = None
     def  __post_init__(self):
         super().__init__()
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[set[str]]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking task call '{self.name}' with arguments '{self.arguments}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"Task call '{self.name}' checked successfully with return type '{return_type}'."
+            )
+        }    
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> Optional[set[str]]:
         try:
             self.child_return_types.clear()
-            vvvprint(f"Task Call: Checking task call '{self.name}' with arguments '{self.arguments}'...")
 
             signature = f_table.lookup(self.name)
-            arguments = self.arguments or []
-
-            
-
-                
+            arguments = self.arguments or []                
             if len(arguments) != len(signature.param_types):
                 raise Exception(f"Task '{self.name}' expects {len(signature.param_types)} arguments, but got {len(arguments)}", self)
         
@@ -363,40 +558,43 @@ class TaskCall(ASTNode):
                     arg_type = narrowed_arg_type
 
                 self.child_return_types[f"arg_{i}"] = (arg_type.copy(), arg)
-                vvvprint(f"Task Call: check: Argument {i+1} for task '{self.name}' checked with type '{arg_type}'. Remembered type for argument '{argument_name}' set to '{arg_type}' for inference.")
 
-            vvvprint(f"Task Call: check: All arguments for task '{self.name}' checked successfully. Checking return type...")
             if signature.return_type is not None:
                 self.child_return_types["self"] = (signature.return_type.copy(), self)
+                log_case.set("success", return_type=signature.return_type.copy())
                 return signature.return_type.copy()
-            
+            log_case.set("success", return_type=None)
             return None
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> Any:
+    @logged(
+        start=lambda self, env: (
+            f"Executing task call '{self.name}' with arguments '{self.arguments}'..."
+        ),
+        success={
+            "return_val": lambda self, env, return_val: (
+                f"Task call '{self.name}' executed successfully with return value '{return_val}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
-            vvvprint(f"Task Call: Looking up task '{self.name}'...")
             task_func = env.get_function(self.name)
-            vvvprint(f"Task Call: Task '{self.name}' found: {task_func}")
 
             values : List[Any] = []
             for i in range(len(task_func.parameters)):
-                vvvprint(f"Task Call: Evaluating argument {i+1} for task '{self.name}'...")
                 values.append(self.arguments[i].execute(env))
-                vvvprint(f"Task Call: Argument {i+1} for task '{self.name}' evaluated to: {values[-1]}")
             
             env.enter_function_scope(self.name)
             for i in range(len(task_func.parameters)):
                 param_name = task_func.parameters[i]
                 param_value = values[i]
-                vvvprint(f"Task Call: Binding parameter '{param_name}' to value '{param_value}' in function scope for task '{self.name}'...")
                 env.assign_variable(param_name, param_value)
-                vvvprint(f"Task Call: Parameter '{param_name}' bound to value '{param_value}' in function scope for task '{self.name}'.")
             
             result = task_func.body.execute(env)
             env.exit_scope()
-
+            log_case.set("return_val", return_val=result)
             return result
         except TraceError as e:
             raise TraceError(node = self,cause = e)
@@ -410,8 +608,18 @@ class ListLookup(ASTNode):
     def  __post_init__(self):
         super().__init__()
     
-        
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking list lookup on target '{self.target}' with index '{self.index}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"List lookup checked successfully with return type '{return_type}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
 
@@ -470,33 +678,49 @@ class ListLookup(ASTNode):
             return_types = t_h.get_list_element_types(target_types)
             
             self.child_return_types["self"] = (return_types.copy(), self)
+            log_case.set("success", return_type=return_types.copy())
             return return_types
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def execute(self, env: Environment) -> Any:
-        vvvprint(f"ListLookup: execute: Executing list lookup. Target: {self.target}, Index: {self.index}")
+    @logged(
+        start=lambda self, env: (
+            f"Executing list lookup on target '{self.target}' with index '{self.index}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"List lookup executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
-            vvvprint(f"ListLookup: execute: Evaluating target '{self.target}'...")
             target_value = self.target.execute(env)
-        except Exception as e:
-            raise BoshRuntimeError(f"Error executing list lookup: {e}", self)
-        vvvprint(f"ListLookup: execute: Target evaluated successfully. Value: {target_value}")
-        index_value = self.index.execute(env)
-        vvvprint(f"ListLookup: execute: Index evaluated successfully. Value: {index_value}")
-        try:
-            vvvprint(f"ListLookup: execute: Attempting to index into target with index...")
+            
+
             index_value = self.index.execute(env)
-            return target_value[int(index_value)]
+            result = target_value[int(index_value)]
+            log_case.set("success", result=result)
+            return result
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+            f"Attempting type inference for list lookup. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Type inference for list lookup completed successfully. Target type updated to '{self.child_return_types['target'][0]}', Return type updated to '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )    
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
                 inference_context: InferenceContext,
                 old_inference_value: set[str],
-                new_inference_value: set[str]
+                new_inference_value: set[str],
+                log_case: LogCase
                 ) -> None:
         try:
             
@@ -534,9 +758,11 @@ class ListLookup(ASTNode):
                 )
             
             self.child_return_types["target"] = (list_types.copy(), self.target)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
+
 
 @dataclass
 class Unit(ASTNode):
@@ -545,7 +771,18 @@ class Unit(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable,  inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking unit '{self.unit_type}' applied to value '{self.value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Unit '{self.unit_type}' checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable,  inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             value_type = self.value.check(v_table=v_table,
@@ -571,6 +808,7 @@ class Unit(ASTNode):
 
             self.child_return_types["value"] = (value_type.copy(), self.value)
             self.child_return_types["self"] = ({"time"}, self) # the return type of a unit is always time, so we can just set it directly without needing to remember it for inference.
+            log_case.set("success")
             return {"time"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -597,20 +835,6 @@ class Unit(ASTNode):
                     raise TraceError(node = self, cause = f"Unsupported unit type '{self.unit_type}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-    def inference(self,
-                v_table: ScopeStack,
-                f_table: FuncTable,
-                inference_context: InferenceContext,
-                old_inference_value: set[str],
-                new_inference_value: set[str]
-                ) -> None:
-            raise Exception(
-                            f"Unit inference is not supported because the return type of a unit is always 'time'. "
-                            f"If you are seeing this error, something went wrong in inference pathing. "
-                            f"new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}",
-                            self
-                            )
 
 
 @dataclass  
@@ -620,7 +844,18 @@ class TypeCast(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking type cast for node '{self.__class__.__name__}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type cast checked successfully: from type '{self.child_return_types['target'][0]}' to type '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             
             self.child_return_types.clear()
@@ -638,11 +873,7 @@ class TypeCast(ASTNode):
                 inference_context=inference_context
             )
 
-            
             target_type = next(iter(target_type_name))
-
-
-
             if target_type not in ["number", "decimal", "text", "boolean", "date"]:
                 raise Exception(f"Unsupported target type for type cast: '{target_type}'", self)
             match target_type:
@@ -686,36 +917,48 @@ class TypeCast(ASTNode):
             
             self.child_return_types["target"] = (original_type.copy(), self.target)
             self.child_return_types["self"] = (return_type.copy(), self)
+            log_case.set("success")
             return return_type
-                    
-
-
-            
-            
+                
         except Exception as e:
-
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> Any:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing type cast for node '{self.__class__.__name__}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Type cast executed successfully. Result type: '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )   
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
             value = self.target.execute(env)
             target_type = self.target_type.execute(env)
             match target_type:
                 case "number":
+                    log_case.set("success")
                     return int(value)
                 case "decimal":
+                    log_case.set("success")
                     return float(value)
                 case "text":
                     if self.child_return_types["target"][0] == {"boolean"}:
                         return "true" if value else "false"
+                    log_case.set("success")
                     return str(value)
                 case "boolean":
+                    log_case.set("success")
                     return bool(value)
                 case "date":
                     if self.child_return_types["target"][0] == {"text"}:
+                            log_case.set("success")
                             return datetime.datetime.fromisoformat(value)
+                    log_case.set("success")
                     return value  # if it's already a date, just return it
-                    raise Exception(f"Cannot cast value of type '{type(value)}' to 'date'. Expected a datetime object or an ISO format string.")
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported target type for type cast: '{self.target_type}'")
         except Exception as e:
@@ -732,7 +975,17 @@ class BinaryOp(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking binary operation '{self.operator}' with left operand '{self.left}' and right operand '{self.right}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Binary operation '{self.operator}' checked successfully with return type '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
 
             self.child_return_types.clear()
@@ -850,7 +1103,7 @@ class BinaryOp(ASTNode):
                                         )
                     
                     self.child_return_types["self"] = (return_types.copy(), self)
-
+                    log_case.set("success")
                     return return_types
 
                     
@@ -859,6 +1112,7 @@ class BinaryOp(ASTNode):
                         self.child_return_types["left"] = (left_type.copy(), self.left)
                         self.child_return_types["right"] = (right_type.copy(), self.right)
                         self.child_return_types["self"] = ({"boolean"}, self)
+                        log_case.set("success")
                         return {"boolean"}
                     if not t_h.is_compatible(left_type, right_type):
                         if not (t_h.is_compatible(left_type, t_h.NUMERIC_TYPES) and t_h.is_compatible(right_type, t_h.NUMERIC_TYPES)):
@@ -902,6 +1156,7 @@ class BinaryOp(ASTNode):
 
                     self.child_return_types["right"] = (right_type.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
 
                 case "lt" | "gt" | "loet" | "goet":
@@ -909,6 +1164,7 @@ class BinaryOp(ASTNode):
                         self.child_return_types["left"] = (left_type.copy(), self.left)
                         self.child_return_types["right"] = (right_type.copy(), self.right)
                         self.child_return_types["self"] = ({"boolean"}, self)
+                        log_case.set("success")
                         return {"boolean"}
                     if not t_h.is_compatible(left_type, right_type):
                         raise Exception(
@@ -948,12 +1204,14 @@ class BinaryOp(ASTNode):
 
                     self.child_return_types["right"] = (right_type.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
                 
                 case "eq_type" | "neq_type":
                     self.child_return_types["left"] = (left_type.copy(), self.left)
                     self.child_return_types["right"] = (right_type.copy(), self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
 
                 case "or" | "and":
@@ -991,6 +1249,7 @@ class BinaryOp(ASTNode):
                     self.child_return_types["left"] = ({"boolean"}, self.left)
                     self.child_return_types["right"] = ({"boolean"}, self.right)
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
 
                 case _:
@@ -999,7 +1258,19 @@ class BinaryOp(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> Any:
+
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing binary operation '{self.operator}' with left operand '{self.left}' and right operand '{self.right}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Binary operation '{self.operator}' executed successfully. Result: {result}"
+            )   
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
             left_val = self.left.execute(env)
             right_val = self.right.execute(env)
@@ -1007,81 +1278,138 @@ class BinaryOp(ASTNode):
                 case "plus":
                     # datetime + milliseconds
                     if self.child_return_types["left"][0] == {"date"} and self.child_return_types["right"][0] == {"time"}:
-                        return left_val + datetime.timedelta(milliseconds=right_val)
+                        result = left_val + datetime.timedelta(milliseconds=right_val)
+                        log_case.set("success", result=result)
+                        return result
+
                     # milliseconds + datetime -> swap
                     if self.child_return_types["left"][0] == {"time"} and self.child_return_types["right"][0] == {"date"}:
-                        return right_val + datetime.timedelta(milliseconds=left_val)
+                        result = right_val + datetime.timedelta(milliseconds=left_val)
+                        log_case.set("success", result=result)
+                        return result
                     # string concatenation
 #                    if isinstance(left_val, str) or isinstance(right_val, str):
 #                        if isinstance(left_val, bool):
 #                            left_val = "true" if left_val else "false"
 #                        return str(left_val) + str(right_val)
                     # fallback to python add (may raise)
-                    return left_val + right_val
+                    result = left_val + right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "minus":
                     if self.child_return_types["left"][0] == {"date"} and self.child_return_types["right"][0] == {"time"}:
-                        return left_val - datetime.timedelta(milliseconds=right_val)
+                        result = left_val - datetime.timedelta(milliseconds=right_val)
+                        log_case.set("success", result=result)
+                        return result
                     # numeric subtraction
-                    return left_val - right_val
+                    result = left_val - right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "mult":
-                    return left_val * right_val
+                    result = left_val * right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "div":
-                    return left_val / right_val
+                    result = left_val / right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "mod":
-                    return left_val % right_val
+                    result = left_val % right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "pow":
-                    return left_val ** right_val
+                    result = left_val ** right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "eq":
                     if type(left_val) != type(right_val):
                         if (type(left_val) in [int, float] and type(right_val) in [int, float]):
                             pass
                         else:
+                            log_case.set("success", result=False)
                             return False
-                    return left_val == right_val
+                    result = left_val == right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "neq":
                     if type(left_val) != type(right_val):
                         if (type(left_val) in [int, float] and type(right_val) in [int, float]):
                             pass
                         else:
-                            return True
-                    return left_val != right_val
+                            result = True
+                            log_case.set("success", result=result)
+                            return result
+                    result = left_val != right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "eq_type" | "neq_type":
 
                     
                     if right_val in ["folder", "file"]:
                         if t_h.contains(self.child_return_types["left"][0], "text"):
                             if right_val == "folder":
-                                return os.path.isdir(left_val)
+                                result = os.path.isdir(left_val)
+                                log_case.set("success", result=result)
+                                return result
                             else:
-                                return os.path.isfile(left_val)
+                                result = os.path.isfile(left_val)
+                                log_case.set("success", result=result)
+                                return result
                         else:
                             raise TraceError(node = self, cause = f"Left operand must be a string when comparing to 'file' or 'folder', got '{type(left_val).__name__}'")
                     if self.operator == "eq_type":
-                        return python_type_to_bosh_type(type(left_val)) == right_val
-                    return python_type_to_bosh_type(type(left_val)) != right_val
+                        result = python_type_to_bosh_type(type(left_val)) == right_val
+                        log_case.set("success", result=result)
+                        return result
+                    result = python_type_to_bosh_type(type(left_val)) != right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "or":
-                    return bool(left_val) or bool(right_val)
+                    result = bool(left_val) or bool(right_val)
+                    log_case.set("success", result=result)
+                    return result
                 case "and":
-                    return bool(left_val) and bool(right_val)
+                    result = bool(left_val) and bool(right_val)
+                    log_case.set("success", result=result)
+                    return result
                 case "lt":
-                    return left_val < right_val
+                    result = left_val < right_val
+                    log_case.set("success", result=result)
+                    return result
                 case "gt":
-                    return self.left.execute(env) > self.right.execute(env)
+                    result = self.left.execute(env) > self.right.execute(env)
+                    log_case.set("success", result=result)
+                    return result
                 case "loet":
-                    return self.left.execute(env) <= self.right.execute(env)
+                    result = self.left.execute(env) <= self.right.execute(env)
+                    log_case.set("success", result=result)
+                    return result
                 case "goet":
-                    return self.left.execute(env) >= self.right.execute(env)
+                    result = self.left.execute(env) >= self.right.execute(env)
+                    log_case.set("success", result=result)
+                    return result
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported operator '{self.operator}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Starting inference for binary operator '{self.operator}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'..."
+            ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Inference for binary operator '{self.operator}' completed successfully. Updated return type: '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
     def inference(self,
                 v_table: ScopeStack,
                 f_table: FuncTable,
                 inference_context: InferenceContext,
                 old_inference_value: set[str],
-                new_inference_value: set[str]
+                new_inference_value: set[str],
+                log_case: LogCase
                 ) -> None:
         try:
             if "self" not in self.child_return_types:
@@ -1183,7 +1511,8 @@ class BinaryOp(ASTNode):
     
                 case _:
                     raise Exception(f"Unsupported operator '{self.operator}' for inference in BinaryOp. Node: {self}", self)
-        
+                
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -1195,7 +1524,17 @@ class UnaryOp(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking unary operation '{self.operator}' with operand '{self.operand}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Unary operation '{self.operator}' checked successfully with return type '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             operand_type = self.operand.check(
@@ -1227,6 +1566,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = (narrowed.copy(), self)
+                    log_case.set("success")
                     return narrowed
                 
                 case "not_" | "not" | "!":
@@ -1249,6 +1589,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = ({"boolean"}, self.operand)
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
                 
                 case "floor" | "ceiling" | "round":
@@ -1272,6 +1613,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = ({"number"}, self)
+                    log_case.set("success")
                     return {"number"}
                 
                 case "exponent":
@@ -1295,6 +1637,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = (narrowed.copy(), self)
+                    log_case.set("success")
                     return narrowed
                 
                 case "sqrt":
@@ -1318,6 +1661,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (narrowed.copy(), self.operand)
                     self.child_return_types["self"] = ({"decimal"}, self)
+                    log_case.set("success")
                     return {"decimal"}
 
                 case "length":    
@@ -1342,6 +1686,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (operand_type.copy(), self.operand)
                     self.child_return_types["self"] = ({"number"}, self)
+                    log_case.set("success")
                     return {"number"}
                 
                 case "first" | "last":
@@ -1367,6 +1712,7 @@ class UnaryOp(ASTNode):
                     self.child_return_types["operand"] = (operand_type.copy(), self.operand)
                     return_type = t_h.get_list_element_types(operand_type)
                     self.child_return_types["self"] = (return_type.copy(), self)
+                    log_case.set("success")
                     return return_type
                 
                 case _:
@@ -1375,37 +1721,76 @@ class UnaryOp(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env):
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing unary operation '{self.operator}' with operand '{self.operand}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Unary operation '{self.operator}' executed successfully. Result: {result}"
+            )   
+        }
+    )
+    def execute(self, env, log_case: LogCase) -> Any:
         try:
             match self.operator:
                 case "neg":
-                    return -self.operand.execute(env)
+                    result = -self.operand.execute(env)
+                    log_case.set("success", result=result)
+                    return result
                 case "not":
-                    return not self.operand.execute(env)
+                    result = not self.operand.execute(env)
+                    log_case.set("success", result=result)
+                    return result
                 case "first":
-                    return self.operand.execute(env)[0]
+                    result = self.operand.execute(env)[0]
+                    log_case.set("success", result=result)
+                    return result
                 case "last":
-                    return self.operand.execute(env)[-1]
+                    result = self.operand.execute(env)[-1]
+                    log_case.set("success", result=result)
+                    return result
                 case "floor":
-                    return math.floor(self.operand.execute(env))
+                    result = math.floor(self.operand.execute(env))
+                    log_case.set("success", result=result)
+                    return result
                 case "ceiling":
-                    return math.ceil(self.operand.execute(env))
+                    result = math.ceil(self.operand.execute(env))
+                    log_case.set("success", result=result)
+                    return result
                 case "round":
-                    return int(round(self.operand.execute(env)))
+                    result = int(round(self.operand.execute(env)))
+                    log_case.set("success", result=result)
+                    return result
                 case "sqrt":
-                    return math.sqrt(self.operand.execute(env))
+                    result = math.sqrt(self.operand.execute(env))
+                    log_case.set("success", result=result)
+                    return result
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported unary operator '{self.operator}'")
                 
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
+    
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+            f"Starting inference for unary operator '{self.operator}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Inference for unary operator '{self.operator}' completed successfully. Updated return type: '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
     def inference(self,
                     v_table: ScopeStack,
                     f_table: FuncTable,
                     inference_context: InferenceContext,
                     old_inference_value: set[str],
-                    new_inference_value: set[str]
+                    new_inference_value: set[str],
+                    log_case: LogCase
                 ) -> None:
         
         try:
@@ -1437,6 +1822,7 @@ class UnaryOp(ASTNode):
 
                     self.child_return_types["operand"] = (new_operand_inference.copy(), self.operand)
                     self.child_return_types["self"] = (new_inference_value.copy(), self)
+                    log_case.set("success")
                     return
 
                 case "sqrt":
@@ -1466,6 +1852,7 @@ class UnaryOp(ASTNode):
                         )
 
                     self.child_return_types["operand"] = (new_list_inference.copy(), self.operand)
+                    log_case.set("success")
                     return
 
                 case _:
@@ -1480,6 +1867,8 @@ class AccessOp(ASTNode):
     argument: Optional[ASTNode] = None
     def __post_init__(self):
         super().__init__()
+    
+
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
         try:
