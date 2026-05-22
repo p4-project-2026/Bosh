@@ -13,10 +13,7 @@ class LogCase:
         self.data = data
 
 
-def logged(
-    start: Callable[..., str],
-    success: dict[str, Callable[..., str]],
-):
+def logged(start: Callable[..., str], success: dict[str, Callable[..., str]]):
     def decorator(fn):
         @wraps(fn)
         def wrapper(self, *args, **kwargs):
@@ -34,11 +31,13 @@ def logged(
                 message_builder = success.get(log_case.path)
 
                 if message_builder is None:
-                    raise Exception(f"No success log message for path '{log_case.path}'")
+                    raise Exception(
+                        f"No success log message for path '{log_case.path}'"
+                    )
 
                 vvvprint(
                     f"{self.__class__.__name__}: "
-                    f"{message_builder(self, result, log_case.data, *args, **kwargs)}"
+                    f"{message_builder(self, *args, **kwargs, **log_case.data)}"
                 )
 
             return result
