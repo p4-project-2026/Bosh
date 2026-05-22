@@ -34,6 +34,7 @@ class SymbolTableScopeStacker(ScopeStack):
         self.stack[-1].bind(name, type_value)  # Bind in the current scope if not found in any outer scope
         log_case.set("Bound")
 
+
     @logged(
         start=lambda self, name, type_value: (
             f"Attempting to bind local variable '{name}' to type '{type_value}' in current scope..."
@@ -51,7 +52,8 @@ class SymbolTableScopeStacker(ScopeStack):
 
         except Exception as e:
             raise Exception(f"Error binding variable '{name}' in local scope: {e}")
-        
+
+
     @logged(
         start=lambda self: (
             f"Retrieving domain of all visible scopes in current scope stack..."
@@ -74,7 +76,8 @@ class SymbolTableScopeStacker(ScopeStack):
 
     def snapshot(self) -> Symbol_Table:
         return super().snapshot()
-    
+
+
     @logged(
         start=lambda self, snapshot: (
             f"Attempting to update snapshot of current scope stack with visible variables..."
@@ -96,6 +99,7 @@ class SymbolTableScopeStacker(ScopeStack):
             log_case.set("success", snapshot=snapshot)
         except Exception as e:
             raise Exception(f"Error updating snapshot: {e}")
+
 
     @logged(
         start=lambda self, function_scope: (
