@@ -20,7 +20,8 @@ class VarTable(Table[int]):
         
         log_case.set("success")
         self.table[name] = address
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Attempting to look up variable '{name}' in current scope..."
