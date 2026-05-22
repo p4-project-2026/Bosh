@@ -36,13 +36,13 @@ class FuncTable(Table[FunctionSignature]):
             )
         }
     )
-
     def bind(self, name: str, signature: FunctionSignature, log_case: LogCase):
         if name in self.table:
             if self.table[name].function_def is not signature.function_def:
                 raise Exception(f"Function '{name}' already defined in scope with a different definition.")
         self.table[name] = signature
         log_case.set("success")
+
 
     @logged(
         start=lambda self, name: (
