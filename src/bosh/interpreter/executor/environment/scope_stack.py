@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from .table import Table
 from .function_binding import FunctionBinding
 from typing import TypeVar, Generic, Type, Dict
+from bosh.helper_functions.logged import logged, LogCase
 
 T = TypeVar('T')
 
@@ -11,7 +12,17 @@ class ScopeStack(Generic[T]):
     def __init__(self, table_class: Type[Table[T]] = Table):
         self.table_class = table_class
         self.stack: list[Table[T]] = [self.table_class()]  # Start with global scope
-
+    
+    @logged(
+        start=lambda self: (
+            f"Creating a copy of the current scope stack..."
+        ),
+        success={
+            "success": lambda self, copy: (
+                f"Copy of current scope stack created successfully."
+            )
+        }
+    )
     def copy(self):
         #deep copy the stack to ensure that modifications to the copy do not affect the original
         new_stack = ScopeStack(self.table_class)
@@ -19,24 +30,22 @@ class ScopeStack(Generic[T]):
         return new_stack
 
     def new_scope(self):
-        with self.step(f"Entering new scope...", f"New scope entered successfully."):
 
-            self.stack.append(self.table_class())
+        self.stack.append(self.table_class())
         
  
 
     def exit_scope(self):
-        with self.step(f"Exiting current scope...", f"Current scope exited successfully."):
-            if len(self.stack) == 1:
-                raise Exception("Cannot exit global scope.")
-            
-            if self.stack[-2].function_scope:
-                self.stack.pop()  # pop function body scope
-                self.stack.pop()  # pop captured function boundary scope
+        if len(self.stack) == 1:
+            raise Exception("Cannot exit global scope.")
+
+        if self.stack[-2].function_scope:
+            self.stack.pop()  # pop function body scope
+            self.stack.pop()  # pop captured function boundary scope
 
                 
-                return
-            self.stack.pop()
+            return
+        self.stack.pop()
 
 
 
@@ -111,15 +120,5 @@ class ScopeStack(Generic[T]):
             domain.update({name: None for name in scope.domain()})
         return list(domain.keys())
 
-    def log(self, message: str) -> None:
-        vvvprint(f"{self.__class__.__name__}: {message}")
 
-    @contextmanager
-    def step(self, start: str, success: str):
-        self.log(start)
-        try:
-            yield
-        except Exception as e:
-            self.log(f"Failed: {e}")
-            raise
-        self.log(success)
+
