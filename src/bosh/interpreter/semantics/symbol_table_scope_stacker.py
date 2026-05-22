@@ -20,7 +20,6 @@ class SymbolTableScopeStacker(ScopeStack):
             )
         }
     )
-
     def bind(self, name: str, type_value: set[str], log_case: LogCase):
         for scope in reversed(self.stack):
             if scope.contains(name):
@@ -86,7 +85,6 @@ class SymbolTableScopeStacker(ScopeStack):
             )
         }
     )
-
     def update_snapshot(self, snapshot: Symbol_Table, log_case: LogCase):
         try:
             domain = snapshot.domain()
