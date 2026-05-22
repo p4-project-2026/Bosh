@@ -1,4 +1,19 @@
+import bosh.interpreter.executor.environment.environment as environment_module
+import bosh.interpreter.executor.environment.scope_stack as scope_stack_module
+import bosh.interpreter.executor.environment.table as table_module
+import bosh.interpreter.executor.environment.var_table as var_table_module
+import bosh.interpreter.executor.environment.store as store_module
+
+noop_print = lambda *args, **kwargs: None
+
+environment_module.vvvprint = noop_print
+scope_stack_module.vvvprint = noop_print
+table_module.vvvprint = noop_print
+var_table_module.vvvprint = noop_print
+store_module.vvvprint = noop_print
+
 from bosh.interpreter.executor.environment.table import Table
+
 
 
 def test_table():
