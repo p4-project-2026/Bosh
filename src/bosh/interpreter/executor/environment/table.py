@@ -1,6 +1,8 @@
 from contextlib import contextmanager
 from typing import Dict, Generic, Optional, TypeVar
 
+from bosh.helper_functions.logged import logged, LogCase
+
 T = TypeVar('T')
 
 class Table(Generic[T]):
@@ -28,11 +30,21 @@ class Table(Generic[T]):
                 raise Exception(f"Name '{name}' already defined in scope.")
             self.table[name] = value
     
-    def lookup(self, name: str) -> T:
-        with self.step(f"Looking up name '{name}' in current scope...", f"Name '{name}' found in current scope with value {self.table[name]}." if name in self.table else f"Name '{name}' not found in current scope."):
-            if name in self.table:
-                return self.table[name]
-            raise Exception(f"Name '{name}' not found in scope.")
+    @logged(
+        start=lambda self, name: f"looking up name '{name}' in current scope...",
+        success={
+            "success": lambda self, result, name: 
+            f"Name '{name}' found in current scope with value {result}.",
+        },
+    )
+    def lookup(self, name: str, *, log_case: LogCase) -> T:
+        
+        if name in self.table:
+            value = self.table[name]
+            log_case.set("success", result=value, name=name)
+            return value
+        raise Exception(f"Name '{name}' not found in scope.")
+
     
     def contains(self, name: str) -> bool:
         with self.step(f"Checking if name '{name}' exists in current scope...", f"Name '{name}' {'exists' if name in self.table else 'does not exist'} in current scope."):
