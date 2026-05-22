@@ -27,7 +27,8 @@ class Table(Generic[T]):
             
         self.table[name] = value
         log_case.set("success")
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Looking up name '{name}' in current scope..."
@@ -46,6 +47,7 @@ class Table(Generic[T]):
             return value
         
         raise Exception(f"Name '{name}' not found in scope.")
+
 
     @logged(
         start=lambda self, name: (
