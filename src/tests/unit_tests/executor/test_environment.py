@@ -86,6 +86,7 @@ def test_update_variable_same_type():
     env.assign_variable("counter", 10)
     assert env.lookup_variable("counter") == 10
 
+# Test updating a variable to a different type, as environment, itself, does not type check.
 def test_update_variable_different_type():
     env = Environment()
     env.new_scope()
