@@ -5,7 +5,7 @@ from bosh.helper_functions.type_helper import EMPTY_LIST_TYPE, UNKNOWN_LIST_TYPE
 class Symbol_Table(Table[set[str]]):
 
     def bind(self, name: str, type_value: set[str]):
-        while self.step(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...", f"SymbolTable: Variable '{name}' bound to type '{type_value}' in current scope successfully."):
+        with self.step(f"SymbolTable: Attempting to bind variable '{name}' to type '{type_value}' in current scope...", f"SymbolTable: Variable '{name}' bound to type '{type_value}' in current scope successfully."):
             if not type_value:
                 raise Exception(f"SymbolTable: Cannot bind variable '{name}' to empty type set.")
         

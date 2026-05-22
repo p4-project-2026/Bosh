@@ -29,7 +29,7 @@ class Table(Generic[T]):
             self.table[name] = value
     
     def lookup(self, name: str) -> T:
-        while self.step(f"Looking up name '{name}' in current scope...", f"Name '{name}' found in current scope with value {self.table[name]}." if name in self.table else f"Name '{name}' not found in current scope."):
+        with self.step(f"Looking up name '{name}' in current scope...", f"Name '{name}' found in current scope with value {self.table[name]}." if name in self.table else f"Name '{name}' not found in current scope."):
             if name in self.table:
                 return self.table[name]
             raise Exception(f"Name '{name}' not found in scope.")
