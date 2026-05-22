@@ -278,7 +278,7 @@ class ForAll(ASTNode):
             iterable_val = self.iterable.execute(env)
             
             elements_to_iterate = []
-            if isinstance(iterable_val, str):
+            if t_h.is_only(iterable_val, "text"):
                 if not os.path.exists(iterable_val):
                     raise ValueError(f"Directory path '{iterable_val}' does not exist.")
                 if not os.path.isdir(iterable_val):
@@ -288,10 +288,8 @@ class ForAll(ASTNode):
                     full_path = os.path.join(iterable_val, item)
                     elements_to_iterate.append(full_path.replace("\\", "/"))
                     
-            elif isinstance(iterable_val, list):
-                elements_to_iterate = iterable_val
             else:
-                raise ValueError(f"Iterable must evaluate to a list or a directory string, got {type(iterable_val).__name__}")
+                elements_to_iterate = iterable_val
 
             for element in elements_to_iterate:
                 env.new_scope()
