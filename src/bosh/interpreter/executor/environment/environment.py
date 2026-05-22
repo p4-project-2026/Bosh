@@ -14,7 +14,8 @@ class Environment:
         self.f_table = FunctionTable()
         self.store = Store()
         self.CD: str = str(Path.cwd())  # Current Directory, used for resolving file paths in import statements
-    
+
+
     @logged(
         start=lambda self: (
             f"Creating a new variable scope..."
@@ -30,6 +31,7 @@ class Environment:
         self.v_table.new_scope()
         log_case.set("success")
 
+
     @logged(
         start=lambda self: (
             f"Attempting to exit current variable scope..."
@@ -42,10 +44,10 @@ class Environment:
     )
     def exit_scope(self, log_case: LogCase):
         """Exit the current variable scope."""
-
         self.v_table.exit_scope()
         log_case.set("success")
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Attempting to look up function '{name}' in function table..."
@@ -67,6 +69,7 @@ class Environment:
         except Exception as e:
             raise Exception(f"Environment: Error looking up function '{name}': {e}")
 
+
     @logged(
         start=lambda self, name: (
             f"Attempting to enter function scope for function '{name}'..."
@@ -77,7 +80,6 @@ class Environment:
             )
         }
     )
-
     def enter_function_scope(self,name: str, log_case: LogCase):
         """Enter a new function scope based on the function definition associated with the given name. returns the FunctionBinding for the function being entered."""
 
@@ -87,6 +89,7 @@ class Environment:
             log_case.set("success", function_def=function_def)
         except Exception as e:
             raise Exception(f"Environment: Error looking up function '{name}': {e}")
+
 
     @logged(
         start=lambda self, name, value: (
@@ -112,6 +115,7 @@ class Environment:
             self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
             log_case.set("logged")
 
+
     @logged(
         start=lambda self, name, value: (
             f"Attempting to bind local variable '{name}' in current scope..."
@@ -122,12 +126,12 @@ class Environment:
             )
         }
     )
-
     def bind_local_variable(self, name: str, value: any, log_case: LogCase):
         """Bind a variable to the current scope without checking outer scopes. This is used for binding function parameters and local variables."""
         loc = self.store.allocate(value)  # Allocate a new cell in the store
         self.v_table.bind(name, loc)  # Bind the variable name to the new location in the current scope
         log_case.set("success")
+
 
     @logged(
         start=lambda self, name: (
@@ -140,8 +144,7 @@ class Environment:
         }
     )
     def lookup_variable(self, name: str, log_case: LogCase) -> any:
-        """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""
-        
+        """Look up the value of a variable by name. Search through visible scopes and return the value from the store."""        
         try:
             loc = self.v_table.lookup(name)  # Get the location of the variable from the scope stack
             value = self.store.get(loc)  # Retrieve the value from the store using the location
@@ -149,7 +152,7 @@ class Environment:
             return value
         except Exception as e:
             raise Exception(f"Error looking up variable '{name}': {e}")
-        
+
 
     @logged(
         start=lambda self: (
@@ -161,13 +164,13 @@ class Environment:
             )
         }
     )
-
     def snapshot(self, log_case: LogCase) -> VarTable:
         """Create a snapshot of the current variable scope stack. This is used for capturing the environment when defining a function."""
         snapshot = self.v_table.snapshot()
         log_case.set("success", snapshot=snapshot)
         return snapshot
-    
+
+
     @logged(
         start=lambda self, name, function_def: (
             f"Attempting to bind function '{name}' to function definition {function_def} in function table..."
@@ -186,6 +189,7 @@ class Environment:
         except Exception as e:
             raise Exception(f"Error binding function '{name}': {e}")
 
+
     @logged(
         start=lambda self: (
             f"Attempting to get current directory for environment..."
@@ -201,6 +205,7 @@ class Environment:
         cd = self.CD
         log_case.set("success", CD=cd)
         return cd
+
    
     @logged(
         start=lambda self, path: (
