@@ -4,6 +4,7 @@ from .ast_base import *
 from .ast_expressions import Identifier
 from ..semantics.func_table import FunctionSignature
 
+
 @dataclass
 class Assign(ASTNode):
     target: Identifier
@@ -11,10 +12,20 @@ class Assign(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking assignment of value '{self.value}' to variable '{self.target.name}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, value_type: (
+                f"Assignment of value '{self.value}' to variable '{self.target.name}' type checked successfully with value type '{value_type}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint(f"Assign: Checking assignment of value '{self.value}' to variable '{self.target.name}'...")
 
             value_type = self.value.check(
                 v_table=v_table,
@@ -48,23 +59,31 @@ class Assign(ASTNode):
             else:
                 v_table.bind(self.target.name, value_type.copy())
                 self.child_return_types["value"] = (value_type.copy(), self.value)
-                vvvprint(f"Assign: Variable '{self.target.name}' was not previously defined. Binding it to type '{value_type}' in variable table.")
+                log_case.set("success", value_type=value_type.copy())
                 return
                 
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing assignment of value '{self.value}' to variable '{self.target.name}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Assignment of value '{self.value}' to variable '{self.target.name}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
-            vvvprint(f"Assign: Executing assignment of value '{self.value}' to variable '{self.target.name}'...")
             value = self.value.execute(env)
-            vvvprint(f"Assign: Attempting to assign value '{value}' to variable '{self.target.name}' in environment...")
             env.assign_variable(self.target.name, value)
-            vvvprint(f"Assign: Successfully assigned value '{value}' to variable '{self.target.name}' in environment.")
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-
 
 @dataclass
 class AssignType(ASTNode):
@@ -74,7 +93,18 @@ class AssignType(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self: (
+            f"Checking assignment of type '{self.var_type}' to variable '{self.target.name}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"Assignment of type '{self.var_type}' to variable '{self.target.name}' checked successfully with return type: {return_type}"
+             )
+         }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -130,22 +160,38 @@ class AssignType(ASTNode):
                 if narrowed_declared_type != old_type:
                     v_table.bind(self.target.name, narrowed_declared_type.copy())
                     inference_context.mark_infered()
+                
+                self.child_return_types["value"] = (
+                    narrowed_declared_type.copy(),
+                    self.value,
+                    )
+                log_case.set("success", value_type=narrowed_declared_type.copy())
             else:
                 v_table.bind(self.target.name, declared_type.copy())
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
-            
-    def execute(self, env: Environment) -> None:
-        vvvprint(f"AssignType: Executing assignment of value '{self.value}' to variable '{self.target.name}' with declared type '{self.var_type}'...")
+
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing assignment of type '{self.var_type}' to variable '{self.target.name}'..."
+        ),
+        success={
+            "success": lambda self, env, value: (
+                f"Assignment of value '{value}' to variable '{self.target.name}' executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, value: Any = None, log_case: LogCase = None) -> None:
         try:
-            vvvprint(f"AssignType: Attempting to assign value '{self.value}' to variable '{self.target.name}' in environment...")
-            env.assign_variable(self.target.name, self.value.execute(env) if self.value else None)
-            vvvprint(f"AssignType: Successfully assigned value '{self.value}' to variable '{self.target.name}' in environment.")
+            value = self.value.execute(env) if self.value else None
+            env.assign_variable(self.target.name, value)
+            log_case.set("success", value=value)
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
                 
-
 
 @dataclass
 class TaskDecl(ASTNode):
@@ -156,10 +202,20 @@ class TaskDecl(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking task declaration for task '{self.name}' with parameters {self.parameters}..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, return_type: (
+                f"Task declaration for task '{self.name}' checked successfully with return type: {return_type}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvvprint(f"TaskDecl: Checking task declaration for task '{self.name}' with parameters {self.parameters}...")
     
             saved_inference_state = inference_context.save_state()
             if self.captured_scope is None:
@@ -175,7 +231,6 @@ class TaskDecl(ASTNode):
             
             return_type = None
             while True:
-                vvvprint(f"TaskDecl: Starting inference iteration for task '{self.name}'...")
 
                 inference_context.reset()
 
@@ -186,10 +241,9 @@ class TaskDecl(ASTNode):
                 )
                 
                 if not inference_context.has_changed():
-                    vvvprint(f"TaskDecl: No changes in inference context after checking body of task '{self.name}', breaking inference loop.")
                     break
                 
-
+                vvvprint(f"TaskDecl: Detected a change during inference of task '{self.name}', restarting type checking of task body with updated types...")
             
             parameter_dict = {param: v_table.lookup(param) for param in self.parameters}
             f_table.bind(
@@ -208,10 +262,22 @@ class TaskDecl(ASTNode):
             vvvprint(f"TaskDecl: Task '{self.name}' bound successfully to function table with signature: parameters {parameter_dict} and return type '{return_type}'.")
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
+            log_case.set("success", return_type=return_type)
         except Exception as e:
             raise TraceError(node = self, cause = e)
-            
-    def execute(self, env: Environment) -> None:
+    
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing task declaration for task '{self.name}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"Task declaration for task '{self.name}' executed successfully and function binding created in environment."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             # Create a snapshot of the current variable scope stack to capture the environment for the function
             env_snapshot = env.snapshot()
@@ -219,6 +285,7 @@ class TaskDecl(ASTNode):
             function_binding = FunctionBinding(parameters=self.parameters, body=self.body, captured_scope=env_snapshot)
 
             env.bind_function(self.name, function_binding)
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
