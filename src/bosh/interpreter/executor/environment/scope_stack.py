@@ -30,6 +30,7 @@ class ScopeStack(Generic[T]):
         log_case.set("success")
         return new_stack
 
+
     @logged(
         start=lambda self: (
             f"Creating a new scope in the current scope stack..."
@@ -44,7 +45,6 @@ class ScopeStack(Generic[T]):
 
         self.stack.append(self.table_class())
         log_case.set("success")
-
         
  
     @logged(
@@ -91,6 +91,7 @@ class ScopeStack(Generic[T]):
         self.new_scope()  # Create a new scope for the function body
         log_case.set("success")
 
+
     @logged(
         start=lambda self: (
             f"Creating snapshot of current visible scopes in scope stack..."
@@ -101,6 +102,7 @@ class ScopeStack(Generic[T]):
             )
         }
     )
+
 
     def snapshot(self, log_case: LogCase) -> Table[T]:
         visible_scopes: list[Table[T]] = []
@@ -116,6 +118,7 @@ class ScopeStack(Generic[T]):
         snapshot_table= self.table_class(table=snapshot)
         log_case.set("success")
         return snapshot_table
+
 
     @logged(
         start=lambda self, name: (
@@ -136,7 +139,8 @@ class ScopeStack(Generic[T]):
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
                 break
         raise Exception(f"Undefined variable '{name}'")
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Attempting to look up variable '{name}' for assignment in current scope stack..."
@@ -146,8 +150,7 @@ class ScopeStack(Generic[T]):
                 f"Variable '{name}' found in current scope stack for assignment with Store location {loc}."
             )
         }
-    )
-            
+    )            
     def lookup_assign(self, name: str, log_case: LogCase) -> T:
         for scope in reversed(self.stack):
             if scope.function_scope:  # If we reach a function scope or global scope, stop searching
@@ -157,7 +160,8 @@ class ScopeStack(Generic[T]):
                 log_case.set("success", loc = loc)
                 return loc
         raise Exception(f"Variable '{name}' not found in scope.")
-    
+
+
     @logged(
         start=lambda self, name: (
             f"Checking if variable '{name}' is contained in current scope stack..."
@@ -171,7 +175,6 @@ class ScopeStack(Generic[T]):
             )
         }
     )
-
     def contains(self, name: str, log_case: LogCase) -> bool:
         for scope in reversed(self.stack):
             if scope.contains(name):
@@ -181,7 +184,8 @@ class ScopeStack(Generic[T]):
                 break
         log_case.set("not_contains")
         return False
-    
+
+
     @logged(
         start=lambda self, name, value: (
             f"Attempting to bind variable '{name}' to value {value} in current scope stack..."
@@ -192,13 +196,13 @@ class ScopeStack(Generic[T]):
             )
         }
     )
-
     def bind(self, name: str, value: T, log_case: LogCase):
         if self.stack[-1].contains(name):
             raise Exception(f"Variable '{name}' already defined in current scope.")
         
         log_case.set("success")
         self.stack[-1].bind(name, value)
+
 
     @logged(
         start=lambda self: (
@@ -210,7 +214,6 @@ class ScopeStack(Generic[T]):
             )
         }
     )
-
     def domain(self, log_case: LogCase) -> list[str]:
         domain = {}
         vvvprint(f"{self.__class__.__name__}: Computing domain of visible variables...")
