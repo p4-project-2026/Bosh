@@ -31,7 +31,8 @@ class Store:
         self.next_location += 1
         log_case.set("success", loc=loc)
         return loc
-    
+
+
     @logged(
         start=lambda self, address: (
             f"Attempting to retrieve value at address {address} from store..."
@@ -48,6 +49,7 @@ class Store:
         value = self.memory[address].value
         log_case.set("success", value=value)
         return value
+
     
     @logged(
         start=lambda self, address, value: (
