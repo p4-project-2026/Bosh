@@ -1,101 +1,255 @@
-CurrentPlayer is "X"
-if now as text regex "[02468]$":
-    CurrentPlayer is "O" 
+#Tic-Tac-Toe Game in Bosh
 
+#Function to clear the terminal
+function ClearScreen:
+    execute "cls"
+
+#Start Screen
+run ClearScreen
+print "  ╔═══════════════════════════════╗" .
+print "  ║      TIC-TAC-TOE IN BOSH      ║" .
+print "  ╠═══════════════════════════════╣" .
+print "  ║  SELECT GAME MODE             ║" .
+print "  ║                               ║" .
+print "  ║  [1]  Play 1 Player (vs AI)   ║" .
+print "  ║  [2]  Play 2 Player           ║" .
+print "  ╚═══════════════════════════════╝" .
+print ""
+GameMode is input "  Enter your choice (1 or 2): "
+
+#Initialize variables
+IsAI is false
+AIType is "perfect"
+CurrentPlayer is "X"
+
+#If 1 player, choose AI type
+if GameMode == "1":
+    run ClearScreen
+    IsAI is true
+    print "  ╔═══════════════════════════════╗"
+    print "  ║      TIC-TAC-TOE IN BOSH      ║"
+    print "  ╠═══════════════════════════════╣"
+    print "  ║  Choose Difficulty            ║"
+    print "  ║  [1]  Easy                    ║"
+    print "  ║  [2]  Hard                    ║"
+    print "  ╚═══════════════════════════════╝"
+    print ""
+    AIChoice is input "  Enter your choice (1 or 2): "
+    if AIChoice == "1":
+        AIType is "random"
+    else:
+        AIType is "perfect"
+    
+    #Randomly decide who goes first
+    WhoFirst is random from 1 to 2
+    if WhoFirst == 1:
+        CurrentPlayer is "X"
+    else:
+        CurrentPlayer is "O"
+
+#Initialize the board with empty spaces
 Board is a list
 count from 1 to 9:
     append " " to Board
 
-function PrintBoard:
-    print ""
-    count I from 0 to 2:
-        Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
-        print " " + Row
-        if I < 2:
-            print "---+---+---"
-    print ""
 
+#Function to print the board
+function PrintBoard:
+    run ClearScreen
+    print "  ╔═══════════════════════════════╗"
+    print "  ║      TIC-TAC-TOE IN BOSH      ║"
+    if IsAI == true:
+        print "  ╠═══╦═══╦═══╦═══════════════════╣"
+        print "  ║ {Board at 0} ║ {Board at 1} ║ {Board at 2} ║  Current: {CurrentPlayer}       ║"
+        print "  ╠═══╬═══╬═══╣                   ║"
+        print "  ║ {Board at 3} ║ {Board at 4} ║ {Board at 5} ║  (X = You)        ║"
+        print "  ╠═══╬═══╬═══╣  (O = AI)         ║"
+        print "  ║ {Board at 6} ║ {Board at 7} ║ {Board at 8} ║                   ║"
+        print "  ╚═══╩═══╩═══╩═══════════════════╝"
+    else:
+        print "  ╠═══╦═══╦═══╦═══════════════════╣"
+        print "  ║ {Board at 0} ║ {Board at 1} ║ {Board at 2} ║  Current: {CurrentPlayer}       ║"
+        print "  ╠═══╬═══╬═══╣                   ║"
+        print "  ║ {Board at 3} ║ {Board at 4} ║ {Board at 5} ║  (X = Player 1)   ║"
+        print "  ╠═══╬═══╬═══╣  (O = Player 2)   ║"
+        print "  ║ {Board at 6} ║ {Board at 7} ║ {Board at 8} ║                   ║"
+        print "  ╚═══╩═══╩═══╩═══════════════════╝"
+
+#Function to check if a player has won
+function CheckWinner uses (Player):
+    #Check rows
+    if Board at 0 == Player and Board at 1 == Player and Board at 2 == Player:
+        return true
+    if Board at 3 == Player and Board at 4 == Player and Board at 5 == Player:
+        return true
+    if Board at 6 == Player and Board at 7 == Player and Board at 8 == Player:
+        return true
+    
+    #Check columns
+    if Board at 0 == Player and Board at 3 == Player and Board at 6 == Player:
+        return true
+    if Board at 1 == Player and Board at 4 == Player and Board at 7 == Player:
+        return true
+    if Board at 2 == Player and Board at 5 == Player and Board at 8 == Player:
+        return true
+    
+    #Check diagonals
+    if Board at 0 == Player and Board at 4 == Player and Board at 8 == Player:
+        return true
+    if Board at 2 == Player and Board at 4 == Player and Board at 6 == Player:
+        return true
+    
+    return false
+
+#Function to check if board is full (draw)
+function IsDraw:
+    IsFull is true
+    count I from 0 to 8:
+        if Board at I == " ":
+            IsFull is false
+    return IsFull
+
+#Function to check if position creates a win
+function CanWin uses (Position, Player):
+    Board at Position is Player
+    Result is CheckWinner result using (Player)
+    Board at Position is " "
+    return Result
+
+#Function for Random AI
+function AIRandomMove:
+    Position is 0
+    ValidMove is false
+    repeat until ValidMove == true:
+        Position is random from 0 to 8
+        if Board at Position == " ":
+            Board at Position is "O"
+            ValidMove is true
+            print "AI chose position {Position + 1}"
+
+#Function for Perfect AI
+function AIPerfectMove:
+    MoveMade is false
+    
+    #1. Try to win
+    if MoveMade == false:
+        WinningPos is -1
+        count I from 0 to 8:
+            if Board at I == " ":
+                if CanWin result using (I, "O"):
+                    WinningPos is I
+        if WinningPos != -1:
+            Chance is random from 1 to 100
+            if Chance > 20:
+                Board at WinningPos is "O"
+                print "AI chose position {WinningPos + 1}"
+                MoveMade is true
+    
+    #2. Block player from winning
+    if MoveMade == false:
+        BlockingPos is -1
+        count I from 0 to 8:
+            if Board at I == " ":
+                if CanWin result using (I, "X"):
+                    BlockingPos is I
+        if BlockingPos != -1:
+            Chance is random from 1 to 100
+            if Chance > 10:
+                Board at BlockingPos is "O"
+                print "AI chose position {BlockingPos + 1} (blocking)"
+                MoveMade is true
+    
+    #3. Take center if available
+    if MoveMade == false and Board at 4 == " ":
+        Board at 4 is "O"
+        print "AI chose position 5" .
+        MoveMade is true
+    
+    #4. Take corners (randomized)
+    if MoveMade == false:
+        ChosenCorner is -1
+        Corners is [0, 2, 6, 8]
+        count I from 0 to 3:
+            Corner is Corners at I
+            if ChosenCorner == -1 and Board at Corner == " ":
+                Chance is random from 1 to 100
+                if Chance > 50:
+                    ChosenCorner is Corner
+        if ChosenCorner != -1:
+            Board at ChosenCorner is "O"
+            print "AI chose position {ChosenCorner + 1}"
+            MoveMade is true
+    
+    #5. Take any available space
+    if MoveMade == false:
+        count I from 0 to 8:
+            if MoveMade == false and Board at I == " ":
+                Board at I is "O"
+                print "AI chose position {I + 1}"
+                MoveMade is true
+
+#Main AI move dispatcher
+function AIMove:
+    if AIType == "random":
+        run AIRandomMove
+    else:
+        run AIPerfectMove
+
+#Main game loop
 repeat until false:
     run PrintBoard
     
-    Error is ""
-
-    MoveInput is input "Player {CurrentPlayer}, choose position (1-9): "
-
-    MoveLocation is MoveInput as int - 1 else Error is "Please enter a number between 1 and 9."
-
-    if MoveLocation < 0 or MoveLocation > 8:
-        print("Invalid position. Choose 1-9.")
-        continue
-
-    if Board at MoveLocation != " ":
-        print("Position already taken.")
-        continue
+    #Check if AI should play
+    if CurrentPlayer == "O" and IsAI == true:
+        run AIMove
+    else:
+        #Get player input
+        print ""
+        MoveInput is input "  Player {CurrentPlayer}, enter position (1-9): "
+        
+        #Convert input to index (1-based to 0-based)
+        MoveLocation is MoveInput as int - 1
+        
+        #Validate position range
+        if MoveLocation < 0 or MoveLocation > 8:
+            print "Invalid position. Choose 1-9." .
+            continue
+        
+        #Check if position is already taken
+        if Board at MoveLocation != " ":
+            print "Position already taken." .
+            continue
+        
+        #Place the move
+        Board at MoveLocation is CurrentPlayer
     
-    Board at MoveLocation is CurrentPlayer
-
-    if CurrentPlayer == "X"
+    #Check for winner
+    if CheckWinner result using (CurrentPlayer):
+        run PrintBoard
+        if CurrentPlayer == "O" and IsAI == true:
+            print "  ╔═══════════════════════════════╗" .
+            print "  ║           AI WINS!            ║" .
+            print "  ╚═══════════════════════════════╝" .
+        if CurrentPlayer == "X" and IsAI == true:
+            print "  ╔═══════════════════════════════╗" .
+            print "  ║           You WIN!            ║" .
+            print "  ╚═══════════════════════════════╝" .
+        if IsAI == false:
+            print "  ╔═══════════════════════════════╗" .
+            print "  ║        Player {CurrentPlayer} WINS!         ║" .
+            print "  ╚═══════════════════════════════╝" .
+        break
+    
+    #Check for draw
+    if IsDraw result:
+        run PrintBoard
+        print "  ╔═══════════════════════════════╗" .
+        print "  ║         IT'S A DRAW!          ║" .
+        print "  ╚═══════════════════════════════╝" .
+        break
+    
+    #Switch player
+    if CurrentPlayer == "X":
         CurrentPlayer is "O"
     else:
         CurrentPlayer is "X"
-
-
-    
-
-
-
-
-#def check_winner(player):
-#    win_combinations = [
-#        [0, 1, 2],
-#        [3, 4, 5],
-#        [6, 7, 8],
-#        [0, 3, 6],
-#        [1, 4, 7],
-#        [2, 5, 8],
-#        [0, 4, 8],
-#        [2, 4, 6]
-#    ]
-#
-#    for combo in win_combinations:
-#        if all(board[pos] == player for pos in combo):
-#            return True
-#    return False
-#
-#
-#def is_draw():
-#    return " " not in board
-#
-#
-#current_player = "X"
-#
-#while True:
-#    print_board()
-#
-#    try:
-#        move = int(input(f"Player {current_player}, choose position (1-9): ")) - 1
-#
-#        if move < 0 or move > 8:
-#            print("Invalid position. Choose 1-9.")
-#            continue
-#
-#        if board[move] != " ":
-#            print("Position already taken.")
-#            continue
-#
-#        board[move] = current_player
-#
-#        if check_winner(current_player):
-#            print_board()
-#            print(f"Player {current_player} wins!")
-#            break
-#
-#        if is_draw():
-#            print_board()
-#            print("It's a draw!")
-#            break
-#
-#        current_player = "O" if current_player == "X" else "X"
-#
-#    except ValueError:
-#        print("Please enter a number between 1 and 9.")
