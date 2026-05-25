@@ -1,9 +1,8 @@
 from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 from bosh.app.cli.flags.flag_handler import FlagHandler
 
+from bosh.app.cli.flags.flags import Cmd
 class CLIHandler:
-    run_type = None
-
     def initializer(self):
         # extract the non-flag arguments for your main application logic
         ArgumentHandler().extract_args_from_cli()
@@ -14,9 +13,6 @@ class CLIHandler:
         # Mark that verbose flags have been processed and queued messages should be flushed
         from bosh.helper_functions.print import set_verbose_flag_proceeded
         set_verbose_flag_proceeded(True)
-
-        # get_run_type
-        CLIHandler.run_type = ArgumentHandler().get_run_type()
 
         # execute before flags
         FlagHandler().execute_before_flags()

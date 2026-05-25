@@ -27,7 +27,7 @@ class Main:
             raise CLIError(f"Error initializing CLI", cause=e)
 
         # run Interpreter
-        Interpreter().initializer(ArgumentHandler.file, CLIHandler.run_type)
+        Interpreter().initializer(ArgumentHandler.file)
 
         # Cli terminator
         CLIHandler().terminator()
@@ -44,6 +44,8 @@ if __name__ == "__main__":
         Main().run()
     except Exception as e:
         print_error(f"Error when running Bosh:", e)
+    except KeyboardInterrupt:
+        print("\nBosh execution interrupted by user. Goodbye!")
 
 # Alternative entry point for uv
 def main():
@@ -51,6 +53,8 @@ def main():
         Main().run()
     except Exception as e:
         print_error(f"Error when running Bosh:", e)
+    except KeyboardInterrupt:
+        print("\nBosh execution interrupted by user. Goodbye!")
 
 def main_no_try():
     Main().run()

@@ -10,6 +10,11 @@ class ConfigHandler:
     config = None
     default_config = None
 
+    def __init__(self):
+        # Ensure config is initialized when any instance is created
+        if ConfigHandler.config is None:
+            self.initializer()
+
     def initializer(self):
         # Check if config file exists, if not create it
         config_path = self._get_config_file_path()
@@ -26,7 +31,7 @@ class ConfigHandler:
         self.set_default_flags(self.get("bosh.default_flags"))      
         
     def get(self, path=None):
-        if path is None: return self.config
+        if path is None: return
 
         # Get a value from the config file using a dot separated path
         keys = path.split(".")
