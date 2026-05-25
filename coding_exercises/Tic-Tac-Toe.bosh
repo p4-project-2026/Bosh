@@ -16,16 +16,7 @@ function PrintBoard:
     print ""
 
 repeat until false:
-    # run PrintBoard
-    #### QUICK FIX ####
-    print ""
-    count I from 0 to 2:
-        Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
-        print " " + Row
-        if I < 2:
-            print "---+---+---"
-    print ""
-    ###################
+    run PrintBoard
     
     Error is ""
 

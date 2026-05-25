@@ -1,5 +1,43 @@
+# Build board
+Board is a list
+count from 1 to 9:
+    append " " to Board
 
+function PrintBoard:
+    print ""
+    count I from 0 to 2:
+        Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
+        print " " + Row
+        if I < 2:
+            print "---+---+---"
+    print ""
+
+#set random start player
 if random from 1 to 2 == 1:
     CurrentPlayer is "O" 
 else:
     CurrentPlayer is "X"
+
+repeat until false:
+    run PrintBoard
+
+    MoveInput is input "Player {CurrentPlayer}, choose position (1-9): "
+
+    MoveLocation is MoveInput as int - 1
+
+    if MoveLocation < 0 or MoveLocation > 8:
+        print("Invalid position. Choose 1-9.")
+        continue
+
+    if Board at MoveLocation != " ":
+        print("Position already taken.")
+        continue
+
+    Board at MoveLocation is CurrentPlayer
+
+    if CurrentPlayer == "X"
+        CurrentPlayer is "O"
+    else:
+        CurrentPlayer is "X"
+
+
