@@ -63,7 +63,7 @@ class GoTo(ASTNode):
         try:
             path_value = self.path.execute(env)
             log_case.set("success", path_value=path_value)
-            os.chdir(path_value)
+            env.set_current_directory(path_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         return
@@ -417,7 +417,18 @@ class Copy(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def execute(self, env: Environment) -> None:
+    
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'copy' statement to copy from source '{self.source}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, env, source_value, target_value: (
+                f"'Copy' statement executed successfully. Copied from '{source_value}' to '{target_value}'"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             source_value = self.source.execute(env)
             target_value = self.target.execute(env)
@@ -427,6 +438,8 @@ class Copy(ASTNode):
             elif os.path.isfile(source_value):
                 import shutil
                 shutil.copy2(source_value, target_value)
+
+            log_case.set("success", source_value=source_value, target_value=target_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -439,7 +452,18 @@ class Move(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'move' statement to move from source '{self.source}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Move' statement checked successfully'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -487,15 +511,27 @@ class Move(ASTNode):
                 target_type = {"text"}
 
             self.child_return_types[self.target] = (target_type, self.target)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def execute(self, env: Environment) -> None:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'move' statement to move from source '{self.source}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, env, source_value, target_value: (
+                    f"'Move' statement executed successfully. Moved from '{source_value}' to '{target_value}'"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             source_value = self.source.execute(env)
             target_value = self.target.execute(env)
             os.rename(source_value, target_value)
+            log_case.set("success", source_value=source_value, target_value=target_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -506,7 +542,17 @@ class Read(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'read' statement with source '{self.source}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Read' statement checked successfully with source '{self.source}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -531,16 +577,28 @@ class Read(ASTNode):
                 source_type = {"text"}
 
                 self.child_return_types[self.source] = (source_type, self.source)
-
+            
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
-    
-    def execute(self, env: Environment) -> str:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'read' statement with source '{self.source}'..."
+        ),
+        success={
+            "success": lambda self, env, source_value: (
+                f"'Read' statement executed successfully with source '{source_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> str:
         try:
             source_value = self.source.execute(env)
             if os.path.isfile(source_value):
                 with open(source_value, "r") as f:
+                    log_case.set("success", source_value=source_value)
                     return f.read()
             else:
                 raise TraceError(node = self, cause = f"Cannot read from '{source_value}' because it is not a file.")
@@ -555,8 +613,17 @@ class Write(ASTNode):
     
     def __post_init__(self):
         super().__init__()
-
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None: 
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'write' statement to write data '{self.data}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Write' statement checked successfully'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None: 
         try:
             self.child_return_types.clear()
 
@@ -598,16 +665,28 @@ class Write(ASTNode):
 
                 data_type = {"text"}
             self.child_return_types[self.data] = (data_type, self.data)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
-        
-    def execute(self, env: Environment) -> None:
+    
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'write' statement to write data '{self.data}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, env, target_value, data_value: (
+                f"'Write' statement executed successfully for writing data '{data_value}' to target '{target_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             data_value = self.data.execute(env)
             with open(target_value, "w") as f:
                 f.write(data_value)
+            log_case.set("success", target_value=target_value, data_value=data_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -615,13 +694,37 @@ class Write(ASTNode):
 @dataclass
 class GoUp(ASTNode):
     
-
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'go up' statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Go up' statement checked successfully'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
+        log_case.set("success")
         return
 
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'go up' statement..."
+        ),
+        success={
+            "success": lambda self, env, old_directory, new_directory: (
+                f"'Go up' statement executed successfully, current directory changed from '{old_directory}' to its parent directory '{new_directory}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
-            os.chdir("..")
+            current_dir = env.get_current_directory()
+            new_current_dir = current_dir[:current_dir.rfind('/')+1]
+            env.set_current_directory(new_current_dir)
+            log_case.set("success", old_directory=current_dir, new_directory=new_current_dir)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 

@@ -2207,7 +2207,7 @@ class AccessOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "here":
-                    result = os.getcwd()
+                    result = env.get_current_directory()
                     log_case.set("success", result=result)
                     return result
                 case _:
