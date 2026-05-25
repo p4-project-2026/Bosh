@@ -191,7 +191,17 @@ class Delete(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'delete' statement with target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Delete' statement checked successfully with target '{self.target}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext , log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -220,18 +230,31 @@ class Delete(ASTNode):
                 target_type = {"text"}
 
             self.child_return_types[self.target] = (target_type, self.target)
+            log_case.set("success")
 
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def execute(self, env: Environment) -> None:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'delete' statement with target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"'Delete' statement executed successfully with target '{self.target}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             if os.path.isdir(target_value):
                 os.rmdir(target_value)
             elif os.path.isfile(target_value):
                 os.remove(target_value)
+            
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
