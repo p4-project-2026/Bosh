@@ -9,7 +9,17 @@ class GoTo(ASTNode):
     def __post_init__(self):
         super().__init__()
 
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'go to' statement with path '{self.path}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, path_type: (
+                f"'Go to' statement checked successfully with path type '{path_type}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
             vvprint(f"Checking: 'go to' statement with path '{self.path}'...")
@@ -39,9 +49,20 @@ class GoTo(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def execute(self, env: Environment) -> None:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'go to' statement with path '{self.path}'..."
+        ),
+        success={
+            "success": lambda self, env, path_value: (
+                f"'Go to' statement executed successfully, current directory changed to '{path_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             path_value = self.path.execute(env)
+            log_case.set("success", path_value=path_value)
             os.chdir(path_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -58,7 +79,18 @@ class Make(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'make' statement to create a new {self.entity_type} with name '{self.name}' and location '{self.location}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Make' statement checked successfully for creating a new {self.entity_type} with name '{self.name}' and location '{self.location}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -112,13 +144,23 @@ class Make(ASTNode):
                 location_type = {"text"}
 
             self.child_return_types[self.location] = (location_type, self.location)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
 
-
-    def execute(self, env: Environment) -> None:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'make' statement to create a new {self.entity_type} with name '{self.name}' and location '{self.location}'..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"'Make' statement executed successfully for creating a new {self.entity_type} with name '{self.name}' and location '{self.location}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             name_value = self.name.execute(env)
             location_value = self.location.execute(env) if self.location else None
@@ -135,6 +177,8 @@ class Make(ASTNode):
                 else:
                     with open(path, "a") as f:
                         pass
+            
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
