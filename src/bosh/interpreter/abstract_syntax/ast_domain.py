@@ -11,18 +11,17 @@ class GoTo(ASTNode):
 
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'go to' statement with path '{self.path}'..."
+            f"Checking 'go to' statement..."
         ),
         success={
-            "success": lambda self, v_table, f_table, inference_context, path_type: (
-                f"'Go to' statement checked successfully with path type '{path_type}'."
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Go to' statement checked successfully with path type '{self.child_return_types['path'][0]}'."
             )
         }
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-            vvprint(f"Checking: 'go to' statement with path '{self.path}'...")
 
             path_type = self.path.check(
                 v_table=v_table, 
@@ -44,7 +43,8 @@ class GoTo(ASTNode):
                 )
                 path_type = narrowed_path_type
             
-            self.child_return_types[self.path] = (path_type, self.path)
+            self.child_return_types["path"] = (path_type, self.path)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -82,11 +82,11 @@ class Make(ASTNode):
 
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'make' statement to create a new {self.entity_type} with name '{self.name}' and location '{self.location}'..."
+            f"Checking 'make' statement to create a new {self.entity_type}..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Make' statement checked successfully for creating a new {self.entity_type} with name '{self.name}' and location '{self.location}'."
+                f"'Make' statement checked successfully for creating a new {self.entity_type}."
             )
         }
     )
@@ -121,7 +121,7 @@ class Make(ASTNode):
                 
                 name_type = {"text"}
                 
-            self.child_return_types[self.name] = (name_type, self.name)
+            self.child_return_types["name"] = (name_type, self.name)
 
             location_type = self.location.check(
                 v_table, 
@@ -143,7 +143,7 @@ class Make(ASTNode):
 
                 location_type = {"text"}
 
-            self.child_return_types[self.location] = (location_type, self.location)
+            self.child_return_types["location"] = (location_type, self.location)
             log_case.set("success")
 
         except Exception as e:
@@ -152,7 +152,7 @@ class Make(ASTNode):
 
     @logged(
         start=lambda self, env: (
-            f"Executing 'make' statement to create a new {self.entity_type} with name '{self.name}' and location '{self.location}'..."
+            f"Executing 'make' statement to create a new {self.entity_type}..."
         ),
         success={
             "success": lambda self, env, name_value, location_value: (
@@ -229,7 +229,7 @@ class Delete(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
             log_case.set("success")
 
 
@@ -300,7 +300,7 @@ class Rename(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
 
 
             new_name_type = self.new_name.check(
@@ -322,7 +322,7 @@ class Rename(ASTNode):
 
                 new_name_type = {"text"}
             log_case.set("success")
-            self.child_return_types[self.new_name] = (new_name_type, self.new_name)
+            self.child_return_types["new_name"] = (new_name_type, self.new_name)
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
@@ -357,7 +357,7 @@ class Copy(ASTNode):
 
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'copy' statement to copy from source '{self.source}' to target '{self.target}'..."
+            f"Checking 'copy' statement..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
@@ -390,7 +390,7 @@ class Copy(ASTNode):
 
                 source_type = {"text"}
 
-            self.child_return_types[self.source] = (source_type, self.source)
+            self.child_return_types["source"] = (source_type, self.source)
 
             target_type = self.target.check(
                 v_table=v_table, 
@@ -413,14 +413,14 @@ class Copy(ASTNode):
 
                 target_type = narrowed_target_type
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
     
     @logged(
         start=lambda self, env: (
-            f"Executing 'copy' statement to copy from source '{self.source}' to target '{self.target}'..."
+            f"Executing 'copy' statement..."
         ),
         success={
             "success": lambda self, env, source_value, target_value: (
@@ -455,11 +455,11 @@ class Move(ASTNode):
 
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'move' statement to move from source '{self.source}' to target '{self.target}'..."
+            f"Checking 'move' statement..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Move' statement checked successfully'."
+                f"'Move' statement checked successfully. Source: {self.child_return_types['source']}, Target: {self.child_return_types['target']}"
             )
         }
     )
@@ -488,7 +488,7 @@ class Move(ASTNode):
 
                 source_type = {"text"}
 
-            self.child_return_types[self.source] = (source_type, self.source)
+            self.child_return_types["source"] = (source_type, self.source)
             
             target_type = self.target.check(
                 v_table=v_table, 
@@ -510,7 +510,7 @@ class Move(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
             log_case.set("success")
 
         except Exception as e:
@@ -518,7 +518,7 @@ class Move(ASTNode):
         
     @logged(
         start=lambda self, env: (
-            f"Executing 'move' statement to move from source '{self.source}' to target '{self.target}'..."
+            f"Executing 'move' statement..."
         ),
         success={
             "success": lambda self, env, source_value, target_value: (
@@ -544,11 +544,11 @@ class Read(ASTNode):
     
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'read' statement with source '{self.source}'..."
+            f"Checking 'read' statement..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Read' statement checked successfully with source '{self.source}'."
+                f"'Read' statement checked successfully."
             )
         }
     )
@@ -576,7 +576,7 @@ class Read(ASTNode):
 
                 source_type = {"text"}
 
-                self.child_return_types[self.source] = (source_type, self.source)
+                self.child_return_types["source"] = (source_type, self.source)
             
             log_case.set("success")
 
@@ -585,7 +585,7 @@ class Read(ASTNode):
 
     @logged(
         start=lambda self, env: (
-            f"Executing 'read' statement with source '{self.source}'..."
+            f"Executing 'read' statement..."
         ),
         success={
             "success": lambda self, env, source_value: (
@@ -615,11 +615,11 @@ class Write(ASTNode):
         super().__init__()
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'write' statement to write data '{self.data}' to target '{self.target}'..."
+            f"Checking 'write' statement..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Write' statement checked successfully'."
+                f"'Write' statement checked successfully. Target: {self.child_return_types['target']}, Data: {self.child_return_types['data']}"
             )
         }
     )
@@ -645,7 +645,7 @@ class Write(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
 
             data_type = self.data.check(
                 v_table=v_table,
@@ -664,7 +664,7 @@ class Write(ASTNode):
                 )
 
                 data_type = {"text"}
-            self.child_return_types[self.data] = (data_type, self.data)
+            self.child_return_types["data"] = (data_type, self.data)
             log_case.set("success")
 
         except Exception as e:
@@ -672,7 +672,7 @@ class Write(ASTNode):
     
     @logged(
         start=lambda self, env: (
-            f"Executing 'write' statement to write data '{self.data}' to target '{self.target}'..."
+            f"Executing 'write' statement..."
         ),
         success={
             "success": lambda self, env, target_value, data_value: (
@@ -736,7 +736,18 @@ class Execute(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'execute' statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Execute' statement checked successfully. Target: {self.child_return_types['target'][0]}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -760,15 +771,29 @@ class Execute(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'execute' statement..."
+        ),
+        success={
+            "success": lambda self, env, target_value: (
+                f"'Execute' statement executed successfully with target '{target_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
+
             os.system(target_value)
+            log_case.set("success", target_value=target_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -777,14 +802,36 @@ class Execute(ASTNode):
 class Pause(ASTNode):
     
 
-
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'pause' statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Pause' statement checked successfully'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
+        log_case.set("success")
         return
     
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'pause' statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"'Pause' statement executed successfully, execution paused until user input."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             print("Press any key to continue...")
             msvcrt.getch()
+            log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -795,7 +842,18 @@ class Wait(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'wait' statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Wait' statement checked successfully. Duration type: {self.child_return_types['time'][0]}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
             duration_type = self.time.check(
@@ -818,15 +876,28 @@ class Wait(ASTNode):
 
                 duration_type = narrowed_duration_type
             
-            self.child_return_types[self.time] = (duration_type, self.time)
+            self.child_return_types["time"] = (duration_type, self.time)
+            log_case.set("success")
+
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def execute(self, env: Environment) -> None:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'wait' statement..."
+        ),
+        success={
+            "success": lambda self, env, duration_value: (
+                f"'Wait' statement executed successfully, execution paused for {duration_value} milliseconds."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             duration_value = self.time.execute(env)
             time.sleep(duration_value / 1000)
+            log_case.set("success", duration_value=duration_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
