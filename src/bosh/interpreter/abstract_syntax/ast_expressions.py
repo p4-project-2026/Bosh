@@ -446,6 +446,8 @@ class Identifier(ASTNode):
     def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
             value = env.lookup_variable(self.name)
+            if value is None:
+                raise Exception(f"Identifier '{self.name}' is defined, but has not been assigned a value.", self)
             log_case.set("success", result=value)
             return value
         except Exception as e:
