@@ -152,7 +152,7 @@ _BLOCKEND: "}"
 _SEP: "." _WS* _NL* | _NL+
 COMMENT: /#[^\n]*\n?/
 BOOLEAN: "true" | "false"
-IDENT: /[A-Z][a-zA-Z0-9]*/(" "*/[A-Z][a-zA-Z0-9]*/)*
+IDENT: /[A-Z][a-zA-Z0-9_]*/(" "*/[A-Z][a-zA-Z0-9_]*/)*
 %import common.WS_INLINE -> _WS
 %import common.NEWLINE -> _NL
 %import common.INT -> NUMBER
