@@ -95,7 +95,7 @@ class AssignType(ASTNode):
     
 
     @logged(
-        start=lambda self: (
+        start=lambda self, v_table, f_table, inference_context: (
             f"Checking assignment of type '{self.var_type}' to variable '{self.target.name}'..."
         ),
         success={
@@ -106,9 +106,12 @@ class AssignType(ASTNode):
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
+            
             self.child_return_types.clear()
-
-            declared_type = {self.var_type}
+    
+            declared_type = self.var_type.check(v_table, f_table, inference_context)
+            if declared_type is None:
+                raise Exception(f"Declared type for variable '{self.target.name}' is undefined.", self)
 
             if self.value:
                 value_type = self.value.check(
@@ -183,7 +186,7 @@ class AssignType(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, value: Any = None, log_case: LogCase = None) -> None:
+    def execute(self, env: Environment, value: Any = None, *, log_case: LogCase) -> None:
         try:
             value = self.value.execute(env) if self.value else None
             env.assign_variable(self.target.name, value)
