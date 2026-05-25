@@ -1,7 +1,5 @@
-task Func:
-    task Inside Func:
-        say "Hello, World!"
+task Print uses (Message, Times):
+    count from 1 to Times:
+        say Message
 
-    run Inside Func
-
-call Func
+run Print using ("Hello, World!", 3)

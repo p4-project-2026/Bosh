@@ -1942,25 +1942,30 @@ class AccessOp(ASTNode):
         super().__init__()
     
 
-    
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> set[str]:
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking access operation '{self.operation}' with target '{self.target}' and argument '{self.argument}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Access operation '{self.operation}' checked successfully with return type '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
-            vvprint(f"AccessOp: Checking access operation '{self.operation}'...")
 
             target_type = self.target.check(v_table=v_table, f_table=f_table, inference_context=inference_context) if self.target else None
             op = self.operation
 
-
-
             match op:
-                
+
                 case "file_name":
                     if target_type is None:
                         raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
                     if not t_h.contains(target_type, "text"):
-                        raise Exception(f"Cannot get file name from type '{target_type}'. {op} Expected 'text'.")
-                    
+                        raise Exception(f"Cannot get file name from type '{target_type}'. {op} Expected 'text'.")    
                     if target_type != {"text"}:
                         self.target.inference(
                             v_table=v_table,
@@ -1969,20 +1974,19 @@ class AccessOp(ASTNode):
                             old_inference_value=target_type.copy(),
                             new_inference_value={"text"},
                         )
+
                         target_type = {"text"}
                     
                     self.child_return_types["target"] = (target_type.copy(), self.target)
                     self.child_return_types["self"] = ({"text"}, self)
-
-                    vvprint(f"AccessOp: Operation 'file_name' on target type '{target_type}' is valid. Returning 'text'.")
+                    log_case.set("success")
                     return {"text"}
                 
                 case "age":
                     if target_type is None:
                         raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
                     if not t_h.contains(target_type, "text"):
-                        raise Exception(f"Cannot get age from type '{target_type}'. {op} Expected 'text'.")
-                    
+                        raise Exception(f"Cannot get age from type '{target_type}'. {op} Expected 'text'.")                    
                     if target_type != {"text"}:
                         self.target.inference(
                             v_table=v_table,
@@ -1996,6 +2000,7 @@ class AccessOp(ASTNode):
 
                     self.child_return_types["target"] = (target_type.copy(), self.target)
                     self.child_return_types["self"] = ({"time"}, self)
+                    log_case.set("success")
                     return {"time"}
                 
                 case "first" | "last":
@@ -2019,28 +2024,34 @@ class AccessOp(ASTNode):
                     self.child_return_types["target"] = (target_type.copy(), self.target)
                     return_type = t_h.get_list_element_types(target_type)
                     self.child_return_types["self"] = (return_type.copy(), self)
+                    log_case.set("success")
                     return return_type
 
                 case "length":
                     if target_type is None:
                         raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
                     if not t_h.has_list_type(target_type):
-                        raise Exception(f"Cannot get length of type '{target_type}'. {op} Expected a list.")
-                    
-                    if t_h.has_non_list_type(target_type):
-                        new_target_type = t_h.get_all_list_types(target_type)
-                        self.target.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=target_type.copy(),
-                            new_inference_value=new_target_type.copy(),
-                        )
+                        if not t_h.contains(target_type, "text"):
+                            raise Exception(f"Cannot get length of type '{target_type}'. {op} Expected a list.")
+                    if not t_h.is_only(target_type, "text"):
+                        if t_h.has_non_list_type(target_type):
 
-                        target_type = new_target_type.copy()
+                            new_target_type = t_h.get_all_list_types(target_type)
+                            if t_h.contains(target_type, "text"):
+                                new_target_type.add("text")
+                            self.target.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=target_type.copy(),
+                                new_inference_value=new_target_type.copy(),
+                            )
+
+                            target_type = new_target_type.copy()
                     
                     self.child_return_types["target"] = (target_type.copy(), self.target)
                     self.child_return_types["self"] = ({"number"}, self)
+                    log_case.set("success")
                     return {"number"}
                     
 
@@ -2085,6 +2096,7 @@ class AccessOp(ASTNode):
                         self.child_return_types["argument"] = ({"text"}, self.argument)
 
                     self.child_return_types["self"] = ({"boolean"}, self)
+                    log_case.set("success")
                     return {"boolean"}
 
                 case "unit":
@@ -2114,14 +2126,17 @@ class AccessOp(ASTNode):
                         return_types.add("number")
                     
                     self.child_return_types["self"] = (return_types.copy(), self)
+                    log_case.set("success")
                     return return_types
                 
                 case "now":
                     self.child_return_types["self"] = ({"date"}, self)
+                    log_case.set("success")
                     return {"date"}
 
                 case "here":
                     self.child_return_types["self"] = ({"text"}, self)
+                    log_case.set("success")
                     return {"text"}
                 
                 case _:
@@ -2130,40 +2145,83 @@ class AccessOp(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def execute(self, env: Environment) -> Any:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing access operation '{self.operation}' with target '{self.target}' and argument '{self.argument}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Access operation '{self.operation}' executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> Any:
         try:
             target_value = self.target.execute(env) if self.target else None
             arg_value = self.argument.execute(env) if self.argument else None
             match self.operation:
                 case "file_name":
-                    return os.path.basename(target_value)
+                    result = os.path.basename(target_value)
+                    log_case.set("success", result=result)
+                    return result
                 case "age":
-                    return os.path.getmtime(target_value)
+                    result = os.path.getmtime(target_value)
+                    log_case.set("success", result=result)
+                    return result
                 case "starts_with":
-                    return target_value.startswith(arg_value)
+                    result = target_value.startswith(arg_value)
+                    log_case.set("success", result=result)
+                    return result
                 case "ends_with":
-                    return target_value.endswith(arg_value)
+                    result = target_value.endswith(arg_value)
+                    log_case.set("success", result=result)
+                    return result
                 case "regex":
-                    return re.search(arg_value, target_value) is not None
+                    result = re.search(arg_value, target_value) is not None
+                    log_case.set("success", result=result)
+                    return result
                 case "length":
-                    return len(target_value)
+                    result = len(target_value)
+                    log_case.set("success", result=result)
+                    return result
                 case "first":
-                    return target_value[0]
+                    result = target_value[0]
+                    log_case.set("success", result=result)
+
+                    return result
                 case "last":
-                    return target_value[-1]
+                    result = target_value[-1]
+                    log_case.set("success", result=result)
+                    return result
                 case "unit":
                     # This will be handled by the Unit AST node, so we can just return the value here
+                    log_case.set("success", result=target_value)
                     return target_value
                 case "now":
-                    return datetime.datetime.now()
+                    result = datetime.datetime.now()
+                    log_case.set("success", result=result)
+                    return result
                 case "here":
-                    return os.getcwd()
+                    result = os.getcwd()
+                    log_case.set("success", result=result)
+                    return result
                 case _:
                     raise TraceError(node = self, cause = f"Unsupported access operation '{self.operation}'")
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def inference(self, v_table, f_table, inference_context, old_inference_value, new_inference_value):
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Starting inference for access operation '{self.operation}' with old inference value '{old_inference_value}' and new inference value '{new_inference_value}'..."
+            ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Inference for access operation '{self.operation}' completed successfully. Updated return type: '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def inference(self, v_table, f_table, inference_context, old_inference_value, new_inference_value, log_case: LogCase) -> None:
         try:
             if "self" not in self.child_return_types:
                 raise Exception(f"AccessOp inference: No type information available for access operation during inference. This node has not been checked. Node: {self}", self)
@@ -2236,7 +2294,8 @@ class AccessOp(ASTNode):
                         f"Inference for access operation '{self.operation}' is not supported. If you are seeing this error, it means something went wrong somewhere. "
                         f"new_inference_value: {new_inference_value}, old_inference_value: {old_inference_value}",
                         self)
-
+            
+            log_case.set("success")
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
