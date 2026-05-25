@@ -7,16 +7,17 @@ function PrintBoard:
     print ""
     count I from 0 to 2:
         Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
-        print " " + Row
+        print " {Row}"
         if I < 2:
             print "---+---+---"
     print ""
 
 #set random start player
-if random from 1 to 2 == 1:
+CurrentPlayer is "X"
+if (random from 1 to 2) == 1:
     CurrentPlayer is "O" 
-else:
-    CurrentPlayer is "X"
+
+
 
 repeat until false:
     run PrintBoard
@@ -32,12 +33,15 @@ repeat until false:
     if Board at MoveLocation != " ":
         print("Position already taken.")
         continue
-
+    
     Board at MoveLocation is CurrentPlayer
+
+    if Check_winner(current_player):
+        print_board()
+        print(f"Player {current_player} wins!")
+        break
 
     if CurrentPlayer == "X"
         CurrentPlayer is "O"
     else:
         CurrentPlayer is "X"
-
-
