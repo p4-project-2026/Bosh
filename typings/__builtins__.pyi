@@ -10,6 +10,7 @@ BoshTypeError: Any
 BoshRuntimeError: Any
 BoshScriptError: Any
 TraceError: Any
+BoshFileNotFoundError: Any
 
 # Helper functions
 print_error: Any

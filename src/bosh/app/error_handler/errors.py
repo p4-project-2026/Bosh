@@ -73,3 +73,8 @@ class TraceError(Error):
             super().__init__(message=cause.message, severity=severity, cause=cause)
         else:
             super().__init__(message=formatted_message, severity=severity, cause=cause)
+
+class BoshFileNotFoundError(Error):
+    def __init__(self, message: str, severity: str = "error", details: Optional[Dict[str, Any]] = None, suggestion: Optional[str] = None, cause: Optional[Error] = None, color: Optional[str] = None):
+        formatted_message = f"    {message}"
+        super().__init__(message=formatted_message, severity=severity, details=details, suggestion=suggestion, cause=cause, color=color)

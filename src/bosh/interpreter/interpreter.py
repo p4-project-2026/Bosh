@@ -5,25 +5,26 @@ from bosh.interpreter.lexparser.parser import parseBosh, createAST
 from bosh.interpreter.semantics.type_checker import TypeChecker
 from bosh.interpreter.executor.executor import Executor
 
+from bosh.app.cli.flags.flags import Cmd
 class Interpreter:
     code = None
     processed_code = None
     parse_tree = None
     ast = None
 
-    def initializer(self, file_path, run_type):
-        vprint(f"Running {file_path} with run type: {run_type}")
-        if run_type == "cli":
-            self._run_cli()
-            return
+    def initializer(self, file_path):
+        vprint(f"Running {file_path} with Cmd: {Cmd.enabled}")
 
-        if run_type == "cmd":
+        if Cmd.enabled:
             self._run_cmd()
             return
 
         # open and load the file
         vprint(f"Opening file: {file_path}...")
-        Interpreter.code = self._load_code_from_file(file_path)
+        try:
+            Interpreter.code = self._load_code_from_file(file_path)
+        except FileNotFoundError as e:
+            raise BoshFileNotFoundError(f"File not found: {file_path}")
         vvprint(indent(Interpreter.code))
 
         self.run()
@@ -33,22 +34,6 @@ class Interpreter:
             vprint(f"Running argument {i + 1}: ")
             Interpreter.code = code
             self.run()
-
-    def _run_cli(self):
-        print("Welcome to Bosh CLI IDE!")
-        print("Type your code below. Type 'exit' to quit.")
-        while True:
-            try:
-                code = input(">>> ")
-                if code.strip() == "exit":
-                    print("Goodbye!")
-                    break
-                # Here you would normally pass the code to your interpreter logic
-                # TODO: Implement the actual code execution logic
-                print(f"You entered: {code}")
-            except KeyboardInterrupt:
-                print("\nGoodbye!")
-                break
 
     def run(self):
         # Preprocess the code
