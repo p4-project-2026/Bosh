@@ -901,16 +901,22 @@ class ListAdd(ASTNode):
     )
     def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
+            
             target_value = self.target.execute(env)
+
             item_value = self.item.execute(env)
+
+
             if self.op == "insert" and self.index is not None:
                 index_value = self.index.execute(env)
                 target_value.insert(index_value, item_value)
-            
+
             elif self.op == "append":
                 target_value.append(item_value)
+
             
             elif self.op == "prepend":
+
                 target_value.insert(0, item_value)
 
             log_case.set("success")
