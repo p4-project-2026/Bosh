@@ -1,5 +1,4 @@
-N is 0
-function Factorial:
+function Factorial uses (N):
     if N < 0: 
         say "Factorial does not exist for negative numbers"
         quit
@@ -17,4 +16,4 @@ function Factorial:
 Input is input "Enter a number: "
 N is Input as int
 
-print "Factorial of " + N + " is " + Factorial result
+print "{N}! = {Factorial result using (N)}"

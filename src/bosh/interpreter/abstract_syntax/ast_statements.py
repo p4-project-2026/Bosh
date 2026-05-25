@@ -456,11 +456,11 @@ class RepeatUntil(ASTNode):
 
 
     @logged(
-        start=lambda self, v_table, f_table, inference_context: (
+        start=lambda self, env: (
             f"Executing repeat until statement..."
         ),
         success={
-            "success": lambda self, v_table, f_table, inference_context: (
+            "success": lambda self, env: (
                 f"RepeatUntil executed successfully."
             )
         }
@@ -629,14 +629,14 @@ class Quit(ASTNode):
         super().__init__()
 
 
-        logged(
-            start=lambda self, v_table, f_table, inference_context: (
-                f"Checking quit statement..."
-            ),
-            success={
-                "success": lambda self, v_table, f_table, inference_context: (
-                    f"Quit statement checked successfully."
-                )
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking quit statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Quit statement checked successfully."
+            )
         }
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:

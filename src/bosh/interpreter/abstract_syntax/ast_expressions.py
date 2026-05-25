@@ -2166,9 +2166,11 @@ class AccessOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "age":
-                    result = os.path.getmtime(target_value)
+                    time = os.path.getmtime(target_value)
+                    file_date = datetime.datetime.fromtimestamp(time)
+                    now = datetime.datetime.now()
                     log_case.set("success", result=result)
-                    return result
+                    return int((now - file_date).total_seconds() * 1000)
                 case "starts_with":
                     result = target_value.startswith(arg_value)
                     log_case.set("success", result=result)

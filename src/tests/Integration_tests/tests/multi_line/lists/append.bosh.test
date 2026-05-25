@@ -1,5 +1,5 @@
-A is (1)
+A is [1]
 append 2 to A
 say A
 ===
-(1, 2)
+[1, 2]
