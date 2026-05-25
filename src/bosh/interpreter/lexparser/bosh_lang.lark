@@ -21,6 +21,7 @@ block:  stmt (_SEP+ stmt)* _SEP*
                 | "return" expr?                                                -> return_
                 | "continue"                                                    -> continue_
                 | "break"                                                       -> break_
+                | term "at" "index"? plus_expr "is" expr                        -> assign_to_list
                 | INSERT expr "to" term ("at" "index"? expr)?                   -> add_to_list
                 | "remove" expr "from" expr                                     -> remove_from_list
                 | "remove index" expr "from" expr                               -> remove_from_list_at
@@ -92,7 +93,7 @@ INSERT : "append" | "prepend" | "insert"
 
 ?access_expr    : term
                 | access_expr "at" "index"? term        -> list_look
-                | access_expr "letter" term "of" term   -> text_look
+                | "letter" term "of" term               -> text_look
                 | "length of" term                      -> length
                 | "first" "element"? "of" term          -> first
                 | "last" "element"? "of"  term          -> last

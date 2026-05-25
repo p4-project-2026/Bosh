@@ -23,7 +23,7 @@ class ArgumentHandler:
         args = args[len(ArgumentHandler.flags):]
 
         if len(args) == 0:
-            ArgumentHandler.file = ConfigHandler.get(path = "bosh.default_file")
+            ArgumentHandler.file = ConfigHandler().get(path = "bosh.default_file")
             vprint("no file provided, default file used")
             vprint(f"arguments: {ArgumentHandler.args}")
             return

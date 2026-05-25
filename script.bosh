@@ -1,1 +1,5 @@
-say length of "Hello, World!"
+task Print uses (Message, Times):
+    count from 1 to Times:
+        say Message
+
+run Print using ("Hello, World!", 3)
