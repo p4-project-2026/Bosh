@@ -1958,19 +1958,23 @@ class AccessOp(ASTNode):
                     if target_type is None:
                         raise Exception(f"Access operation '{op}' requires a target, but no target was provided.")
                     if not t_h.has_list_type(target_type):
-                        raise Exception(f"Cannot get length of type '{target_type}'. {op} Expected a list.")
-                    
-                    if t_h.has_non_list_type(target_type):
-                        new_target_type = t_h.get_all_list_types(target_type)
-                        self.target.inference(
-                            v_table=v_table,
-                            f_table=f_table,
-                            inference_context=inference_context,
-                            old_inference_value=target_type.copy(),
-                            new_inference_value=new_target_type.copy(),
-                        )
+                        if not t_h.contains(target_type, "text"):
+                            raise Exception(f"Cannot get length of type '{target_type}'. {op} Expected a list.")
+                    if not t_h.is_only(target_type, "text"):
+                        if t_h.has_non_list_type(target_type):
 
-                        target_type = new_target_type.copy()
+                            new_target_type = t_h.get_all_list_types(target_type)
+                            if t_h.contains(target_type, "text"):
+                                new_target_type.add("text")
+                            self.target.inference(
+                                v_table=v_table,
+                                f_table=f_table,
+                                inference_context=inference_context,
+                                old_inference_value=target_type.copy(),
+                                new_inference_value=new_target_type.copy(),
+                            )
+
+                            target_type = new_target_type.copy()
                     
                     self.child_return_types["target"] = (target_type.copy(), self.target)
                     self.child_return_types["self"] = ({"number"}, self)
