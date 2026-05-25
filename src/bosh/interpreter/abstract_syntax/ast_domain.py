@@ -920,7 +920,7 @@ class Input(ASTNode):
             )
         }
     )
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> Optional[str]:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
             self.child_return_types.clear()
             if self.prompt is not None:
