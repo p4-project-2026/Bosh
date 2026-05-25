@@ -681,33 +681,27 @@ class Input(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[str]:
         try:
             self.child_return_types.clear()
-            if self.prompt is None:
-                return
+            if self.prompt is not None:
+                prompt_type = self.prompt.check(v_table, f_table, inference_context)
 
+                if not t_h.contains(prompt_type, "text"):
+                    raise Exception(f"Prompt in input statement must be of type 'text', got '{prompt_type}'")
+                
+                if prompt_type != {"text"}:
+                    self.prompt.inference(
+                        v_table=v_table,
+                        f_table=f_table, 
+                        inference_context=inference_context, 
+                        old_inference_value=prompt_type, 
+                        new_inference_value={"text"}
+                    )
 
-            prompt_type = self.prompt.check(
-                v_table=v_table, 
-                f_table=f_table,
-                inference_context=inference_context
-            )
-            
-            if not t_h.contains(prompt_type, "text"):
-                raise Exception(f"Prompt in input statement must be of type 'text', got '{prompt_type}'")
-            
-            if prompt_type != {"text"}:
-                self.prompt.inference(
-                    v_table=v_table,
-                    f_table=f_table, 
-                    inference_context=inference_context, 
-                    old_inference_value=prompt_type, 
-                    new_inference_value={"text"}
-                )
+                    prompt_type = {"text"}
 
-                prompt_type = {"text"}
-
-            self.child_return_types[self.prompt] = (prompt_type, self.prompt)
-
+                self.child_return_types["prompt"] = (prompt_type, self.prompt)
+            self.child_return_types["self"] = ({"text"}, self)
             return {"text"}
+        
         except Exception as e:
             raise TraceError(node = self, cause = e)
         

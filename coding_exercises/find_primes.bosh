@@ -1,6 +1,4 @@
-N is 0
-
-function Is Prime:
+function Is Prime uses (N):
     # Return True if N is prime, otherwise False.
     if N < 2:
         return false
@@ -19,5 +17,5 @@ print "All primes between 1 and {Max}:"
 
 count Num from 2 to Max:
     N is Num
-    if Is Prime result:
+    if Is Prime result using (N):
         print N

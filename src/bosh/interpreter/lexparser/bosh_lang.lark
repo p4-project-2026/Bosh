@@ -101,6 +101,7 @@ INSERT : "append" | "prepend" | "insert"
                 | access_expr "name"                    -> file_name
                 | access_expr unit                      -> unit
                 | access_expr "as" TYPE                 -> type_cast
+                | "random from" expr "to" expr          -> random
 
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
@@ -110,12 +111,11 @@ INSERT : "append" | "prepend" | "insert"
         | NUMBER                        -> number
         | FLOAT                         -> decimal
         | BOOLEAN                       -> boolean
-        | "(" term ("," term)* ")"      -> list
+        | "[" term ("," term)* "]"      -> list
         | "input" (expr)?               -> input
         | "null"                        -> null
         | "now"                         -> now
         | "here"                        -> here
-        | "random from" expr "to" expr  -> random
         | "(" expr ")"                  -> paren
         | TYPE
 

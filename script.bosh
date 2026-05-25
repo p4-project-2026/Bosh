@@ -1,5 +1,5 @@
-task Print uses (Message, Times):
-    count from 1 to Times:
-        say Message
 
-run Print using ("Hello, World!", 3)
+if random from 1 to 2 == 1:
+    CurrentPlayer is "O" 
+else:
+    CurrentPlayer is "X"
