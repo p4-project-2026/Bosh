@@ -197,7 +197,7 @@ class Delete(ASTNode):
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Delete' statement checked successfully with target '{self.target}'."
+                f"'Delete' statement checked successfully with target '{self.child_return_types['target'][1]}'."
             )
         }
     )
@@ -238,7 +238,7 @@ class Delete(ASTNode):
         
     @logged(
         start=lambda self, env: (
-            f"Executing 'delete' statement with target '{self.target}'..."
+            f"Executing 'delete' statement'..."
         ),
         success={
             "success": lambda self, env, target_value: (
@@ -269,11 +269,11 @@ class Rename(ASTNode):
 
     @logged(
         start=lambda self, v_table, f_table, inference_context: (
-            f"Checking 'rename' statement to rename target '{self.target}' to new name '{self.new_name}'..."
+            f"Checking 'rename' statement..."
         ),
         success={
             "success": lambda self, v_table, f_table, inference_context: (
-                f"'Rename' statement checked successfully'."
+                f"'Rename' statement checked successfully. Target: '{self.child_return_types['target'][1]}', New Name: '{self.child_return_types['new_name'][1]}'"
             )
         }
     )
@@ -909,7 +909,18 @@ class Input(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> Optional[str]:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'input' statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Input' statement checked successfully. Prompt type: {self.child_return_types['prompt'][0] if self.prompt else 'None'}, Return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> Optional[str]:
         try:
             self.child_return_types.clear()
             if self.prompt is not None:
@@ -936,9 +947,20 @@ class Input(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
-    def execute(self, env: Environment) -> str:
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'input' statement..."
+        ),
+        success={
+            "success": lambda self, env, prompt_value: (
+                f"'Input' statement executed successfully with prompt '{prompt_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> str:
         try:
             prompt_value = self.prompt.execute(env) if self.prompt else ""
+            log_case.set("success", prompt_value=prompt_value)
             return input(prompt_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
