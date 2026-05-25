@@ -155,8 +155,8 @@ class Make(ASTNode):
             f"Executing 'make' statement to create a new {self.entity_type} with name '{self.name}' and location '{self.location}'..."
         ),
         success={
-            "success": lambda self, env: (
-                f"'Make' statement executed successfully for creating a new {self.entity_type} with name '{self.name}' and location '{self.location}'."
+            "success": lambda self, env, name_value, location_value: (
+                f"'Make' statement executed successfully for creating a new {self.entity_type} with name '{name_value}' and location '{location_value}'."
             )
         }
     )
@@ -178,7 +178,7 @@ class Make(ASTNode):
                     with open(path, "a") as f:
                         pass
             
-            log_case.set("success")
+            log_case.set("success", name_value=name_value, location_value=location_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
@@ -241,8 +241,8 @@ class Delete(ASTNode):
             f"Executing 'delete' statement with target '{self.target}'..."
         ),
         success={
-            "success": lambda self, env: (
-                f"'Delete' statement executed successfully with target '{self.target}'."
+            "success": lambda self, env, target_value: (
+                f"'Delete' statement executed successfully with target '{target_value}'."
             )
         }
     )
@@ -254,7 +254,7 @@ class Delete(ASTNode):
             elif os.path.isfile(target_value):
                 os.remove(target_value)
             
-            log_case.set("success")
+            log_case.set("success", target_value=target_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -266,7 +266,18 @@ class Rename(ASTNode):
     def __post_init__(self):
         super().__init__()
     
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'rename' statement to rename target '{self.target}' to new name '{self.new_name}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"'Rename' statement checked successfully'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext , log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -310,15 +321,27 @@ class Rename(ASTNode):
                 )
 
                 new_name_type = {"text"}
-
+            log_case.set("success")
             self.child_return_types[self.new_name] = (new_name_type, self.new_name)
         except Exception as e:
             raise TraceError(node = self, cause = e)
     
-    def execute(self, env: Environment) -> None:
+
+    @logged(
+        start=lambda self, env: (
+            f"Executing 'rename' statement'..."
+        ),
+        success={
+            "success": lambda self, env, target_value, new_name_value: (
+                f"'Rename' statement executed successfully for renaming target '{target_value}' to new name '{new_name_value}'."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             target_value = self.target.execute(env)
             new_name_value = self.new_name.execute(env)
+            log_case.set("success", target_value=target_value, new_name_value=new_name_value)
             os.rename(target_value, new_name_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -330,6 +353,8 @@ class Copy(ASTNode):
     target: ASTNode
     def __post_init__(self):
         super().__init__()
+    
+
     
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
