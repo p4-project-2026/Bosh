@@ -101,6 +101,11 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
 
+    def assign_to_list(self, meta, args):
+        node = ListAssign(target=args[0], index=args[1], value=args[2])
+        node.set_meta(meta, self._filename)
+        return node
+
     def add_to_list(self, meta, args):
         index = args[3] if len(args) > 3 else None
         node = ListAdd(op=args[0], item=args[1], target=args[2], index=index)
@@ -341,6 +346,11 @@ class BoshTransformer(Transformer):
         node.set_meta(meta, self._filename)
         return node
     
+    def text_look(self, meta, args):
+        node = TextLookup(target=args[1], index=args[0])
+        node.set_meta(meta, self._filename)
+        return node
+    
     def length(self, meta, args):
         node = AccessOp(target=args[0], operation="length")
         node.set_meta(meta, self._filename)
@@ -383,11 +393,6 @@ class BoshTransformer(Transformer):
     
     def contains(self, meta, args):
         node = AccessOp(target=args[0], operation="contains", argument=args[1])
-        node.set_meta(meta, self._filename)
-        return node
-    
-    def text_look(self, meta, args):
-        node = AccessOp(target=args[0], operation="text_look", argument=args[1])
         node.set_meta(meta, self._filename)
         return node
 
@@ -481,6 +486,11 @@ class BoshTransformer(Transformer):
 
     def here(self, meta, args):
         node = AccessOp(target=None, operation="here")
+        node.set_meta(meta, self._filename)
+        return node
+
+    def random(self, meta, args):
+        node = Random(from_=args[0], to=args[1])
         node.set_meta(meta, self._filename)
         return node
 

@@ -659,7 +659,119 @@ class Quit(ASTNode):
         log_case.set("success")
         raise SystemExit()
 
+@dataclass
+class ListAssign(ASTNode):
+    target: ASTNode
+    index: ASTNode
+    value: ASTNode
+    def __post_init__(self):
+        super().__init__()
 
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking list assignment statement..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"List assignment statement checked successfully."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
+        try:
+            target_type = self.target.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if target_type is None:
+                raise Exception(f"Target of list assignment cannot be of type 'None'")
+            
+            if not t_h.has_list_type(target_type):
+                raise Exception(f"Target of list assignment must be a list type, got '{target_type}'")
+            
+            if t_h.has_non_list_type(target_type):
+                new_target_type = t_h.get_all_list_types(target_type)
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=target_type.copy(),
+                    new_inference_value=new_target_type.copy()
+                )
+                target_type = new_target_type
+            
+            index_type = self.index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if index_type is None:
+                raise Exception(f"Index in list assignment cannot be of type 'None'")
+            
+            if not t_h.contains(index_type, "number"):
+                raise Exception(f"Index in list assignment must be of type 'number', got '{index_type}'")
+            
+            if index_type != {"number"}:
+                self.index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=index_type.copy(),
+                    new_inference_value={"number"}
+                )
+                index_type = {"number"}
+
+            value_type = self.value.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+
+            if value_type is None:
+                raise Exception(f"Value in list assignment cannot be of type 'None'")
+            
+            list_element_types = t_h.get_list_element_types(target_type)
+            if not t_h.is_compatible(value_type, list_element_types):
+                raise Exception(f"the type '{value_type}' is not compatible with the element type of the list  '{list_element_types}'.")
+
+            if list_element_types != value_type:
+                narrowed_value_type = t_h.narrow(value_type, list_element_types)
+                self.value.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=value_type.copy(),
+                    new_inference_value=narrowed_value_type.copy()
+                )
+                if narrowed_value_type == list_element_types:
+                    new_target_type = t_h.make_set_list_types(narrowed_value_type)
+                    self.target.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=target_type.copy(),
+                        new_inference_value=new_target_type.copy()
+                    )
+
+                value_type = narrowed_value_type = narrowed_value_type
+
+            self.child_return_types["target"] = (target_type.copy(), self.target)
+            self.child_return_types["index"] = (index_type.copy(), self.index)
+            self.child_return_types["value"] = (value_type.copy(), self.value)
+            log_case.set("success")
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    @logged(
+        start=lambda self, env: (
+            f"Attempting to execute list assignment statement..."
+        ),
+        success={
+            "success": lambda self, env: (
+                f"List assignment statement executed successfully."
+            )
+        }
+    )
+    def execute(self, env: Environment, log_case: LogCase) -> None:
+        try:
+            target_value = self.target.execute(env)
+            index_value = self.index.execute(env)
+            value = self.value.execute(env)
+            target_value[index_value] = value
+            log_case.set("success")
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
 @dataclass
 class ListAdd(ASTNode):
     op: str

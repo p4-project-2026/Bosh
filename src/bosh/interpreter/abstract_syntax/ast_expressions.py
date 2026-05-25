@@ -763,6 +763,79 @@ class ListLookup(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
+@dataclass
+class TextLookup(ASTNode):
+    target: ASTNode
+    index: ASTNode
+    def  __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking text lookup on target '{self.target}' with index '{self.index}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Text lookup checked successfully with return type '{self.child_return_types['self'][0]}'."
+            )
+        }
+    )
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
+        try:
+            if self.target is None or self.index is None:
+                raise Exception("TextLookup: Target and index cannot be None")
+            
+            target_type = self.target.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if target_type is None:
+                raise Exception("TextLookup: Target of text lookup cannot be of type 'None'")
+            
+            if not t_h.contains(target_type, "text"):
+                raise Exception("TextLookup: Target of text lookup must be of type 'text'")
+
+            if target_type != {"text"}:
+                self.target.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=target_type.copy(),
+                    new_inference_value={"text"}
+                    )
+                target_type = {"text"}
+
+            index_type = self.index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if index_type is None:
+                raise Exception("TextLookup: Index of text lookup cannot be of type 'None'")
+            
+            if not t_h.contains(index_type, "number"):
+                raise Exception("TextLookup: Index of text lookup must be of type 'number'")
+
+            if index_type != {"number"}:
+                self.index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=index_type.copy(),
+                    new_inference_value={"number"}
+                    )
+                index_type = {"number"}
+
+            self.child_return_types["target"] = (target_type.copy(), self.target)
+            self.child_return_types["index"] = (index_type.copy(), self.index)
+            self.child_return_types["self"] = ({"text"}, self)
+
+            log_case.set("success")
+
+            return {"text"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env: Environment) -> Any:
+        try:
+            target_value = self.target.execute(env)
+            key_value = self.index.execute(env)
+            return target_value[int(key_value)]
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
 
 @dataclass
 class Unit(ASTNode):
@@ -2167,5 +2240,84 @@ class AccessOp(ASTNode):
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
+
+@dataclass
+class Random(ASTNode):
+    from_: ASTNode
+    to: ASTNode
+
+    def __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Starting type check for random operator with 'from' operand '{self.from_}' and 'to' operand '{self.to}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type check for random operator passed successfully. Determined return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
+        try:
+            if self.from_ is None or self.to is None:
+                raise Exception(f"Random operator requires both 'from' and 'to' operands, but one or both were not provided.")
+
+            from_type = self.from_.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
             
+            if from_type is None:
+                raise Exception(f"Could not determine type of 'from' operand in random operator.")
+
+            if not t_h.contains(from_type, "number"):
+                raise Exception(f"Random operator 'from' operand must contain 'number', got '{from_type}'.")
+            
+            if from_type != {"number"}:
+                self.from_.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=from_type.copy(),
+                    new_inference_value={"number"},
+                )
+                from_type = {"number"}
+
+            to_type = self.to.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+
+            if to_type is None:
+                raise Exception(f"Could not determine type of 'to' operand in random operator.")
+            
+            if not t_h.contains(to_type, "number"):
+                raise Exception(f"Random operator 'to' operand must contain 'number', got '{to_type}'.")
+            
+            if to_type != {"number"}:
+                self.to.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=to_type.copy(),
+                    new_inference_value={"number"},
+                )
+                to_type = {"number"}
+
+            self.child_return_types["from"] = (from_type.copy(), self.from_)
+            self.child_return_types["to"] = (to_type.copy(), self.to)
+            self.child_return_types["self"] = ({"number"}, self)
+
+            log_case.set("success")
+
+            return {"number"}
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env):
+        import random
+        try:
+            from_value = self.from_.execute(env)
+            to_value = self.to.execute(env)
+            return random.randint(from_value, to_value)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
           

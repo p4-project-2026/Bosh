@@ -1,5 +1,7 @@
-task Print uses (Message, Times):
-    count from 1 to Times:
-        say Message
+task Func:
+    task Inside Func:
+        say "Hello, World!"
 
-run Print using ("Hello, World!", 3)
+    run Inside Func
+
+call Func
