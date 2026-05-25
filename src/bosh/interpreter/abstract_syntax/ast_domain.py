@@ -355,7 +355,16 @@ class Copy(ASTNode):
         super().__init__()
     
 
-    
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Checking 'copy' statement to copy from source '{self.source}' to target '{self.target}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+            f"'Copy' statement checked successfully'."
+            )
+        }
+    )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
