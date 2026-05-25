@@ -147,7 +147,7 @@ class AssignType(ASTNode):
                 self.child_return_types["value"] = (
                     narrowed_value_type.copy(),
                     self.value,
-                    )
+                )
 
             if v_table.contains(self.target.name):
                 old_type = v_table.lookup(self.target.name)
@@ -186,9 +186,18 @@ class AssignType(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, value: Any = None, *, log_case: LogCase) -> None:
+    def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
-            value = self.value.execute(env) if self.value else None
+            
+            var_type = self.var_type.execute(env)
+            if self.value is None:
+                type = self.var_type.execute(env)
+                if type == EMPTY_LIST_TYPE:
+                    value = []
+                else:
+                    value = None
+            else:
+                value = self.value.execute(env)
             env.assign_variable(self.target.name, value)
             log_case.set("success", value=value)
 
