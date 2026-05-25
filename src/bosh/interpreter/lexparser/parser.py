@@ -526,6 +526,8 @@ class BoshTransformer(Transformer):
                 type_str = "text"
             case "bool":
                 type_str = "boolean"
+            case "list":
+                type_str = "list<any>"
 
         node = Type(name=type_str)
         node.set_meta(None, self._filename)
