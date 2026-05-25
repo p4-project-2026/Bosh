@@ -191,6 +191,7 @@ class Delete(ASTNode):
     def __post_init__(self):
         super().__init__()
     
+
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
         try:
             self.child_return_types.clear()
