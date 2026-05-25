@@ -1,9 +1,9 @@
 # Build board
-Board is a list
-count from 1 to 9:
+Board is [" "]
+count from 1 to 8:
     append " " to Board
 
-function PrintBoard:
+function Print_Board:
     print ""
     count I from 0 to 2:
         Row is "{Board at (I * 3)} | {Board at (I * 3 + 1)} | {Board at (I * 3 + 2)}"
@@ -12,36 +12,64 @@ function PrintBoard:
             print "---+---+---"
     print ""
 
-#set random start player
-CurrentPlayer is "X"
+#start with random start player
+Current_Player is "X"
 if (random from 1 to 2) == 1:
-    CurrentPlayer is "O" 
+    Current_Player is "O" 
+
+function Win_Check:
+    X_Positions is [10]
+    O_Positions is [10]
+
+    I is 0
+    for all Player in Board:
+        if Player == "X":
+            append I to X_Positions
+        if Player == "O":
+            append I to O_Positions
+        I is I + 1
+    
+    Win_Combinations is [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]]
+    
+    remove index 0 from X_Positions
+    remove index 0 from O_Positions
+
+    say X_Positions
+    say O_Positions
+
+    for all Win_State in Win_Combinations:
+        for all Win_Postion in Win_State:
+            # Check if X
+            X_Won is true
+            
+
+
+        
+
+
 
 
 
 repeat until false:
-    run PrintBoard
+    run Print_Board
 
-    MoveInput is input "Player {CurrentPlayer}, choose position (1-9): "
+    Move_Input is input "Player {Current_Player}, choose position (1-9): "
 
-    MoveLocation is MoveInput as int - 1
+    Move_Location is Move_Input as int - 1
 
-    if MoveLocation < 0 or MoveLocation > 8:
+    if Move_Location < 0 or Move_Location > 8:
         print("Invalid position. Choose 1-9.")
         continue
 
-    if Board at MoveLocation != " ":
+    if Board at Move_Location != " ":
         print("Position already taken.")
         continue
     
-    Board at MoveLocation is CurrentPlayer
+    Board at Move_Location is Current_Player
 
-    if Check_winner(current_player):
-        print_board()
-        print(f"Player {current_player} wins!")
-        break
+    run Win_Check    
 
-    if CurrentPlayer == "X"
-        CurrentPlayer is "O"
+    if Current_Player == "X"
+        Current_Player is "O"
     else:
-        CurrentPlayer is "X"
+        Current_Player is "X"
