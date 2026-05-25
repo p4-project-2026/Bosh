@@ -99,8 +99,8 @@ class AssignType(ASTNode):
             f"Checking assignment of type '{self.var_type}' to variable '{self.target.name}'..."
         ),
         success={
-            "success": lambda self, v_table, f_table, inference_context, return_type: (
-                f"Assignment of type '{self.var_type}' to variable '{self.target.name}' checked successfully with return type: {return_type}"
+            "success": lambda self, v_table, f_table, inference_context, value_type: (
+                f"Assignment of type '{self.var_type}' to variable '{self.target.name}' checked successfully with return type: {value_type}"
              )
          }
     )

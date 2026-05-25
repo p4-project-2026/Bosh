@@ -6,7 +6,7 @@ from ..abstract_syntax import *
 from colorama import Fore, Style
 
 def parseBosh(processed_code):
-    with open(PathsHelper().get_src_path().joinpath("bosh/interpreter/lexparser/bosh_lang.lark"), "r") as f:
+    with open(PathsHelper().get_src_path().joinpath("bosh/interpreter/lexparser/bosh_lang.lark"), "r", encoding="utf-8") as f:
         grammar = f.read()
 
     parser = Lark(grammar, start="program", parser="lalr", propagate_positions=True)

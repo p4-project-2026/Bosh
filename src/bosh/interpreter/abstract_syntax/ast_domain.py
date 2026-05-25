@@ -657,7 +657,7 @@ class Execute(ASTNode):
 
                 target_type = {"text"}
 
-            self.child_return_types[self.target] = (target_type, self.target)
+            self.child_return_types["target"] = (target_type, self.target)
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
