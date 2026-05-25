@@ -679,6 +679,7 @@ class ListAssign(ASTNode):
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
+            self.child_return_types.clear()
             target_type = self.target.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
             if target_type is None:
                 raise Exception(f"Target of list assignment cannot be of type 'None'")

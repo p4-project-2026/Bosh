@@ -38,7 +38,7 @@ class Assign(ASTNode):
             if v_table.contains(self.target.name):
                 old_types = v_table.lookup(self.target.name)
                 if not t_h.is_compatible(old_types, value_type):
-                    raise Exception(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{old_types}'", self)
+                    raise Exception(f"Cannot assign value of type '{value_type}' to variable '{self.target.name}' of type '{old_types}'")
                 
                 narrowed_type = t_h.narrow(old_types, value_type)
                 if narrowed_type != value_type:
@@ -52,7 +52,7 @@ class Assign(ASTNode):
                     
                 if old_types != narrowed_type:
                     v_table.bind(self.target.name, narrowed_type.copy())
-                    inference_context.mark_infered()
+                    inference_context.mark_inferred()
                     
                 self.child_return_types["value"] = (narrowed_type.copy(), self.value)
                 return
@@ -162,7 +162,7 @@ class AssignType(ASTNode):
                 narrowed_declared_type = t_h.narrow(old_type, declared_type)
                 if narrowed_declared_type != old_type:
                     v_table.bind(self.target.name, narrowed_declared_type.copy())
-                    inference_context.mark_infered()
+                    inference_context.mark_inferred()
                 
                 self.child_return_types["value"] = (
                     narrowed_declared_type.copy(),

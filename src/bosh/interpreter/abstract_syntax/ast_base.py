@@ -16,7 +16,7 @@ class Position():
     end_col: Optional[int] = None
     filename: Optional[str] = None
 
-@dataclass
+
 class InferenceContext:
     def __init__(self):
         self.__changed: bool = False
@@ -24,7 +24,7 @@ class InferenceContext:
     def has_changed(self) -> bool:
         return self.__changed
     
-    def mark_infered(self):
+    def mark_inferred(self):
         self.__changed = True
 
     def reset(self):
@@ -72,10 +72,9 @@ class ASTNode():
                 new_inference_value: set[str]) -> None:
         
         raise Exception(
-            self.__class__.__name__ + f"does not implement inference() but was called during inference. " 
+            self.__class__.__name__ + f" does not implement inference() but was called during inference. " 
             f"This means there is likely a bug in the inference pathing logic, or the node is missing a proper inference implementation." 
-            f"Node: {self}, old_inference_value: {old_inference_value}, new_inference_value: {new_inference_value}",
-            self
+            f"Node: {self}, old_inference_value: {old_inference_value}, new_inference_value: {new_inference_value}"
         )
 
         

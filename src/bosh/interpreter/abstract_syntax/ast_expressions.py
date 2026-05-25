@@ -499,7 +499,7 @@ class Identifier(ASTNode):
 
             v_table.bind(self.name, narrowed.copy())
             self.child_return_types["self"] = (narrowed.copy(), self)
-            inference_context.mark_infered()
+            inference_context.mark_inferred()
             log_case.set("success", new_type=narrowed.copy())
             return
         except Exception as e:
@@ -2207,7 +2207,7 @@ class AccessOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "here":
-                    result = os.getcwd()
+                    result = env.get_current_directory()
                     log_case.set("success", result=result)
                     return result
                 case _:
