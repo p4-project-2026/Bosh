@@ -61,47 +61,36 @@ def can_be_list_type(type_name: set[str]) -> bool:
     return type_name.startswith("list<") and type_name.endswith(">")
 
 def is_list_type(type_name: str) -> bool:
-    vvvprint(f"Type Helper: Checking if type '{type_name}' is a list type...")
     return type_name.startswith("list<") and type_name.endswith(">")
 
 def is_only_a_list_type(type_set: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{type_set}' contains only a list type...")
     return len(type_set) == 1 and is_list_type(next(iter(type_set)))
 
 def is_only(type_set: set[str], type_name: str) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{type_set}' contains only the type '{type_name}'...")
     return len(type_set) == 1 and next(iter(type_set)) == type_name
 
 def is_empty_list_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is an empty list type...")
     return types == {EMPTY_LIST_TYPE}
 
 def is_unknown_list_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is an unknown list type...")
     return types == {UNKNOWN_LIST_TYPE}
 
 def is_special_list_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is a special list type...")
     return types in SPECIAL_LIST_TYPES
 
 def is_numeric_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is a number type...")
     return types.issubset(NUMERIC_TYPES)
 
 def is_unknown_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is an unknown type...")
     return types == {UNKNOWN_TYPE}
 
 def is_any_type(types: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{types}' is an any type...")
     return types == {ANY_TYPE}
 
 def is_compatible(a: set[str], b: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if types '{a}' and '{b}' are compatible...")
     return bool(narrow(a, b))
 
 def is_a_subset(subset: set[str], superset: set[str]) -> bool:
-    vvvprint(f"Type Helper: Checking if type set '{subset}' is a subset of '{superset}'...")
     return subset.issubset(superset)
 
 
@@ -109,19 +98,16 @@ def is_a_subset(subset: set[str], superset: set[str]) -> bool:
 #'get' function for getting the list element types from a set of types, which returns the set of element types if there are any list types in the set, and None otherwise. This is useful for inference when we have a variable that can be multiple types, some of which are list types, and we want to extract the element types for inference purposes.
 
 def get_all_list_types(types: set[str]) -> set[str]:
-    vvvprint(f"Type Helper: Getting all list types from set '{types}'...")
     if is_unknown_type(types):
         return {UNKNOWN_LIST_TYPE}
     return {t for t in types if is_list_type(t)}
 
 def get_all_non_list_types(types: set[str]) -> set[str]:
-    vvvprint(f"Type Helper: Getting all non-list types from set '{types}'...")
     if is_unknown_type(types):
         return {UNKNOWN_TYPE}
     return {t for t in types if not is_list_type(t)}
 
 def get_list_element_types(list_type: set[str]) -> set[str]:
-    vvvprint(f"Type Helper: Getting list element types from list type set '{list_type}'...")
     return_type = set()
     if is_unknown_type(list_type):
         return {UNKNOWN_TYPE}
