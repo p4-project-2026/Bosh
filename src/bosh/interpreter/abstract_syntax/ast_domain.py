@@ -51,7 +51,7 @@ class GoTo(ASTNode):
     
     @logged(
         start=lambda self, env: (
-            f"Executing 'go to' statement with path '{self.path}'..."
+            f"Executing 'go to' statement with..."
         ),
         success={
             "success": lambda self, env, path_value: (
@@ -62,8 +62,16 @@ class GoTo(ASTNode):
     def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             path_value = self.path.execute(env)
-            log_case.set("success", path_value=path_value)
+            if os.path.isabs(path_value):
+                if not os.path.exists(path_value):
+                    raise TraceError(node = self, cause = f"Path '{path_value}' does not exist.")
+            else:
+                path_value = os.path.join(env.get_current_directory(), path_value)
+                if not os.path.exists(path_value):
+                    raise TraceError(node = self, cause = f"Path '{path_value}' does not exist.")
+            
             env.set_current_directory(path_value)
+            log_case.set("success", path_value=path_value)
         except Exception as e:
             raise TraceError(node = self, cause = e)
         return
@@ -75,7 +83,7 @@ class Make(ASTNode):
     new: bool
     entity_type: str
     name: ASTNode
-    location: ASTNode
+    location: Optional[ASTNode]
     def __post_init__(self):
         super().__init__()
     
@@ -122,28 +130,35 @@ class Make(ASTNode):
                 name_type = {"text"}
                 
             self.child_return_types["name"] = (name_type, self.name)
-
-            location_type = self.location.check(
-                v_table, 
-                f_table, 
-                inference_context
-            )
-
-            if not t_h.contains(location_type, "text"):
-                raise Exception(f"Location in make statement must be of type 'text', got '{location_type}'")
-            
-            if location_type != {"text"}:
-                self.location.inference(
-                    v_table=v_table,
-                    f_table=f_table, 
-                    inference_context=inference_context, 
-                    old_inference_value=location_type, 
-                    new_inference_value={"text"}
+            if self.location is not None:
+                location_type = self.location.check(
+                    v_table, 
+                    f_table, 
+                    inference_context
                 )
+            
+                if not t_h.contains(location_type, "text"):
+                    raise Exception(f"Location in make statement must be of type 'text', got '{location_type}'")
+            
+                if location_type != {"text"}:
+                    self.location.inference(
+                        v_table=v_table,
+                        f_table=f_table, 
+                        inference_context=inference_context, 
+                        old_inference_value=location_type, 
+                        new_inference_value={"text"}
+                    )
 
-                location_type = {"text"}
+                    location_type = {"text"}
+                    self.child_return_types["location"] = (location_type, self.location)
+                
+                else:
+                    location_type = {"text"}
+                    self.child_return_types["location"] = (location_type, None)
+                
+            
 
-            self.child_return_types["location"] = (location_type, self.location)
+            
             log_case.set("success")
 
         except Exception as e:
@@ -163,7 +178,12 @@ class Make(ASTNode):
     def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
             name_value = self.name.execute(env)
-            location_value = self.location.execute(env) if self.location else None
+            if self.location is not None:
+                location_value = self.location.execute(env)
+
+            else:
+                location_value = env.get_current_directory()
+
             path = os.path.join(location_value, name_value) if location_value else name_value
             if self.entity_type == "folder":
                 if self.new:
