@@ -528,6 +528,8 @@ class TaskCall(ASTNode):
             self.child_return_types.clear()
 
             signature = f_table.lookup(self.name)
+            if signature.first_check:
+                signature.called_during_first_check = True
             arguments = self.arguments or []                
             if len(arguments) != len(signature.param_types):
                 raise Exception(f"Task '{self.name}' expects {len(signature.param_types)} arguments, but got {len(arguments)}", self)
