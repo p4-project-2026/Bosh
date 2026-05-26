@@ -220,4 +220,4 @@ class Environment:
     def set_current_directory(self, path: str, log_case: LogCase):
         """Set the current directory for resolving file paths in import statements."""
         self.CD = path
-        log_case.set("success", path=self.CD)
+        log_case.set("success")
