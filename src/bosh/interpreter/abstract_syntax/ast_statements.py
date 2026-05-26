@@ -480,7 +480,6 @@ class RepeatUntil(ASTNode):
                     break
             env.exit_scope()
             log_case.set("success")
-            return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -618,7 +617,6 @@ class Count(ASTNode):
                         env.exit_scope()
             
             log_case.set("success")
-            return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
