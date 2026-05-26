@@ -1,4 +1,2 @@
-repeat until false:
-    print 1
-    break
-print 2
+wait 3 seconds
+print "Done!"
