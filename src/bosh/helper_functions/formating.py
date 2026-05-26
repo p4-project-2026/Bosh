@@ -10,6 +10,9 @@ def string_format_list(value: list) -> str:
 def string_format_list_of_bools(value: list) -> str:
     return "[" + ", ".join(string_format_bool(v) for v in value) + "]"
 
+def string_format_list_of_strings(value: list) -> str:
+    return "[" + ", ".join(f'"{v}"' for v in value) + "]"
+
 def string_format_list_if_strings(value: list) -> str:
     if all(isinstance(v, str) for v in value):
         return "[" + ", ".join(f'"{v}"' for v in value) + "]"
