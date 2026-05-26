@@ -232,11 +232,19 @@ class TaskDecl(ASTNode):
             saved_inference_state = inference_context.save_state()
             if self.captured_scope is None:
                 self.captured_scope = v_table.snapshot()
+                # Temporary signature so recursive calls can resolve this function during checking of the function bodt.
+                f_table.bind(self.name, FunctionSignature(
+                    parameters= {param: {UNKNOWN_TYPE} for param in self.parameters},
+                    function_def=self,
+                    return_type={UNKNOWN_TYPE},
+                    first_check=True
+                    )
+                )
                 v_table.new_scope()
             else:
                 v_table.update_snapshot(self.captured_scope)  # Update the snapshot with the current visible scopes so that it captures the correct environment for the function definition
                 v_table.enter_function_scope(self.captured_scope)  # Enter the function scope to ensure parameters are bound in the correct scope for checking the function body
-            
+
             
             for param in self.parameters:
                 v_table.bind_local(param, {UNKNOWN_TYPE})
@@ -251,10 +259,27 @@ class TaskDecl(ASTNode):
                     f_table=f_table, 
                     inference_context=inference_context
                 )
-                
+
+                signature = f_table.lookup(self.name)
+                if signature.first_check and signature.called_during_first_check: # If the function was called during the first check, we need to do another check to ensure the parameter types are correctly inferred based on the recursive calls.
+                    inference_context.mark_inferred()
+                    
                 if not inference_context.has_changed():
                     break
                 
+                
+                parameter_dict = {param: v_table.lookup(param) for param in self.parameters}
+                
+                # Update the function signature in the function table with the new inferred parameter types and return type before re-checking the function body
+                f_table.bind(
+                    self.name,
+                    FunctionSignature(
+                        parameters=parameter_dict,
+                        return_type=return_type,
+                        function_def=self
+                    )
+                )
+            
                 vvvprint(f"TaskDecl: Detected a change during inference of task '{self.name}', restarting type checking of task body with updated types...")
             
             parameter_dict = {param: v_table.lookup(param) for param in self.parameters}
