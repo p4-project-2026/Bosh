@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Literal
 from ..semantics.symbol_table_scope_stacker import SymbolTableScopeStacker as ScopeStack
 from ..semantics.func_table import FuncTable
 from ..executor.environment.function_binding import FunctionBinding
@@ -8,6 +8,8 @@ from bosh.helper_functions.type_helper import UNKNOWN_TYPE, ANY_TYPE, EMPTY_LIST
 import bosh.helper_functions.type_helper as t_h
 import bosh.helper_functions.formating as f_h
 from bosh.helper_functions.logged import logged, LogCase
+
+ExecutionSignal = Literal["continue", "break"]
 
 @dataclass
 class Position():
@@ -99,10 +101,18 @@ class Block(ASTNode):
         return_type = None
         for stmt in self.statements:
             stmt_return_type = stmt.check(v_table, f_table, inference_context)
-            if stmt_return_type is not None:
-                if return_type is not None and stmt_return_type != return_type:
-                    raise TraceError(node = self, cause = f"All statements in a block must return the same type, but got '{return_type}' and '{stmt_return_type}'")
+            if stmt_return_type is None:
+                continue
+            
+            if return_type is None:
                 return_type = stmt_return_type
+                continue
+
+            if not t_h.is_compatible_type(return_type, stmt_return_type):
+                raise Exception(f"Type error: Incompatible return types in block. Previous return type: {return_type}, new return type: {stmt_return_type}")
+                    
+            return_type = t_h.narrow(return_type, stmt_return_type)
+                
         log_case.set("success", return_type=return_type)
         return return_type
 
