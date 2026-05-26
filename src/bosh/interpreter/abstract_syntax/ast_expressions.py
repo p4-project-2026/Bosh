@@ -2171,8 +2171,9 @@ class AccessOp(ASTNode):
                     time = os.path.getmtime(target_value)
                     file_date = datetime.datetime.fromtimestamp(time)
                     now = datetime.datetime.now()
+                    result = int((now - file_date).total_seconds() * 1000)
                     log_case.set("success", result=result)
-                    return int((now - file_date).total_seconds() * 1000)
+                    return result
                 case "starts_with":
                     result = target_value.startswith(arg_value)
                     log_case.set("success", result=result)
