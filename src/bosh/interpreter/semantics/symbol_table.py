@@ -71,7 +71,7 @@ class Symbol_Table(Table[set[str]]):
 
     @logged(
         start=lambda self, name: (
-            f"Attempting to look up variable '{name}' in current scope..."
+            f"Attempting to look up variable '{name}' in a scope..."
         ),
         success={
             "success": lambda self, name, type_value: (
