@@ -6,10 +6,10 @@ if TYPE_CHECKING:
     from bosh.interpreter.abstract_syntax.ast_definitions import TaskDecl
 
 
-from dataclasses import dataclass
+
 T = TypeVar('T')
 
-@dataclass
+
 class FunctionSignature:
     
     param: List[str]
@@ -17,12 +17,17 @@ class FunctionSignature:
     return_type: Optional[set[str]]
 
     function_def: "TaskDecl"
+    first_check: bool = False,
+    called_during_first_check = False
     
-    def __init__(self, parameters: Dict[str, set[str]], return_type: Optional[set[str]] = None, function_def: "TaskDecl" = None):
+    def __init__(self, parameters: Dict[str, set[str]], function_def: "TaskDecl" , return_type: Optional[set[str]] = None, first_check: bool = False):
         self.param = list(parameters.keys())
         self.param_types = parameters
         self.return_type = return_type if return_type is not None else set()
         self.function_def = function_def
+        self.first_check = first_check
+        self.called_during_first_check = False
+
 
 class FuncTable(Table[FunctionSignature]):
     
