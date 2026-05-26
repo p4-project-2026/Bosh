@@ -108,11 +108,13 @@ class IfElse(ASTNode):
                 condition_type = valid_condition_types
 
             self.child_return_types["condition"] = (condition_type.copy(), self.condition)
+            then_type = None
+            else_type = None
             saved_inference_state = inference_context.save_state()
             v_table.new_scope()
             while True:
                 inference_context.reset()
-                self.then_branch.check(
+                then_type = self.then_branch.check(
                     v_table=v_table, 
                     f_table=f_table, 
                     inference_context=inference_context
@@ -126,7 +128,7 @@ class IfElse(ASTNode):
                 v_table.new_scope()
                 while True:
                     inference_context.reset()
-                    self.else_branch.check(
+                    else_type = self.else_branch.check(
                         v_table=v_table, 
                         f_table=f_table, 
                         inference_context=inference_context
@@ -136,9 +138,24 @@ class IfElse(ASTNode):
                         break
 
                 v_table.exit_scope()
-
+                
+            return_type = None
             inference_context.load_state(saved_inference_state)
+            if then_type is not None or else_type is not None:
+                if then_type is None:
+                    return_type = else_type
+                elif else_type is None:
+                    return_type = then_type
+                elif then_type == else_type:
+                    return_type = then_type
+                else:
+                    if t_h.is_compatible(then_type, else_type):
+                        return_type = t_h.narrow(then_type, else_type)
+                    else:
+                        raise Exception(f"Then branch of if statement has incompatible type '{then_type}' with else branch type '{else_type}'")
+            
             log_case.set("success")
+            return return_type
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
 
@@ -284,14 +301,17 @@ class ForAll(ASTNode):
             saved_inference_state = inference_context.save_state() 
             v_table.new_scope()
             v_table.bind(self.iterator_name, element_type)
+            return_type = None
             while True:
                 inference_context.reset()
-                self.body.check(
+                return_type = self.body.check(
                     v_table=v_table,
                     f_table=f_table,
                     inference_context=inference_context
                 )
                 
+
+
                 if not inference_context.has_changed():
                     break
 
@@ -333,7 +353,8 @@ class ForAll(ASTNode):
                                         )
                 
                 self.child_return_types["iterable"] = (new_iterable_type.copy(), self.iterable)
-                log_case.set("success")
+            log_case.set("success")
+            return return_type
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
@@ -366,22 +387,26 @@ class ForAll(ASTNode):
                     
             else:
                 elements_to_iterate = iterable_val
-
+            return_value = None
             for element in elements_to_iterate:
                 env.new_scope()
                 try:
                     env.assign_variable(self.iterator_name, element)
                     value = self.body.execute(env)
-                    if value == "continue":
+                    if value is Literal["continue"]:
                         continue
                     
+                    if value is Literal["break"]:
+                        break
                     if value is not None:
+                        return_value = value
                         break
 
                 finally:
                     env.exit_scope()           
-
+            
             log_case.set("success")
+            return return_value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
         
@@ -435,11 +460,11 @@ class RepeatUntil(ASTNode):
             saved_inference_state = inference_context.save_state()
             
             v_table.new_scope()
-
+            return_type = None
             while True:
 
                 inference_context.reset()
-                self.body.check(
+                return_type = self.body.check(
                     v_table=v_table, 
                     f_table=f_table,
                     inference_context=inference_context
@@ -451,6 +476,7 @@ class RepeatUntil(ASTNode):
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
             log_case.set("success")
+            return return_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -472,14 +498,17 @@ class RepeatUntil(ASTNode):
             while True:
                 value = self.body.execute(env)
                 condition_value = self.condition.execute(env)
-                if value == "continue":
+                if value is Literal["continue"]:
                     continue
+                if value is Literal["break"]:
+                    break
                 if value is not None:
                     break
                 if condition_value:
                     break
             env.exit_scope()
             log_case.set("success")
+            return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -559,12 +588,12 @@ class Count(ASTNode):
             saved_inference_state = inference_context.save_state()
 
             v_table.new_scope()
-
+            return_type = None
             if self.iterator_name:
                 v_table.bind_local(self.iterator_name, {"number"})
             while True:
                 inference_context.reset()
-                self.body.check(
+                return_type = self.body.check(
                     v_table=v_table, 
                     f_table=f_table,
                     inference_context=inference_context
@@ -577,6 +606,7 @@ class Count(ASTNode):
             v_table.exit_scope()
             inference_context.load_state(saved_inference_state)
             log_case.set("success")
+            return return_type
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -602,8 +632,10 @@ class Count(ASTNode):
                     try:
                         env.bind_local_variable(self.iterator_name, i)
                         value = self.body.execute(env)
-                        if value == "continue":
+                        if value is Literal["continue"]:
                             continue
+                        if value is Literal["break"]:
+                            break
                         if value is not None:
                             break
                     finally:
@@ -611,12 +643,17 @@ class Count(ASTNode):
                 else:
                     try:
                         value = self.body.execute(env)
+                        if value is Literal["continue"]:
+                            continue
+                        if value is Literal["break"]:
+                            break
                         if value is not None:
                             break
                     finally:
                         env.exit_scope()
             
             log_case.set("success")
+            return value
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
@@ -1218,7 +1255,7 @@ class Continue(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, log_case: LogCase) -> None:
+    def execute(self, env: Environment, log_case: LogCase) -> Literal["continue"]:
         log_case.set("success")
         return "continue"
 
@@ -1250,6 +1287,6 @@ class Break(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, log_case: LogCase) -> None:
+    def execute(self, env: Environment, log_case: LogCase) -> Literal["break"]:
         log_case.set("success")
         return "break"
