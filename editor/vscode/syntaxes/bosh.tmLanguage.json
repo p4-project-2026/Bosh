@@ -1,0 +1,227 @@
+{
+  "name": "Bosh",
+  "scopeName": "source.bosh",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#constants" },
+    { "include": "#types" },
+    { "include": "#functionDeclarations" },
+    { "include": "#functionCalls" },
+    { "include": "#control" },
+    { "include": "#domain" },
+    { "include": "#listCommands" },
+    { "include": "#accessors" },
+    { "include": "#operators" },
+    { "include": "#identifiers" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.bosh",
+          "match": "#.*$"
+        }
+      ]
+    },
+
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.bosh",
+          "begin": "\"",
+          "beginCaptures": {
+            "0": { "name": "punctuation.definition.string.begin.bosh" }
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": { "name": "punctuation.definition.string.end.bosh" }
+          },
+          "patterns": [
+            {
+              "name": "constant.character.escape.bosh",
+              "match": "\\\\."
+            },
+            {
+              "name": "meta.interpolation.bosh",
+              "begin": "\\{",
+              "beginCaptures": {
+                "0": { "name": "punctuation.section.interpolation.begin.bosh" }
+              },
+              "end": "\\}",
+              "endCaptures": {
+                "0": { "name": "punctuation.section.interpolation.end.bosh" }
+              },
+              "patterns": [
+                { "include": "$self" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.other.date.bosh",
+          "match": "\\bt[0-9]{4}-[0-1][0-9]-[0-3][0-9](?: [0-2][0-9]:[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{0,6})?)?\\b"
+        },
+        {
+          "name": "constant.numeric.float.bosh",
+          "match": "\\b[0-9]+\\.[0-9]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.bosh",
+          "match": "\\b[0-9]+\\b"
+        },
+        {
+          "name": "constant.language.bosh",
+          "match": "\\b(?:true|false|null|now|here)\\b"
+        }
+      ]
+    },
+
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.bosh",
+          "match": "\\b(?:text|string|int|number|float|decimal|boolean|bool|date|time|list|file|folder)\\b"
+        }
+      ]
+    },
+
+    "functionDeclarations": {
+      "patterns": [
+        {
+          "name": "meta.function.bosh",
+          "match": "\\b(?:(new)\\s+)?(task|function)\\s+([A-Z][a-zA-Z0-9_]*(?:\\s+[A-Z][a-zA-Z0-9_]*)*)\\b",
+          "captures": {
+            "1": { "name": "keyword.declaration.bosh" },
+            "2": { "name": "keyword.declaration.function.bosh" },
+            "3": { "name": "entity.name.function.bosh" }
+          }
+        },
+        {
+          "name": "keyword.other.function.bosh",
+          "match": "\\b(?:uses|using|result|run|call|input)\\b"
+        }
+      ]
+    },
+
+    "functionCalls": {
+      "patterns": [
+        {
+          "name": "variable.function.bosh",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*(?:\\s+[A-Z][a-zA-Z0-9_]*)*(?=\\s+result\\b)"
+        },
+        {
+          "match": "\\b(?:run|call)\\s+([A-Z][a-zA-Z0-9_]*(?:\\s+[A-Z][a-zA-Z0-9_]*)*)\\b",
+          "captures": {
+            "1": { "name": "variable.function.bosh" }
+          }
+        }
+      ]
+    },
+
+    "control": {
+      "patterns": [
+        {
+          "name": "keyword.control.loop.bosh",
+          "match": "\\b(?:for\\s+all|for\\s+each|repeat\\s+until)\\b"
+        },
+        {
+          "name": "keyword.control.bosh",
+          "match": "\\b(?:if|else|otherwise|count|from|to|in|return|continue|break|stop|quit)\\b"
+        },
+        {
+          "name": "keyword.control.output.bosh",
+          "match": "\\b(?:say|print|output)\\b"
+        }
+      ]
+    },
+
+    "domain": {
+      "patterns": [
+        {
+          "name": "keyword.other.domain.bosh",
+          "match": "\\b(?:copy\\s+from|go\\s+to|go\\s+up)\\b"
+        },
+        {
+          "name": "keyword.other.domain.bosh",
+          "match": "\\b(?:make|create|rename|delete|move|read|write|execute|pause|wait)\\b"
+        },
+        {
+          "name": "keyword.declaration.bosh",
+          "match": "\\bnew\\b"
+        }
+      ]
+    },
+
+    "listCommands": {
+      "patterns": [
+        {
+          "name": "keyword.other.list.bosh",
+          "match": "\\b(?:remove\\s+index|length\\s+of|first\\s+element\\s+of|last\\s+element\\s+of)\\b"
+        },
+        {
+          "name": "keyword.other.list.bosh",
+          "match": "\\b(?:append|prepend|insert|remove|at|index|first|last|letter|of)\\b"
+        }
+      ]
+    },
+
+    "accessors": {
+      "patterns": [
+        {
+          "name": "support.constant.unit.bosh",
+          "match": "\\b(?:second|seconds|minute|minutes|hour|hours|day|days|month|months|year|years)\\b"
+        },
+        {
+          "name": "support.function.accessor.bosh",
+          "match": "\\b(?:age|name)\\b"
+        },
+        {
+          "name": "support.function.bosh",
+          "match": "\\b(?:random\\s+from|floor\\s+of|ceiling\\s+of|round\\s+of|sqrt|square\\s+root\\s+of)\\b"
+        }
+      ]
+    },
+
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.bosh",
+          "match": "\\|\\||&&|==|!=|>=|<=|>|<|\\+|-|\\*|/|%|\\^|!"
+        },
+        {
+          "name": "keyword.operator.word.bosh",
+          "match": "\\b(?:greater\\s+or\\s+equal\\s+than|less\\s+or\\s+equal\\s+than|not\\s+equals|is\\s+not\\s+a|is\\s+not|starts\\s+with|ends\\s+with|to\\s+the\\s+power\\s+of|divided\\s+by)\\b"
+        },
+        {
+          "name": "keyword.operator.word.bosh",
+          "match": "\\b(?:and|or|not|equals|is\\s+a|is|greater\\s+than|less\\s+than|plus|minus|times|mod|pow|negative|neg|regex|contains|as)\\b"
+        }
+      ]
+    },
+
+    "identifiers": {
+      "patterns": [
+        {
+          "name": "variable.other.bosh",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*(?:\\s+[A-Z][a-zA-Z0-9_]*)*\\b"
+        }
+      ]
+    },
+
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.separator.bosh",
+          "match": "[{}()\\[\\]:,.~]"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "bosh-language-support",
+  "displayName": "Bosh Language Support",
+  "description": "Syntax highlighting for Bosh",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "bosh",
+        "aliases": ["Bosh", "bosh"],
+        "extensions": [".bosh"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "bosh",
+        "scopeName": "source.bosh",
+        "path": "./syntaxes/bosh.tmLanguage.json"
+      }
+    ]
+  }
+}
