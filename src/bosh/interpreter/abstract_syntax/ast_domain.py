@@ -861,10 +861,11 @@ class Wait(ASTNode):
                 f_table=f_table, 
                 inference_context=inference_context
             )
-
-            if not t_h.contains(duration_type, {"number", "decimal", "time"}):
+            
+            if not t_h.is_compatible(duration_type, {"number", "decimal", "time"}):
                 raise Exception(f"Duration in 'wait' statement must be of type 'number', 'decimal' or 'time', got '{duration_type}'")
             narrowed_duration_type = t_h.narrow(duration_type, {"number", "decimal", "time"})
+            
             if narrowed_duration_type != duration_type:
                 self.time.inference(
                     v_table=v_table,
