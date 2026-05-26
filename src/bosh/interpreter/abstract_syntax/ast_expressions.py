@@ -1399,23 +1399,23 @@ class BinaryOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "eq":
-                    if type(left_val) != type(right_val):
-                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
-                            pass
-                        else:
-                            log_case.set("success", result=False)
-                            return False
+#                    if type(left_val) != type(right_val):
+#                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+#                            pass
+#                        else:
+#                            log_case.set("success", result=False)
+#                            return False
                     result = left_val == right_val
                     log_case.set("success", result=result)
                     return result
                 case "neq":
-                    if type(left_val) != type(right_val):
-                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
-                            pass
-                        else:
-                            result = True
-                            log_case.set("success", result=result)
-                            return result
+#                    if type(left_val) != type(right_val):
+#                        if (type(left_val) in [int, float] and type(right_val) in [int, float]):
+#                            pass
+#                        else:
+#                            result = True
+#                            log_case.set("success", result=result)
+#                            return result
                     result = left_val != right_val
                     log_case.set("success", result=result)
                     return result
