@@ -104,6 +104,11 @@ INSERT : "append" | "prepend" | "insert"
                 | "random from" expr "to" expr          -> random
                 | "read" expr                           -> read
                 | "list files in" expr                  -> list_files
+                | "slice text" term "from" expr "to" expr   -> text_slice
+                | "cut text" term "from" FROM "at" expr -> textcutter
+                | "split text" term "with" expr           -> text_split
+
+FROM : "start"|"end"
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
         | text
