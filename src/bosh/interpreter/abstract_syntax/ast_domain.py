@@ -597,8 +597,10 @@ class Read(ASTNode):
                 source_type = {"text"}
 
                 self.child_return_types["source"] = (source_type, self.source)
-            
+            self.child_return_types["self"] = ({"text"}, self)
             log_case.set("success")
+            return {"text"}
+
 
         except Exception as e:
             raise TraceError(node = self, cause = e)
