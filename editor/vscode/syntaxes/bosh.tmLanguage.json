@@ -4,6 +4,8 @@
   "patterns": [
     { "include": "#comments" },
     { "include": "#strings" },
+    { "include": "#dates" },
+    { "include": "#numbers" },
     { "include": "#constants" },
     { "include": "#types" },
     { "include": "#functionDeclarations" },
@@ -11,6 +13,8 @@
     { "include": "#control" },
     { "include": "#domain" },
     { "include": "#listCommands" },
+    { "include": "#textCommands" },
+    { "include": "#fileCommands" },
     { "include": "#accessors" },
     { "include": "#operators" },
     { "include": "#identifiers" },
@@ -62,12 +66,17 @@
       ]
     },
 
-    "constants": {
+    "dates": {
       "patterns": [
         {
           "name": "constant.other.date.bosh",
           "match": "\\bt[0-9]{4}-[0-1][0-9]-[0-3][0-9](?: [0-2][0-9]:[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{0,6})?)?\\b"
-        },
+        }
+      ]
+    },
+
+    "numbers": {
+      "patterns": [
         {
           "name": "constant.numeric.float.bosh",
           "match": "\\b[0-9]+\\.[0-9]+\\b"
@@ -75,10 +84,23 @@
         {
           "name": "constant.numeric.integer.bosh",
           "match": "\\b[0-9]+\\b"
+        }
+      ]
+    },
+
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.boolean.bosh",
+          "match": "\\b(?:true|false)\\b"
+        },
+        {
+          "name": "constant.language.null.bosh",
+          "match": "\\bnull\\b"
         },
         {
           "name": "constant.language.bosh",
-          "match": "\\b(?:true|false|null|now|here)\\b"
+          "match": "\\b(?:now|here)\\b"
         }
       ]
     },
@@ -87,7 +109,11 @@
       "patterns": [
         {
           "name": "storage.type.bosh",
-          "match": "\\b(?:text|string|int|number|float|decimal|boolean|bool|date|time|list|file|folder)\\b"
+          "match": "\\b(?:text|string|int|number|float|decimal|boolean|bool|list|date|time)\\b"
+        },
+        {
+          "name": "storage.type.path.bosh",
+          "match": "\\b(?:file|folder)\\b"
         }
       ]
     },
@@ -105,7 +131,7 @@
         },
         {
           "name": "keyword.other.function.bosh",
-          "match": "\\b(?:uses|using|result|run|call|input)\\b"
+          "match": "\\b(?:uses|using|result|run|call|input|return)\\b"
         }
       ]
     },
@@ -129,15 +155,23 @@
       "patterns": [
         {
           "name": "keyword.control.loop.bosh",
-          "match": "\\b(?:for\\s+all|for\\s+each|repeat\\s+until)\\b"
+          "match": "\\b(?:for\\s+all|for\\s+each|repeat\\s+until|count\\s+from|count)\\b"
         },
         {
-          "name": "keyword.control.bosh",
-          "match": "\\b(?:if|else|otherwise|count|from|to|in|return|continue|break|stop|quit)\\b"
+          "name": "keyword.control.conditional.bosh",
+          "match": "\\b(?:if|else|otherwise)\\b"
+        },
+        {
+          "name": "keyword.control.flow.bosh",
+          "match": "\\b(?:return|continue|break|stop|quit)\\b"
         },
         {
           "name": "keyword.control.output.bosh",
           "match": "\\b(?:say|print|output)\\b"
+        },
+        {
+          "name": "keyword.control.bosh",
+          "match": "\\b(?:from|to|in)\\b"
         }
       ]
     },
@@ -146,7 +180,7 @@
       "patterns": [
         {
           "name": "keyword.other.domain.bosh",
-          "match": "\\b(?:copy\\s+from|go\\s+to|go\\s+up)\\b"
+          "match": "\\b(?:copy\\s+from|go\\s+to|go\\s+up|list\\s+files\\s+in)\\b"
         },
         {
           "name": "keyword.other.domain.bosh",
@@ -167,7 +201,29 @@
         },
         {
           "name": "keyword.other.list.bosh",
-          "match": "\\b(?:append|prepend|insert|remove|at|index|first|last|letter|of)\\b"
+          "match": "\\b(?:append|prepend|insert|remove|at|index|first|last|element|of)\\b"
+        }
+      ]
+    },
+
+    "textCommands": {
+      "patterns": [
+        {
+          "name": "keyword.other.text.bosh",
+          "match": "\\b(?:slice\\s+text|cut\\s+text|split\\s+text)\\b"
+        },
+        {
+          "name": "keyword.other.text.bosh",
+          "match": "\\b(?:slice|cut|split|letter|text|with|start|end)\\b"
+        }
+      ]
+    },
+
+    "fileCommands": {
+      "patterns": [
+        {
+          "name": "keyword.other.file.bosh",
+          "match": "\\b(?:read|list\\s+files\\s+in)\\b"
         }
       ]
     },
@@ -184,7 +240,11 @@
         },
         {
           "name": "support.function.bosh",
-          "match": "\\b(?:random\\s+from|floor\\s+of|ceiling\\s+of|round\\s+of|sqrt|square\\s+root\\s+of)\\b"
+          "match": "\\b(?:random\\s+from|floor\\s+of|ceiling\\s+of|round\\s+of|square\\s+root\\s+of)\\b"
+        },
+        {
+          "name": "support.function.bosh",
+          "match": "\\b(?:sqrt|floor|ceiling|round|random)\\b"
         }
       ]
     },
@@ -197,7 +257,7 @@
         },
         {
           "name": "keyword.operator.word.bosh",
-          "match": "\\b(?:greater\\s+or\\s+equal\\s+than|less\\s+or\\s+equal\\s+than|not\\s+equals|is\\s+not\\s+a|is\\s+not|starts\\s+with|ends\\s+with|to\\s+the\\s+power\\s+of|divided\\s+by)\\b"
+          "match": "\\b(?:greater\\s+or\\s+equal\\s+than|less\\s+or\\s+equal\\s+than|not\\s+equals|is\\s+not\\s+a|is\\s+not|starts\\s+with|ends\\s+with|to\\s+the\\s+power\\s+of|divided\\s+by|square\\s+root\\s+of)\\b"
         },
         {
           "name": "keyword.operator.word.bosh",
@@ -218,8 +278,24 @@
     "punctuation": {
       "patterns": [
         {
+          "name": "punctuation.section.block.bosh",
+          "match": "[{}]"
+        },
+        {
+          "name": "punctuation.section.group.bosh",
+          "match": "[()]"
+        },
+        {
+          "name": "punctuation.section.list.bosh",
+          "match": "[\\[\\]]"
+        },
+        {
           "name": "punctuation.separator.bosh",
-          "match": "[{}()\\[\\]:,.~]"
+          "match": "[:,.]"
+        },
+        {
+          "name": "punctuation.separator.branch.bosh",
+          "match": "~"
         }
       ]
     }

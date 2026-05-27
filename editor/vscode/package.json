@@ -1,18 +1,30 @@
 {
   "name": "bosh-language-support",
   "displayName": "Bosh Language Support",
-  "description": "Syntax highlighting for Bosh",
+  "description": "Syntax highlighting for the Bosh language",
   "version": "0.0.1",
+  "publisher": "local",
+  "repository": {
+  "type": "git",
+  "url": "https://github.com/p4-project-2026/Bosh"
+},
   "engines": {
     "vscode": "^1.80.0"
   },
-  "categories": ["Programming Languages"],
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "bosh",
-        "aliases": ["Bosh", "bosh"],
-        "extensions": [".bosh"],
+        "aliases": [
+          "Bosh",
+          "bosh"
+        ],
+        "extensions": [
+          ".bosh"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
