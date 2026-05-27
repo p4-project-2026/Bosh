@@ -263,7 +263,8 @@ class Delete(ASTNode):
         try:
             target_value = self.target.execute(env)
             if os.path.isdir(target_value):
-                os.rmdir(target_value)
+                import shutil
+                shutil.rmtree(target_value)  # Recursively delete the directory
             elif os.path.isfile(target_value):
                 os.remove(target_value)
             
