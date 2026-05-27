@@ -40,7 +40,6 @@ INSERT : "append" | "prepend" | "insert"
                 | "copy from" expr "to" expr    -> copy_from_to
                 | "go up"                       -> go_up
                 | "move" expr "to" expr         -> move
-
                 | "write" expr "to" expr        -> write
                 | "execute" expr                -> execute
                 | "pause"                       -> pause
@@ -103,7 +102,7 @@ INSERT : "append" | "prepend" | "insert"
                 | access_expr unit                      -> unit
                 | access_expr "as" TYPE                 -> type_cast
                 | "random from" expr "to" expr          -> random
-                | "read" expr                   -> read
+                | "read" expr                           -> read
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
         | text
