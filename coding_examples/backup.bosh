@@ -1,10 +1,10 @@
-Dir is "C:\Users\DominoWWW\Downloads\my_folder".
-Backup Dir is "C:\Users\DominoWWW\Downloads\backups".
+Dir is "C:/Users/DominoWWW/Downloads/my_folder".
+Backup Dir is "C:/Users/DominoWWW/Downloads/backups".
 # Date Prefix (YYYY-MM-DD)
 Date Prefix is now date.
 
 # Copy files
-copy from Dir to "{Backup Dir}\\{Date Prefix}" else quit.
+copy from Dir to "{Backup Dir}/{Date Prefix}" else quit.
 say "Copy files from {Dir} to {Backup Dir}". 
 
 # Delete files older than 7 days
