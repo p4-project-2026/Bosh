@@ -2334,6 +2334,7 @@ class Random(ASTNode):
     )
     def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
         try:
+            self.child_return_types.clear()
             if self.from_ is None or self.to is None:
                 raise Exception(f"Random operator requires both 'from' and 'to' operands, but one or both were not provided.")
 
@@ -2436,8 +2437,17 @@ class Lookdir(ASTNode):
             return {"list<text>"}
         except Exception as e:
             raise TraceError(node = self, cause = e)
-
-    def execute(self, env):
+    @logged(
+        start=lambda self, env: (
+            f"Executing lookdir operator..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Lookdir operator executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env, log_case: LogCase):
         try:
             if self.location is None:
                 location = env.get_current_directory()
@@ -2450,6 +2460,279 @@ class Lookdir(ASTNode):
                 raise Exception(f"Lookdir operator requires a directory path, but got '{location}' which is not a directory.")
             if not os.path.exists(location):
                 raise Exception(f"Lookdir operator requires a directory path, but got '{location}' which does not exist.")
-            return os.listdir(location)
+            result = os.listdir(location)
+            log_case.set("success", result=result)
+            return result
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+@dataclass     
+class Textcutter(ASTNode):
+    text: ASTNode
+    cut_from: str
+    index: ASTNode
+    def __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Starting type check for textcutter operator with text operand '{self.text}', cut_from '{self.cut_from}', and index operand '{self.index}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type check for textcutter operator passed successfully. Determined return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
+        try:
+            self.child_return_types.clear()
+            text_type = self.text.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if text_type is None:
+                raise Exception(f"Could not determine type of 'text' operand in Textcutter operator.")
+            if not t_h.contains(text_type, "text"):
+                raise Exception(f"Textcutter operator 'text' operand must contain 'text', got '{text_type}'.")
+            if text_type != {"text"}:
+                self.text.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=text_type.copy(),
+                    new_inference_value={"text"},
+                )
+                text_type = {"text"}
+
+            if self.cut_from not in {"start", "end"}:
+                raise Exception(f"Textcutter operator 'cut_from' must be either 'start' or 'end', got '{self.cut_from}'.")
+            if self.index is None:
+                raise Exception(f"Textcutter operator requires an 'index' operand, but no index was provided.")
+            index_type = self.index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if index_type is None:
+                raise Exception(f"Could not determine type of 'index' operand in Textcutter operator.")
+            if not t_h.contains(index_type, "number"):
+                raise Exception(f"Textcutter operator 'index' operand must contain 'number', got '{index_type}'.")
+            if index_type != {"number"}:
+                self.index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=index_type.copy(),
+                    new_inference_value={"number"},
+                )
+                index_type = {"number"}
+            self.child_return_types["index"] = (index_type.copy(), self.index)
+            self.child_return_types["text"] = (text_type.copy(), self.text)
+            self.child_return_types["self"] = ({"text"}, self)
+            log_case.set("success")
+            return {"text"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+    
+    @logged(
+        start=lambda self, env: (
+            f"Executing textcutter operator with text operand '{self.text}', cut_from '{self.cut_from}', and index operand '{self.index}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Textcutter operator executed successfully. Result: {result}"
+            )
+        }
+    )
+
+    def execute(self, env, log_case: LogCase):
+        try:
+            text_value = self.text.execute(env)
+            index_value = self.index.execute(env)
+
+            if self.cut_from == "start":
+                result = text_value[:index_value]
+            else:
+                result = text_value[-index_value:]
+            log_case.set("success", result=result)
+            return result
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
+@dataclass
+class TextSlice(ASTNode):
+    text: ASTNode
+    from_index: ASTNode
+    to_index: ASTNode
+
+    def __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Starting type check for text slice operator with text operand '{self.text}', from_index operand '{self.from_index}', and to_index operand '{self.to_index}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type check for text slice operator passed successfully. Determined return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
+        try:
+            self.child_return_types.clear()
+            text_type = self.text.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if text_type is None:
+                raise Exception(f"Could not determine type of 'text' operand in TextSlice operator.")
+            if not t_h.contains(text_type, "text"):
+                raise Exception(f"TextSlice operator 'text' operand must contain 'text', got '{text_type}'.")
+            if text_type != {"text"}:
+                self.text.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=text_type.copy(),
+                    new_inference_value={"text"},
+                )
+                text_type = {"text"}
+
+            from_index_type = self.from_index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if from_index_type is None:
+                raise Exception(f"Could not determine type of 'from_index' operand in TextSlice operator.")
+            if not t_h.contains(from_index_type, "number"):
+                raise Exception(f"TextSlice operator 'from_index' operand must contain 'number', got '{from_index_type}'.")
+            if from_index_type != {"number"}:
+                self.from_index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=from_index_type.copy(),
+                    new_inference_value={"number"},
+                )
+                from_index_type = {"number"}
+
+            to_index_type = self.to_index.check(v_table=v_table, f_table=f_table, inference_context=inference_context)
+            if to_index_type is None:
+                raise Exception(f"Could not determine type of 'to_index' operand in TextSlice operator.")
+            if not t_h.contains(to_index_type, "number"):
+                raise Exception(f"TextSlice operator 'to_index' operand must contain 'number', got '{to_index_type}'.")
+            
+            if to_index_type != {"number"}:
+                self.to_index.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=to_index_type.copy(),
+                    new_inference_value={"number"},
+                )
+                to_index_type = {"number"}
+
+            self.child_return_types["text"] = (text_type.copy(), self.text)
+            self.child_return_types["from_index"] = (from_index_type.copy(), self.from_index)
+            self.child_return_types["to_index"] = (to_index_type.copy(), self.to_index)
+            self.child_return_types["self"] = ({"text"}, self)
+            log_case.set("success")
+            return {"text"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
+    @logged(
+        start=lambda self, env: (
+            f"Executing text slice operator with text operand '{self.text}', from_index operand '{self.from_index}', and to_index operand '{self.to_index}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Text slice operator executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env, log_case: LogCase):
+        try:
+            text_value = self.text.execute(env)
+            from_index_value = self.from_index.execute(env)
+            to_index_value = self.to_index.execute(env)
+
+            result = text_value[from_index_value:to_index_value]
+            log_case.set("success", result=result)
+            return result
+
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+    
+@dataclass
+class TextSplit(ASTNode):
+    text: ASTNode
+    delimiter: ASTNode
+    def __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Starting type check for text split operator with text operand '{self.text}' and delimiter operand '{self.delimiter}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type check for text split operator passed successfully. Determined return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
+        try:
+            self.child_return_types.clear()
+            text_type = self.text.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context)
+            if text_type is None:
+                raise Exception(f"Could not determine type of 'text' operand in TextSplit operator.")
+            if not t_h.contains(text_type, "text"):
+                raise Exception(f"TextSplit operator 'text' operand must contain 'text', got '{text_type}'.")
+            if text_type != {"text"}:
+                self.text.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=text_type.copy(),
+                    new_inference_value={"text"},
+                )
+                text_type = {"text"}
+            delimiter_type = self.delimiter.check(
+                v_table=v_table, 
+                f_table=f_table, 
+                inference_context=inference_context
+            )
+            if delimiter_type is None:
+                raise Exception(f"Could not determine type of 'delimiter' operand in TextSplit operator.")
+            if not t_h.contains(delimiter_type, "text"):
+                raise Exception(f"TextSplit operator 'delimiter' operand must contain 'text', got '{delimiter_type}'.")
+            if delimiter_type != {"text"}:
+                self.delimiter.inference(
+                    v_table=v_table,
+                    f_table=f_table,
+                    inference_context=inference_context,
+                    old_inference_value=delimiter_type.copy(),
+                    new_inference_value={"text"},
+                )
+                delimiter_type = {"text"}
+            self.child_return_types["text"] = (text_type.copy(), self.text)
+            self.child_return_types["delimiter"] = (delimiter_type.copy(), self.delimiter)
+            self.child_return_types["self"] = ({"list<text>"}, self)
+            log_case.set("success")
+            return {"list<text>"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+        
+    @logged(
+        start=lambda self, env: (
+            f"Executing text split operator with text operand '{self.text}' and delimiter operand '{self.delimiter}'..."
+        ),
+        success={
+            "success": lambda self, env, result: (
+                f"Text split operator executed successfully. Result: {result}"
+            )
+        }
+    )
+    def execute(self, env, log_case: LogCase):
+        try:
+            text_value = self.text.execute(env)
+            delimiter_value = self.delimiter.execute(env)
+            result = text_value.split(delimiter_value)
+            log_case.set("success", result=result)
+            return result
         except Exception as e:
             raise TraceError(node = self, cause = e)
