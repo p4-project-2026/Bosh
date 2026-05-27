@@ -108,7 +108,7 @@ class Block(ASTNode):
                 return_type = stmt_return_type
                 continue
 
-            if not t_h.is_compatible_type(return_type, stmt_return_type):
+            if not t_h.is_compatible(return_type, stmt_return_type):
                 raise Exception(f"Type error: Incompatible return types in block. Previous return type: {return_type}, new return type: {stmt_return_type}")
                     
             return_type = t_h.narrow(return_type, stmt_return_type)
