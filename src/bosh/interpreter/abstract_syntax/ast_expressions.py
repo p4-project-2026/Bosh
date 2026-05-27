@@ -1064,6 +1064,7 @@ class BinaryOp(ASTNode):
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
+
             self.child_return_types.clear()
             left_type = self.left.check(
                 v_table=v_table,
@@ -1071,12 +1072,15 @@ class BinaryOp(ASTNode):
                 inference_context=inference_context
             )
 
+            
             right_type = self.right.check(
                 v_table=v_table, 
                 f_table=f_table, 
                 inference_context=inference_context
             )
 
+
+            
             if left_type is None or right_type is None:
                 raise Exception(
                                 f"Binary operator check failed: left or right operand has no type. "
@@ -1085,7 +1089,9 @@ class BinaryOp(ASTNode):
                                 )
             
             op = self.operator
+
             match op:
+                    
                 case  "plus" | "minus" | "mult" | "div" | "pow" | "mod":
                     valid_input_types = {"number", "decimal", "date", "time"}
                     if left_type is None:
@@ -1414,6 +1420,8 @@ class BinaryOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "eq_type" | "neq_type":
+
+                    
                     if right_val in ["folder", "file"]:
                         if t_h.contains(self.child_return_types["left"][0], "text"):
                             if right_val == "folder":
@@ -2378,4 +2386,63 @@ class Random(ASTNode):
         except Exception as e:
             raise TraceError(node = self, cause = e)
 
-          
+@dataclass  
+class Lookdir(ASTNode):
+    location: Optional[ASTNode]
+    def __post_init__(self):
+        super().__init__()
+
+    @logged(
+        start=lambda self, v_table, f_table, inference_context: (
+            f"Starting type check for lookdir operator..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context: (
+                f"Type check for lookdir operator passed successfully. Determined return type: {self.child_return_types['self'][0]}"
+            )
+        }
+    )
+    def check(self, v_table, f_table, inference_context, log_case: LogCase) -> set[str]:
+        try:
+            location = self.location.check(v_table=v_table, f_table=f_table, inference_context=inference_context) if self.location else None
+            if self.location is not None:
+                if not t_h.contains(location, "text"):
+                    raise Exception(f"Lookdir operator 'location' operand must contain 'text', got '{location}'.")
+                
+                if location != {"text"}:
+                    self.location.inference(
+                        v_table=v_table,
+                        f_table=f_table,
+                        inference_context=inference_context,
+                        old_inference_value=location.copy(),
+                        new_inference_value={"text"},
+                    )
+                    location = {"text"}
+                self.child_return_types["location"] = (location.copy(), self.location)
+            else:
+                self.child_return_types["location"] = (None, None)
+
+                location = None
+                
+            self.child_return_types["self"] = ({"list<text>"}, self)
+            log_case.set("success")
+            return {"list<text>"}
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
+
+    def execute(self, env):
+        try:
+            if self.location is None:
+                location = env.get_current_directory()
+            else:
+                location = self.location.execute(env)
+                if not os.path.isabs(location):
+                    location = os.path.join(env.get_current_directory(), location)
+                
+            if not os.path.isdir(location):
+                raise Exception(f"Lookdir operator requires a directory path, but got '{location}' which is not a directory.")
+            if not os.path.exists(location):
+                raise Exception(f"Lookdir operator requires a directory path, but got '{location}' which does not exist.")
+            return os.listdir(location)
+        except Exception as e:
+            raise TraceError(node = self, cause = e)
