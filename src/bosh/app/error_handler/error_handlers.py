@@ -3,6 +3,7 @@ from typing import Optional, Type, Dict, Any
 import inspect
 import ast
 from pathlib import Path
+from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 
 
 class Colors:
@@ -39,7 +40,7 @@ def get_call_location():
         caller_frame = stack[2]
         filename = Path(caller_frame.filename)
         line_number = caller_frame.lineno
-        return f"{filename}, at line {line_number}"
+        return f"{str(Path.cwd().joinpath(ArgumentHandler.file))}, at line {line_number}"
     return "Unknown location"
 
 def get_default_color(color: Optional[str], severity: str) -> str:
