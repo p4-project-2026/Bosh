@@ -27,7 +27,7 @@ This is the easiest local installation method.
 
    Example:
 
-        C:\Users\micha\.vscode\extensions\bosh-language-support
+        C:\Users\Dog\.vscode\extensions\bosh-language-support
 
 4. Reopen VS Code.
 
