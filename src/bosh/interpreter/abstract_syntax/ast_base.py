@@ -152,8 +152,8 @@ class Program(ASTNode):
             f"Starting type checking of the program..."
         ),
         success={
-            "success": lambda self, v_table, f_table, return_type: (
-                f"Program type checked successfully with return type: {return_type}"
+            "success": lambda self, v_table, f_table: (
+                f"Program type checked successfully."
             )
         }
     )
@@ -161,11 +161,11 @@ class Program(ASTNode):
         try:
             self.child_return_types.clear()
             inference_context = InferenceContext()
-            return_value = None
+            
             
             while True:
                 inference_context.reset()
-                return_value = self.block.check(
+                self.block.check(
                     v_table=v_table,
                     f_table=f_table,
                     inference_context=inference_context
@@ -176,8 +176,8 @@ class Program(ASTNode):
 
                 vvvprint("Program: Detected a change during inference, restarting type checking with updated types...")
 
-            log_case.set("success", return_type=return_value)
-            return return_value
+            log_case.set("success")
+            return 
         
         except Exception as e:
             raise TraceError(node = self, cause = e)
