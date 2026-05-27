@@ -40,7 +40,7 @@ INSERT : "append" | "prepend" | "insert"
                 | "copy from" expr "to" expr    -> copy_from_to
                 | "go up"                       -> go_up
                 | "move" expr "to" expr         -> move
-                | "read" expr                   -> read
+
                 | "write" expr "to" expr        -> write
                 | "execute" expr                -> execute
                 | "pause"                       -> pause
@@ -48,6 +48,7 @@ INSERT : "append" | "prepend" | "insert"
 
 
 ?expr   : or_expr
+        | "read" expr                   -> read
 
 ?or_expr    : and_expr
             | or_expr ( "||"  | "or" ) and_expr  -> or_
