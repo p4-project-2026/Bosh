@@ -1,0 +1,5 @@
+count I from 0 to 100000:
+    print I
+    I is I + 1
+    if true:
+        continue
