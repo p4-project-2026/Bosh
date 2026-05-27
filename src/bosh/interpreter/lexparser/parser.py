@@ -549,3 +549,18 @@ class BoshTransformer(Transformer):
         node = Lookdir(location=args[0])
         node.set_meta(meta, self._filename)
         return node
+    
+    def text_slice(self, meta, args):
+        node = TextSlice(text=args[0], from_index=args[1], to_index=args[2])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def textcutter(self, meta, args):
+        node = Textcutter(text=args[0], cut_from=args[1], index=args[2])
+        node.set_meta(meta, self._filename)
+        return node
+    
+    def text_split(self, meta, args):
+        node = TextSplit(text=args[0], delimiter=args[1])
+        node.set_meta(meta, self._filename)
+        return node
