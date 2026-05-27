@@ -535,6 +535,6 @@ class BoshTransformer(Transformer):
     
     def PATH(self, token):
         full_path = str(token.value)
-        node = StringLiteral(value=full_path)
+        node = Type(name=full_path)
         node.set_meta(None, self._filename)
         return node

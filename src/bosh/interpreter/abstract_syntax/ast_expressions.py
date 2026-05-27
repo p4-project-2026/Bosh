@@ -1064,7 +1064,6 @@ class BinaryOp(ASTNode):
     )
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> set[str]:
         try:
-
             self.child_return_types.clear()
             left_type = self.left.check(
                 v_table=v_table,
@@ -1072,15 +1071,12 @@ class BinaryOp(ASTNode):
                 inference_context=inference_context
             )
 
-            
             right_type = self.right.check(
                 v_table=v_table, 
                 f_table=f_table, 
                 inference_context=inference_context
             )
 
-
-            
             if left_type is None or right_type is None:
                 raise Exception(
                                 f"Binary operator check failed: left or right operand has no type. "
@@ -1089,9 +1085,7 @@ class BinaryOp(ASTNode):
                                 )
             
             op = self.operator
-
             match op:
-                    
                 case  "plus" | "minus" | "mult" | "div" | "pow" | "mod":
                     valid_input_types = {"number", "decimal", "date", "time"}
                     if left_type is None:
@@ -1420,8 +1414,6 @@ class BinaryOp(ASTNode):
                     log_case.set("success", result=result)
                     return result
                 case "eq_type" | "neq_type":
-
-                    
                     if right_val in ["folder", "file"]:
                         if t_h.contains(self.child_return_types["left"][0], "text"):
                             if right_val == "folder":

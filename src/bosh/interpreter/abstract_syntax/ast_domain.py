@@ -81,7 +81,7 @@ class GoTo(ASTNode):
 @dataclass
 class Make(ASTNode):
     new: bool
-    entity_type: str
+    entity_type: ASTNode
     name: ASTNode
     location: Optional[ASTNode]
     def __post_init__(self):
@@ -101,20 +101,17 @@ class Make(ASTNode):
     def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
-
+            entity_type = self.entity_type.check(v_table, f_table, inference_context)
+            print(entity_type in [{"file"}, {"folder"}])
             
-            if not self.entity_type:
+            if not entity_type:
                 raise Exception("Entity type in make statement cannot be empty.")
             
-            if self.entity_type not in ["folder", "file"]:
+            if entity_type not in [{"folder"}, {"file"}]:
                 # I don't think this is correct, but anyway.
-                raise Exception(f"Invalid entity type '{self.entity_type}' in make statement. Must be 'folder' or 'file'.")
+                raise Exception(f"Invalid entity type '{entity_type}' in make statement. Must be 'folder' or 'file'.")
 
-            name_type = self.name.check(
-                v_table, 
-                f_table, 
-                inference_context
-            )
+            name_type = self.name.check(v_table, f_table, inference_context)
             
             if not t_h.contains(name_type, "text"):
                 raise Exception(f"Name in make statement must be of type 'text', got '{name_type}'")
@@ -154,11 +151,7 @@ class Make(ASTNode):
                 
                 else:
                     location_type = {"text"}
-                    self.child_return_types["location"] = (location_type, None)
-                
-            
-
-            
+                    self.child_return_types["location"] = (location_type, None)   
             log_case.set("success")
 
         except Exception as e:
@@ -184,13 +177,14 @@ class Make(ASTNode):
             else:
                 location_value = env.get_current_directory()
 
+            entity_type_value = self.entity_type.execute(env)
             path = os.path.join(location_value, name_value) if location_value else name_value
-            if self.entity_type == "folder":
+            if entity_type_value == "folder":
                 if self.new:
                     os.makedirs(path, exist_ok=False)
                 else:
                     os.makedirs(path, exist_ok=True)
-            elif self.entity_type == "file":
+            elif entity_type_value == "file":
                 if self.new:
                     with open(path, "x") as f:
                         pass
