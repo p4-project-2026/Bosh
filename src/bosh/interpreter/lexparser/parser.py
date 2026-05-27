@@ -450,6 +450,7 @@ class BoshTransformer(Transformer):
     
     def str_chars(self, meta, args):
         content = "".join(str(arg) for arg in args)
+        content = content.replace(r'\"', '"').replace(r'\{', '{').replace(r'\}', '}').replace(r'\\', '\\')
         node = StringLiteral(value=content)
         node.set_meta(meta, self._filename)
         return node
