@@ -256,7 +256,7 @@ class ForAll(ASTNode):
             f"Checking for all statement..."
         ),
         success={
-            "succe": lambda self, v_table, f_table, inference_context: (
+            "success": lambda self, v_table, f_table, inference_context: (
                 f"ForAll checked successfully."
             )
         }
