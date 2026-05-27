@@ -1,5 +1,5 @@
-Dir is "C:\\Users\\DominoWWW\\Downloads\\my_folder".
-Backup Dir is "C:\\Users\\DominoWWW\\Downloads\\backups".
+Dir is "C:\\some\\folder".
+Backup Dir is "C:\\some\\backup\\folder".
 # Date Prefix (YYYY-MM-DD)
 Date Prefix is now date.
 
