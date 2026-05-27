@@ -102,7 +102,6 @@ class Make(ASTNode):
         try:
             self.child_return_types.clear()
             entity_type = self.entity_type.check(v_table, f_table, inference_context)
-            print(entity_type in [{"file"}, {"folder"}])
             
             if not entity_type:
                 raise Exception("Entity type in make statement cannot be empty.")
