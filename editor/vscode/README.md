@@ -1,85 +1,136 @@
-# Bosh Language Support
+# Bosh Language Support for VS Code
 
-Syntax highlighting and editor support for `.bosh` files.
+This extension adds syntax highlighting and basic editor support for `.bosh` files in Visual Studio Code.
 
 ## Features
 
-- Syntax highlighting
-- Comments with `#`
-- Bracket matching
-- String interpolation highlighting
+- Syntax highlighting for Bosh code
+- Highlighting for comments, strings, numbers, dates, booleans, functions, tasks, control flow, list operations, text operations, file operations, and operators
+- Bracket matching for `{}`, `()`, and `[]`
+- Auto-closing brackets and strings
+- Line comments using `#`
 
 ## Installation
 
-### Option 1: Install manually without Node.js
+The extension is installed from a `.vsix` file.
 
-This is the easiest local installation method.
+A `.vsix` file is a local VS Code extension installer.
 
-1. Close VS Code.
+### Install using VS Code
 
-2. Copy this folder:
+1. Open Visual Studio Code.
+
+2. Open the Extensions view:
+
+        Ctrl + Shift + X
+
+3. Click the `...` menu in the top-right corner of the Extensions panel.
+
+4. Choose:
+
+        Install from VSIX...
+
+5. Select the Bosh `.vsix` file, for example:
+
+        bosh-language-support-0.0.1.vsix
+
+6. Restart VS Code if prompted.
+
+7. Open a `.bosh` file.
+
+8. The language mode in the bottom-right corner should show:
+
+        Bosh
+
+If it says `Plain Text`, click `Plain Text`, then select `Bosh`.
+
+## Install using the command line
+
+You can also install the extension from a terminal.
+
+Open PowerShell or a terminal in the folder containing the `.vsix` file and run:
+
+        code --install-extension bosh-language-support-0.0.1.vsix
+
+Then restart VS Code and open a `.bosh` file.
+
+## Updating the Extension
+
+To update the extension, install the newer `.vsix` file the same way.
+
+For example:
+
+        code --install-extension bosh-language-support-0.0.2.vsix
+
+VS Code will replace the older version with the newer one.
+
+## Uninstalling
+
+1. Open the Extensions view:
+
+        Ctrl + Shift + X
+
+2. Search for:
+
+        Bosh Language Support
+
+3. Click the gear icon.
+
+4. Choose:
+
+        Uninstall
+
+5. Restart VS Code if prompted.
+
+## Development
+
+This section is only for people editing the extension itself.
+
+Open this folder in VS Code:
 
         Bosh/editor/vscode
 
-3. Paste it into your VS Code extensions folder and rename it:
+Press:
 
-        C:\Users\<your-user-name>\.vscode\extensions\bosh-language-support
+        F5
 
-   Example:
+This opens a new VS Code window called the Extension Development Host.
 
-        C:\Users\Dog\.vscode\extensions\bosh-language-support
+In that new window, open a `.bosh` file to test the syntax highlighting.
 
-4. Reopen VS Code.
+After editing `syntaxes/bosh.tmLanguage.json`, reload the Extension Development Host window:
 
-5. Open a `.bosh` file.
+        Ctrl + Shift + P
 
-6. The language mode in the bottom-right corner should show `Bosh`.
+Then run:
 
-If it still says `Plain Text`, click `Plain Text` and select `Bosh`.
+        Developer: Reload Window
 
----
+## Building the VSIX
 
-### Option 2: Install from a `.vsix` package
+This section is only for maintainers.
 
-This requires Node.js and npm.
+Install Node.js LTS first. This provides `node` and `npm`.
 
-1. Install the Node.js LTS version.
-
-2. Close and reopen VS Code or PowerShell.
-
-3. Check that Node.js and npm are available:
+Check that they are installed:
 
         node --version
         npm --version
 
-4. Install the VS Code extension packaging tool:
+Install the VS Code extension packaging tool:
 
         npm install -g @vscode/vsce
 
-5. Go to the extension folder:
-
-        cd "C:\Users\micha\Documents\VS code\Bosh\editor\vscode"
-
-6. Build the `.vsix` package:
-
-        vsce package
-
-7. Install the generated `.vsix` file:
-
-        code --install-extension .\bosh-language-support-0.0.1.vsix
-
-8. Restart VS Code and open a `.bosh` file.
-
----
-
-## Development
-
-To test the extension while editing it:
-
-1. Open this folder in VS Code:
+From this folder:
 
         Bosh/editor/vscode
 
-2. Press `F5`.
+build the `.vsix` file:
 
-This opens a new VS Code window called the **Extension Development Host**. In that window, open a `.bosh` file to test the syntax highlighting.
+        vsce package
+
+This creates a file like:
+
+        bosh-language-support-0.0.1.vsix
+
+That file can be shared with users so they can install the Bosh extension in VS Code.
