@@ -538,3 +538,8 @@ class BoshTransformer(Transformer):
         node = Type(name=full_path)
         node.set_meta(None, self._filename)
         return node
+    
+    def list_files(self, meta, args):
+        node = Lookdir(location=args[0])
+        node.set_meta(meta, self._filename)
+        return node
