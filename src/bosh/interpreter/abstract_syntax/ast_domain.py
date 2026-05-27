@@ -385,7 +385,7 @@ class Copy(ASTNode):
             )
         }
     )
-    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext) -> None:
+    def check(self, v_table: ScopeStack, f_table: FuncTable, inference_context: InferenceContext, log_case: LogCase) -> None:
         try:
             self.child_return_types.clear()
 
@@ -434,6 +434,9 @@ class Copy(ASTNode):
                 target_type = narrowed_target_type
 
             self.child_return_types["target"] = (target_type, self.target)
+            
+            log_case.set("success")
+
         except Exception as e:
             raise TraceError(node = self, cause = e)
         
