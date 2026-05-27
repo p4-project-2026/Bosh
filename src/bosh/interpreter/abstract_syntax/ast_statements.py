@@ -165,10 +165,10 @@ class IfElse(ASTNode):
             f"Attempting to execute if-else statement..."
         ),
         success={
-            "if_branch": lambda self, env: (
+            "if_branch": lambda self, env, return_val: (
                 f"If branch of if-else statement executed successfully."
             ),
-            "else_branch": lambda self, env: (
+            "else_branch": lambda self, env, return_val: (
                 f"Else branch of if-else statement executed successfully."
             )
         }
@@ -181,12 +181,12 @@ class IfElse(ASTNode):
                 env.new_scope()
                 value = self.then_branch.execute(env)
                 env.exit_scope()
-                log_case.set("if_branch")
+                log_case.set("if_branch", return_val=value)
             elif self.else_branch:
                 env.new_scope()
                 value = self.else_branch.execute(env)
                 env.exit_scope()
-                log_case.set("else_branch")
+                log_case.set("else_branch", return_val=value)
             return value
         except Exception as e:
             raise TraceError(node = self, cause = e, hide_trace = True)
