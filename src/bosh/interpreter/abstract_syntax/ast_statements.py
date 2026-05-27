@@ -393,11 +393,11 @@ class ForAll(ASTNode):
                 try:
                     env.assign_variable(self.iterator_name, element)
                     value = self.body.execute(env)
-                    if value is Literal["continue"]:
+                    if isinstance(value, ContinueSignal):
                         value = None
                         continue
                     
-                    elif value is Literal["break"]:
+                    elif isinstance(value, BreakSignal):
                         value = None
                         break
                     elif value is not None:
@@ -500,10 +500,10 @@ class RepeatUntil(ASTNode):
             while True:
                 value = self.body.execute(env)
                 condition_value = self.condition.execute(env)
-                if value is Literal["continue"]:
+                if isinstance(value, ContinueSignal):
                     value = None
                     continue
-                elif value is Literal["break"]:
+                elif isinstance(value, BreakSignal):
                     value = None
                     break
                 elif value is not None:
@@ -636,26 +636,27 @@ class Count(ASTNode):
                     try:
                         env.bind_local_variable(self.iterator_name, i)
                         value = self.body.execute(env)
-                        if value is Literal["continue"]:
+                        if isinstance(value, ContinueSignal):
                             value = None
                             continue
-                        elif value is Literal["break"]:
+                        print(f"Count: value from body: {value}{value.__class__}")
+                        if isinstance(value, BreakSignal):
                             value = None
                             break
-                        elif value is not None:
+                        if value is not None:
                             break
                     finally:
                         env.exit_scope()
                 else:
                     try:
                         value = self.body.execute(env)
-                        if value is Literal["continue"]:
+                        if isinstance(value, ContinueSignal):
                             value = None
                             continue
-                        elif value is Literal["break"]:
+                        if isinstance(value, BreakSignal):
                             value = None
                             break
-                        elif value is not None:
+                        if value is not None:
                             break
                     finally:
                         env.exit_scope()
@@ -1263,9 +1264,9 @@ class Continue(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, log_case: LogCase) -> Literal["continue"]:
+    def execute(self, env: Environment, log_case: LogCase) -> ContinueSignal:
         log_case.set("success")
-        return "continue"
+        return ContinueSignal()
 
 class Break(ASTNode):
 
@@ -1295,6 +1296,6 @@ class Break(ASTNode):
             )
         }
     )
-    def execute(self, env: Environment, log_case: LogCase) -> Literal["break"]:
+    def execute(self, env: Environment, log_case: LogCase) -> BreakSignal:
         log_case.set("success")
-        return "break"
+        return BreakSignal()
