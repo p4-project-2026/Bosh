@@ -529,7 +529,12 @@ class BoshTransformer(Transformer):
                 type_str = "boolean"
             case "list":
                 type_str = "list<any>"
-
         node = Type(name=type_str)
+        node.set_meta(None, self._filename)
+        return node
+    
+    def PATH(self, token):
+        full_path = str(token.value)
+        node = StringLiteral(value=full_path)
         node.set_meta(None, self._filename)
         return node
