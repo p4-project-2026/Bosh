@@ -125,7 +125,6 @@ function AIRandomMove:
         if Board at Position == " ":
             Board at Position is "O"
             ValidMove is true
-            print "AI chose position {Position + 1}"
 
 #Function for Perfect AI
 function AIPerfectMove:
@@ -142,7 +141,6 @@ function AIPerfectMove:
             Chance is random from 1 to 100
             if Chance > 20:
                 Board at WinningPos is "O"
-                print "AI chose position {WinningPos + 1}"
                 MoveMade is true
     
     #2. Block player from winning
@@ -156,7 +154,6 @@ function AIPerfectMove:
             Chance is random from 1 to 100
             if Chance > 10:
                 Board at BlockingPos is "O"
-                print "AI chose position {BlockingPos + 1} (blocking)"
                 MoveMade is true
     
     #3. Take center if available
@@ -177,7 +174,6 @@ function AIPerfectMove:
                     ChosenCorner is Corner
         if ChosenCorner != -1:
             Board at ChosenCorner is "O"
-            print "AI chose position {ChosenCorner + 1}"
             MoveMade is true
     
     #5. Take any available space
@@ -185,7 +181,6 @@ function AIPerfectMove:
         count I from 0 to 8:
             if MoveMade == false and Board at I == " ":
                 Board at I is "O"
-                print "AI chose position {I + 1}"
                 MoveMade is true
 
 #Main AI move dispatcher
@@ -202,6 +197,7 @@ repeat until false:
     #Check if AI should play
     if CurrentPlayer == "O" and IsAI == true:
         run AIMove
+        wait 0.5 second
     else:
         #Get player input
         print ""
@@ -212,12 +208,10 @@ repeat until false:
         
         #Validate position range
         if MoveLocation < 0 or MoveLocation > 8:
-            print "Invalid position. Choose 1-9." .
             continue
         
         #Check if position is already taken
         if Board at MoveLocation != " ":
-            print "Position already taken." .
             continue
         
         #Place the move
