@@ -375,7 +375,7 @@ class ForAll(ASTNode):
             iterable_val = self.iterable.execute(env)
             
             elements_to_iterate = []
-            if t_h.is_only(iterable_val, "text"):
+            if t_h.is_only(self.child_return_types["iterable"][0], "text"):
                 if not os.path.exists(iterable_val):
                     raise ValueError(f"Directory path '{iterable_val}' does not exist.")
                 if not os.path.isdir(iterable_val):
