@@ -1,7 +1,7 @@
 [project]
-name = "bosh"
-version = "0.1.0"
-description = "Add your description here"
+name = "Bosh"
+version = "1.0.0"
+description = "Bosh (Beginner‑Oriented SHell) is a scripting language built with an emphasis on readability and accessibility for casual programmers. Bosh introduces an English‑Like Language syntax that allows users to express file automation using natural English sentences and intuitive verbs."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
