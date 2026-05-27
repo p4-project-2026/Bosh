@@ -32,7 +32,10 @@ def logged(start: Callable[..., str], success: dict[str, Callable[..., str]]):
 
                 if message_builder is None:
                     raise Exception(
-                        f"No success log message for path '{log_case.path}'"
+                        f"No success log message for path '{log_case.path}'",
+                        f"Available paths: {list(success.keys())}",
+                        self.__class__.__name__,
+                        log_case.path
                     )
 
                 vvvprint(
