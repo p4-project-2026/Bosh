@@ -639,7 +639,6 @@ class Count(ASTNode):
                         if isinstance(value, ContinueSignal):
                             value = None
                             continue
-                        print(f"Count: value from body: {value}{value.__class__}")
                         if isinstance(value, BreakSignal):
                             value = None
                             break
