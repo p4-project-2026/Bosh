@@ -48,7 +48,7 @@ INSERT : "append" | "prepend" | "insert"
 
 
 ?expr   : or_expr
-        | "read" expr                   -> read
+
 
 ?or_expr    : and_expr
             | or_expr ( "||"  | "or" ) and_expr  -> or_
@@ -103,7 +103,7 @@ INSERT : "append" | "prepend" | "insert"
                 | access_expr unit                      -> unit
                 | access_expr "as" TYPE                 -> type_cast
                 | "random from" expr "to" expr          -> random
-
+                | "read" expr                   -> read
 
 ?term   : IDENT "result" ("using" "(" expr ("," expr)* ")")? -> func
         | text
