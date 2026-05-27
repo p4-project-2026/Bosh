@@ -8,7 +8,7 @@ from bosh.helper_functions.type_helper import UNKNOWN_TYPE, ANY_TYPE, EMPTY_LIST
 import bosh.helper_functions.type_helper as t_h
 import bosh.helper_functions.formating as f_h
 from bosh.helper_functions.logged import logged, LogCase
-
+from bosh.app.cli.arguments.argument_handler import ArgumentHandler
 
 
 @dataclass
@@ -173,6 +173,10 @@ class Program(ASTNode):
             inference_context = InferenceContext()
             return_value = None
             
+            # Bind command line arguments
+            if len(ArgumentHandler.args) != 0:
+                v_table.bind(f"Args", {"list<text>"})
+
             while True:
                 inference_context.reset()
                 return_value = self.block.check(
@@ -203,6 +207,10 @@ class Program(ASTNode):
         }
     )
     def execute(self, env: Environment, log_case: LogCase) -> Any:
+        # assign command line arguments
+        if len(ArgumentHandler.args) != 0:
+            env.assign_variable(f"Args", ArgumentHandler.args)
+
         return_val = self.block.execute(env)
         log_case.set("return_val", return_val=return_val)
         return return_val
