@@ -39,7 +39,7 @@ class Help:
 		for obj in _flag_objects:
 			name_aliases = f"{', '.join(obj.aliases)}"
 			print(f"  {name_aliases:<{max_alias_len+5}} {obj.description}")
-		exit(0)
+		sys.exit(0)
 
 class Version:
     name = "version"
@@ -52,7 +52,7 @@ class Version:
     def runner():
         version = importlib.metadata.version("bosh")
         print(f"Bosh version: {version}")
-        exit(0)
+        sys.exit(0)
 
 class Verbose:
 	name = "verbose"

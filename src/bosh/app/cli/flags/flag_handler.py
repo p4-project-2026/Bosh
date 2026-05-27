@@ -1,5 +1,5 @@
 import inspect
-from . import flags as flags_module
+from bosh.app.cli.flags import flags as flags_module
 
 class FlagHandler:
     # Dynamically gather all flag classes defined in flags.py
