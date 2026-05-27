@@ -1,0 +1,24 @@
+Dir is "C:/some/folder".
+Backup Dir is "C:/some/backup/folder".
+# Date Prefix (YYYY-MM-DD)
+Date Prefix is now date.
+
+# Copy files
+copy from Dir to "{Backup Dir}/{Date Prefix}" else quit.
+say "Copy files from {Dir} to {Backup Dir}". 
+
+# Delete files older than 7 days
+say "Cleaning files older than 7 days..."
+for each Current File in Backup Dir:
+    # Extract the date from the filename
+    File Date is cut Current File from end at 10 
+    
+    # convert the date text to a date
+    Age is File Date as date
+
+    # Compare the age with now - 7 days
+    if Age less than now - 7 days:
+        say "Deleting {Current File}..."
+        delete Current File
+
+say "Done!"
