@@ -9,7 +9,7 @@ import bosh.helper_functions.type_helper as t_h
 import bosh.helper_functions.formating as f_h
 from bosh.helper_functions.logged import logged, LogCase
 
-ExecutionSignal = Literal["continue", "break"]
+
 
 @dataclass
 class Position():
@@ -17,6 +17,16 @@ class Position():
     start_col: Optional[int] = None
     end_col: Optional[int] = None
     filename: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class BreakSignal:
+    pass
+
+
+@dataclass(frozen=True)
+class ContinueSignal:
+    pass
 
 
 class InferenceContext:
