@@ -58,7 +58,7 @@ class TraceError(Error):
         if FlagHandler().get_flag_by_name("cmd").enabled:
             filename = ""
         else:
-            filename = PathsHelper().get_project_root().joinpath(get_filename())
+            filename = str(Path.cwd().joinpath(ArgumentHandler.file))
             filename = f"\"{filename}\" "
 
         cause = Error(message=cause, severity=severity)

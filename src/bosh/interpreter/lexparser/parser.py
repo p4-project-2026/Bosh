@@ -481,7 +481,7 @@ class BoshTransformer(Transformer):
         return node
 
     def now(self, meta, args):
-        node = AccessOp(target=None, operation="now")
+        node = AccessOp(target=None, operation="now", argument=args[0] if args else None)
         node.set_meta(meta, self._filename)
         return node
 
@@ -536,6 +536,12 @@ class BoshTransformer(Transformer):
     def PATH(self, token):
         full_path = str(token.value)
         node = Type(name=full_path)
+        node.set_meta(None, self._filename)
+        return node
+    
+    def DT(self, token):
+        type_str = str(token.value).lower()
+        node = Type(name = type_str)
         node.set_meta(None, self._filename)
         return node
     

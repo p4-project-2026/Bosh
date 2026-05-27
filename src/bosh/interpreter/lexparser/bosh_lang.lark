@@ -115,7 +115,7 @@ INSERT : "append" | "prepend" | "insert"
         | "[" term ("," term)* "]"      -> list
         | "input" (expr)?               -> input
         | "null"                        -> null
-        | "now"                         -> now
+        | "now" DT?                     -> now
         | "here"                        -> here
         | "(" expr ")"                  -> paren
         | TYPE
@@ -125,9 +125,10 @@ TYPE    : ("text" | "string")
         | ("int" | "number")
         | ("float" | "decimal")
         | ("boolean" | "bool")
-        | "date"
-        | "time" 
         | "list"
+        | DT
+
+DT   : "date" | "time"
 
 
 unit    : ("second" | "seconds")        -> second

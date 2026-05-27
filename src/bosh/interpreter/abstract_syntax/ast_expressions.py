@@ -2206,7 +2206,14 @@ class AccessOp(ASTNode):
                     log_case.set("success", result=target_value)
                     return target_value
                 case "now":
-                    result = datetime.datetime.now()
+                    if arg_value is None:
+                        result = datetime.datetime.now()
+                    elif arg_value == "date":
+                        result = datetime.datetime.now().date()
+                    elif arg_value == "time":
+                        result = datetime.datetime.now().time()
+                    else:
+                        raise TraceError(node = self, cause = f"Invalid argument '{arg_value}' for 'now' operation. Expected 'date', 'time', or None.")
                     log_case.set("success", result=result)
                     return result
                 case "here":
