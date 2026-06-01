@@ -1,6 +1,7 @@
 import importlib.metadata
-import msvcrt
 import sys
+
+from bosh.helper_functions.getch import wait_for_keypress
 
 class Help:
 	name = "help"
@@ -91,8 +92,7 @@ class Pause:
 
 	@staticmethod
 	def runner():
-		print("Press any key to continue...")
-		msvcrt.getch()
+		wait_for_keypress()
 
 class Cmd:
     name = "cmd"

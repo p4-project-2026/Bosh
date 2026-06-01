@@ -1,7 +1,8 @@
-import msvcrt
 from .ast_base import *
 import os
 import time
+
+from bosh.helper_functions.getch import wait_for_keypress
 
 @dataclass
 class GoTo(ASTNode):
@@ -848,8 +849,7 @@ class Pause(ASTNode):
     )
     def execute(self, env: Environment, log_case: LogCase) -> None:
         try:
-            print("Press any key to continue...")
-            msvcrt.getch()
+            wait_for_keypress()
             log_case.set("success")
         except Exception as e:
             raise TraceError(node = self, cause = e)
