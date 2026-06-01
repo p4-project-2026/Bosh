@@ -3,7 +3,10 @@ from lark.exceptions import UnexpectedInput, UnexpectedToken, UnexpectedCharacte
 
 from bosh.helper_functions.paths import PathsHelper
 from ..abstract_syntax import *
-from colorama import Fore, Style
+
+RED = "\033[31m"
+CYAN = "\033[36m"
+RESET_ALL = "\033[0m"
 
 def parseBosh(processed_code):
     with open(PathsHelper().get_src_path().joinpath("bosh/interpreter/lexparser/bosh_lang.lark"), "r", encoding="utf-8") as f:
@@ -15,9 +18,9 @@ def parseBosh(processed_code):
         tree = parser.parse(processed_code)
     except (UnexpectedInput, UnexpectedToken, UnexpectedCharacters) as e:
         context = e.get_context(processed_code)
-        message = f"{Fore.RED}Syntax error: {str(e)}{Style.RESET_ALL}"
+        message = f"{RED}Syntax error: {str(e)}{RESET_ALL}"
         if context:
-            message += f"Context:\n{Fore.CYAN}{context}{Style.RESET_ALL}"
+            message += f"Context:\n{CYAN}{context}{RESET_ALL}"
         raise SyntaxError(message.strip()) from e
 
     return tree
