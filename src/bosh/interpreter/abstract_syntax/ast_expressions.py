@@ -488,16 +488,9 @@ class Identifier(ASTNode):
                 raise Exception(f"Identifier: inference: New inference value '{new_inference_value}' is incompatible with current type '{current_type}' for variable '{self.name}'. something went wrong in type inference.", self)
 
             narrowed = t_h.narrow(current_type, new_inference_value)
-            if narrowed == current_type:
-                raise Exception(
-                    f"Identifier: inference path reached this node, but no narrowing occurred. "
-                    f"current={current_type}, new={new_inference_value}. "
-                    f"This probably means the parent passed a non-narrowing inference request.",
-                    self
-                )
+            if narrowed != current_type:
+                v_table.bind(self.name, narrowed.copy())
 
-
-            v_table.bind(self.name, narrowed.copy())
             self.child_return_types["self"] = (narrowed.copy(), self)
             inference_context.mark_inferred()
             log_case.set("success", new_type=narrowed.copy())
@@ -603,7 +596,26 @@ class TaskCall(ASTNode):
         except TraceError as e:
             raise TraceError(node = self,cause = e)
 
-
+    @logged(
+        start=lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+            f"Attempting type inference for task call '{self.name}'. Old inference value: '{old_inference_value}', New inference value: '{new_inference_value}'..."
+        ),
+        success={
+            "success": lambda self, v_table, f_table, inference_context, old_inference_value, new_inference_value: (
+                f"Type inference for task call '{self.name}' completed successfully."
+            )
+        }
+    )
+    def inference(self,
+                v_table: ScopeStack,
+                f_table: FuncTable,
+                inference_context: InferenceContext,
+                old_inference_value: set[str],
+                new_inference_value: set[str],
+                log_case: LogCase
+                ) -> None:
+        # Task calls are not inferable, as they are the source of inference for their arguments and return type. if we receive an inference request here, it means something went wrong in the inference pathing.
+        return
 
 @dataclass
 class ListLookup(ASTNode):
